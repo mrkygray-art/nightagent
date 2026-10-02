@@ -370,6 +370,28 @@ DEMO_HTML = r"""<!doctype html>
   body.big .ticket .meta, body.big .ev-meta, body.big .accounts .say, body.big .follow-box p { font-size: 17px; }
   body.big .orb-label { font-size: 32px; }
 
+  /* ---------- Simple first screen ---------- */
+  .console { gap: 16px; }
+  .orb-area { padding-top: 10px; }
+  .orb-sub { margin: -4px 0 0; color: var(--muted); font-size: 15px; text-align: center; min-height: 1.4em; max-width: 34ch; }
+  .orb-sub:empty { display: none; }
+  .hint { margin: 0; text-align: center; font-size: 17px; }
+  .hint[hidden] { display: none; }
+  .transcript[hidden], .composer[hidden] { display: none; }
+  .try { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 8px; }
+  .try > p { margin: 0; font-size: 15px; }
+  .try > p span { color: var(--muted); display: block; font-size: 14px; }
+  .try details.accounts { background: transparent; border: 0; padding: 0; }
+  .try details.accounts summary { padding: 2px 0; color: var(--sodium); font-weight: 500; font-size: 14px; }
+  .options { border: 1px solid var(--line); border-radius: 12px; background: var(--night); }
+  .options summary { cursor: pointer; padding: 10px 14px; font-weight: 600; color: var(--muted); list-style: none; }
+  .options summary::-webkit-details-marker { display: none; }
+  .options[open] summary { color: var(--text); border-bottom: 1px solid var(--line); }
+  .options-body { padding: 12px 14px 14px; display: grid; gap: 12px; }
+  .opt-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .opt-label { color: var(--muted); font-size: 14px; }
+  body.big .hint { font-size: 20px; } body.big .orb-sub, body.big .try > p { font-size: 17px; }
+
   .how { padding: 48px 0 24px; }
   .how ol { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
   @media (max-width: 900px) { .how ol { grid-template-columns: 1fr 1fr; } }
@@ -399,76 +421,83 @@ DEMO_HTML = r"""<!doctype html>
 
   <section class="intro">
     <h1>Call the <span class="nowrap">after-hours</span> line.</h1>
-    <p>Sam, the NightAgent voice, answers the night desk for a security integrator. Report a problem as one of the demo customers and watch your ticket appear while you're still on the call. Then watch the repair play out and get a check-in call in <a href="#lifecycle">Demo Mode</a>.</p>
+    <p>Talk to Sam, an AI agent that takes your service call, sends help, and calls you back to make sure it's fixed. <a href="#lifecycle">See it play out below.</a></p>
   </section>
 
   <div class="grid">
     <section class="console" aria-labelledby="console-title">
       <h2 id="console-title" class="sr-only">Talk to Sam</h2>
-      <div class="callbar">
-        <div class="lamp" id="lamp" data-state="idle" aria-hidden="true"></div>
-        <div class="status" aria-live="polite">
-          <strong id="status-title">Sam is available</strong>
-          <span id="status-detail">Calls end automatically after 5 minutes.</span>
-        </div>
-        <div class="mode" role="group" aria-label="How to talk to Sam">
-          <button type="button" data-mode="voice" aria-pressed="true">Voice</button>
-          <button type="button" data-mode="text" aria-pressed="false">Text</button>
-        </div>
-      </div>
-
-      <div class="mic" id="mic-row">
-        <label for="mic">Microphone</label>
-        <select id="mic"><option value="">Browser default</option></select>
-        <button type="button" id="mic-names">Find microphones</button>
-      </div>
+      <div class="lamp" id="lamp" data-state="idle" hidden></div>
+      <strong id="status-title" class="sr-only">Sam is available</strong>
 
       <div class="orb-area">
         <div class="orb" id="orb" data-state="idle" aria-hidden="true"></div>
         <p class="orb-label" id="orb-label" role="status" aria-live="polite">Ready when you are</p>
+        <p class="orb-sub" id="status-detail" aria-live="polite"></p>
       </div>
-      <p class="calm">This is a practice line. You can't break anything. Tap <b>Start over</b> anytime.</p>
 
+      <p class="hint" id="hint">Tap the button and tell Sam about a problem. You're playing a customer.</p>
       <button type="button" class="call" id="call" data-live="false">Start call</button>
       <div class="incall" id="incall" hidden>
         <button type="button" class="restart" id="restart">↺ Start over</button>
         <button type="button" id="repeat">Repeat that</button>
       </div>
-      <div class="prefs" role="group" aria-label="Call options">
-        <label><input type="checkbox" id="pref-slow"> Sam speaks slower</label>
-        <label><input type="checkbox" id="pref-big"> Bigger text</label>
-        <label><input type="checkbox" id="pref-tech"> Show what's happening behind the scenes</label>
-      </div>
+      <p class="calm" id="calm">This is a practice line. You can't break anything.</p>
       <button type="button" class="sound" id="sound" hidden>Can't hear Sam? Tap here to turn on sound</button>
       <p class="error" id="error" role="alert" hidden></p>
 
-      <details class="accounts" open>
-        <summary>Demo customers you can call as</summary>
-        <ul>
-          <li>
-            <div class="who">Sunset Dental Group <span>310-555-0142</span></div>
-            <div class="say">Try: "Our back door won't lock and we're closing up."</div>
-          </li>
-          <li>
-            <div class="who">Westside Self Storage <span>310-555-0178</span></div>
-            <div class="say">Try: "The front gate is stuck open." This plan has no after-hours coverage.</div>
-          </li>
-          <li>
-            <div class="who">Harbor Logistics Warehouse <span>424-555-0119</span></div>
-            <div class="say">Try: "One employee's badge stopped working."</div>
-          </li>
-        </ul>
-      </details>
-
-      <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation transcript">
+      <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation" hidden>
         <p class="empty" id="transcript-empty">The conversation will appear here as you talk.</p>
       </div>
-
-      <form class="composer" id="composer" autocomplete="off">
+      <form class="composer" id="composer" autocomplete="off" hidden>
         <label for="message" class="sr-only">Type a message to Sam</label>
-        <input id="message" type="text" placeholder="Type to Sam instead of talking" maxlength="400">
+        <input id="message" type="text" placeholder="Type to Sam" maxlength="400">
         <button type="submit">Send</button>
       </form>
+
+      <div class="try">
+        <p><span>Not sure what to say? Try:</span> "This is Sunset Dental, 310-555-0142. Our back door won't lock."</p>
+        <details class="accounts" id="examples">
+          <summary>More examples</summary>
+          <ul>
+            <li>
+              <div class="who">Sunset Dental Group <span>310-555-0142</span></div>
+              <div class="say">"Our back door won't lock and we're closing up."</div>
+            </li>
+            <li>
+              <div class="who">Westside Self Storage <span>310-555-0178</span></div>
+              <div class="say">"The front gate is stuck open." This plan has no after-hours coverage.</div>
+            </li>
+            <li>
+              <div class="who">Harbor Logistics Warehouse <span>424-555-0119</span></div>
+              <div class="say">"One employee's badge stopped working."</div>
+            </li>
+          </ul>
+        </details>
+      </div>
+
+      <details class="options" id="options">
+        <summary>⚙ Options</summary>
+        <div class="options-body">
+          <div class="opt-row">
+            <span class="opt-label">How to reach Sam</span>
+            <div class="mode" role="group" aria-label="How to talk to Sam">
+              <button type="button" data-mode="voice" aria-pressed="true">Talk</button>
+              <button type="button" data-mode="text" aria-pressed="false">Type</button>
+            </div>
+          </div>
+          <div class="mic" id="mic-row">
+            <label for="mic">Microphone</label>
+            <select id="mic"><option value="">Browser default</option></select>
+            <button type="button" id="mic-names">Find microphones</button>
+          </div>
+          <div class="prefs" role="group" aria-label="Call options">
+            <label><input type="checkbox" id="pref-slow"> Sam speaks slower</label>
+            <label><input type="checkbox" id="pref-big"> Bigger text</label>
+            <label><input type="checkbox" id="pref-tech"> Show what's happening behind the scenes</label>
+          </div>
+        </div>
+      </details>
 
       <section class="tech" id="tech" hidden aria-label="Behind the scenes">
         <h3>Behind the scenes</h3>
@@ -543,6 +572,7 @@ const els = {
   micRow: $("mic-row"), mic: $("mic"), micNames: $("mic-names"), sound: $("sound"),
   scenarios: $("scenarios"), panel: $("event-panel"), metrics: $("metrics"), impactStatus: $("impact-status"),
   orb: $("orb"), orbLabel: $("orb-label"), incall: $("incall"), restart: $("restart"), repeat: $("repeat"),
+  hint: $("hint"), calm: $("calm"), options: $("options"),
   prefSlow: $("pref-slow"), prefBig: $("pref-big"), prefTech: $("pref-tech"), tech: $("tech"), techLog: $("tech-log"),
 };
 
@@ -689,6 +719,11 @@ function render() {
   });
   els.micRow.hidden = mode !== "voice";
   els.incall.hidden = !live;
+  // Only what's needed right now: the typing box when typing, the conversation once a call starts.
+  els.composer.hidden = mode !== "text";
+  if (live || connecting) els.transcript.hidden = false;
+  els.hint.hidden = live || connecting || Boolean(ringing);
+  els.calm.textContent = live ? "Made a mistake? Tap Start over anytime." : "This is a practice line. You can't break anything.";
   els.restart.disabled = restarting;
   els.repeat.disabled = restarting;
   els.mic.disabled = live || connecting;
@@ -951,7 +986,8 @@ async function startSession(nextMode, opts = {}) {
       try {
         inputDeviceId = await prepareMic();
       } catch {
-        throw new Error("Microphone access is blocked. Allow it from your browser's address bar, or switch to Text.");
+        els.options.open = true; // show the microphone choice and the Type option right away
+        throw new Error("Sam can't hear you yet: the microphone is blocked. Allow it from your browser's address bar, or choose Type in Options.");
       }
     }
     const base = {
@@ -982,7 +1018,7 @@ async function startSession(nextMode, opts = {}) {
     showError(/quota|credit/i.test(msg)
       ? "The demo has used up its call minutes for now. Please check back later."
       : msg);
-    setStatus("idle", "Sam is available", "Calls end automatically after 5 minutes.");
+    setStatus("idle", "Sam is available", "");
   } finally {
     connecting = false;
     render();
