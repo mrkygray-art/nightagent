@@ -1,0 +1,6 @@
+# Upload only what the app runs on
+/*
+!main.py
+!requirements.txt
+!app
+app/__pycache__
