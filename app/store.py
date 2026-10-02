@@ -158,6 +158,25 @@ class MemoryStore:
         return sorted((o for o in self.opportunities.values() if o.get("source_ticket_id") == source_ticket_id),
                       key=lambda o: o["created_at"])
 
+    def impact_counts(self) -> dict:
+        def events(kind, source=None):
+            return sum(1 for e in self.events if e["event_type"] == kind and (source is None or e["source"] == source))
+        tickets = list(self.tickets.values())
+        return {
+            "tickets": len(tickets),
+            "emergencies": sum(1 for t in tickets if t.get("priority") == "emergency"),
+            "paged": sum(1 for t in tickets if t.get("paged_at")),
+            "live_calls": events("call_received", "call"),
+            "scenario_calls": events("call_received", "scenario"),
+            "follow_ups": events("follow_up_completed"),
+            "resolved": events("resolution_confirmed"),
+            "reopened": events("ticket_reopened"),
+            "escalated": events("ticket_escalated"),
+            "new_from_follow_up": sum(1 for t in tickets if t.get("source_ticket_id")),
+            "opportunities": len(self.opportunities),
+            "tasks": len(self.tasks),
+        }
+
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         rows = sorted(self.tickets.values(), key=lambda t: t["created_at"], reverse=True)
         return rows[:limit]
@@ -179,6 +198,7 @@ class SupabaseStore:
         self.events_table = f"{prefix}ticket_events"
         self.tasks_table = f"{prefix}routing_tasks"
         self.opportunities_table = f"{prefix}opportunities"
+        self.impact_function = f"{prefix}impact"
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -266,6 +286,9 @@ class SupabaseStore:
     def create_opportunity(self, opp: dict) -> dict:
         row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP")}
         return self.db.table(self.opportunities_table).insert(row).execute().data[0]
+
+    def impact_counts(self) -> dict:
+        return self.db.rpc(self.impact_function).execute().data
 
     def opportunities_for(self, source_ticket_id: str) -> list[dict]:
         return (

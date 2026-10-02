@@ -285,6 +285,25 @@ DEMO_HTML = r"""<!doctype html>
   .action span { color: var(--muted); }
   .action button { justify-self: start; font: 600 14px var(--body); color: var(--sodium); background: transparent; border: 0; padding: 2px 0; cursor: pointer; text-decoration: underline; }
 
+  .impact { margin-top: 28px; }
+  .impact-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 6px; }
+  .impact-note { margin: 0 0 16px; color: var(--muted); font-size: 14px; max-width: 80ch; }
+  .metrics { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .metric { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+  .metric b { font-family: var(--display); font-size: 34px; line-height: 1; }
+  .metric span { font-weight: 600; font-size: 14px; }
+  .metric small { color: var(--muted); font-size: 13px; }
+  .metric.key { border-color: rgba(245,165,36,.55); }
+  .metric.key b { color: var(--sodium); }
+  @media (max-width: 560px) {
+    .metrics { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric { padding: 12px; }
+    .metric b { font-size: 28px; }
+    .metric span { font-size: 13px; }
+    .metric small { font-size: 12px; }
+    .metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  }
+
   .how { padding: 48px 0 24px; }
   .how ol { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
   @media (max-width: 900px) { .how ol { grid-template-columns: 1fr 1fr; } }
@@ -399,6 +418,15 @@ DEMO_HTML = r"""<!doctype html>
     </div>
   </section>
 
+  <section class="impact" aria-labelledby="impact-title">
+    <div class="impact-head">
+      <h2 id="impact-title">NightAgent Business Impact</h2>
+      <span class="live" id="impact-status">Demo metrics</span>
+    </div>
+    <p class="impact-note">Counted live from this demo's own records: every visitor's calls, scenarios, and follow-ups. Demo data, not customer data, and no revenue figures.</p>
+    <ol class="metrics" id="metrics"></ol>
+  </section>
+
   <section class="how" aria-labelledby="how-title">
     <h2 id="how-title">What happens on a call</h2>
     <ol>
@@ -424,7 +452,7 @@ const els = {
   composer: $("composer"), input: $("message"), tickets: $("tickets"), boardStatus: $("board-status"),
   modeButtons: document.querySelectorAll(".mode button"),
   micRow: $("mic-row"), mic: $("mic"), micNames: $("mic-names"), sound: $("sound"),
-  scenarios: $("scenarios"), panel: $("event-panel"),
+  scenarios: $("scenarios"), panel: $("event-panel"), metrics: $("metrics"), impactStatus: $("impact-status"),
 };
 
 let Conversation = null;
@@ -667,7 +695,7 @@ const handlers = {
       const id = followUpTicket;
       followUpTicket = null;
       addMessage("note", `See what NightAgent did with ${id} in Demo Mode below.`);
-      setTimeout(() => loadTicket(id, { scroll: true }), 1200);
+      setTimeout(() => { loadTicket(id, { scroll: true }); loadImpact(true); }, 1200);
     }
     fastPollUntil = Date.now() + 90 * 1000;
     schedulePoll(1000);
@@ -858,6 +886,7 @@ async function refreshTickets() {
     els.boardStatus.textContent = "Updates live";
     await claimMyCallTicket(list);
     if (selectedId && !busy) loadTicket(selectedId, { quiet: true });
+    loadImpact();
   } catch (err) {
     els.boardStatus.textContent = "Reconnecting…";
   }
@@ -1121,6 +1150,7 @@ async function demoAction(kind) {
     busy = false;
     renderPanel(detail);
     refreshTickets();
+    impactAt = 0;
   } catch (err) {
     busy = false;
     renderPanel(selectedDetail, err.message);
@@ -1138,6 +1168,7 @@ async function startScenario(id, btn) {
     selectedId = detail.ticket.ticket_id;
     busy = false;
     renderPanel(detail);
+    impactAt = 0;
     refreshTickets();
   } catch (err) {
     busy = false;
@@ -1198,9 +1229,47 @@ function pickFromBoard(e) {
 els.tickets.addEventListener("click", pickFromBoard);
 els.tickets.addEventListener("keydown", pickFromBoard);
 
+/* ---------- Business Impact ---------- */
+
+function metric(value, label, note, key) {
+  const li = el("li", `metric${key ? " key" : ""}`);
+  li.appendChild(el("b", "", String(value)));
+  li.appendChild(el("span", "", label));
+  if (note) li.appendChild(el("small", "", note));
+  return li;
+}
+
+let impactAt = 0;
+async function loadImpact(force) {
+  if (!force && Date.now() - impactAt < 30000) return;
+  impactAt = Date.now();
+  try {
+    const m = await api("/api/impact");
+    const hours = m.minutes_saved >= 120 ? `${(m.minutes_saved / 60).toFixed(1)} hr` : `${m.minutes_saved} min`;
+    const a = m.assumptions;
+    els.metrics.replaceChildren(
+      metric(m.calls_handled, "Calls handled", `${m.live_calls} live, ${m.scenario_calls} demo scenario${m.scenario_calls === 1 ? "" : "s"}`, true),
+      metric(m.emergencies, "Emergencies triaged", "P1 by the priority rules"),
+      metric(m.tickets, "Service tickets created"),
+      metric(m.needed_a_person, "After-hours calls that paged a technician", `${m.handled_without_waking_anyone} handled without waking anyone`),
+      metric(m.follow_ups, "Follow-up calls completed", "", true),
+      metric(m.resolved, "Issues confirmed resolved", "The customer said so on the follow-up"),
+      metric(m.reopened, "Tickets reopened"),
+      metric(m.escalated, "Escalations created"),
+      metric(m.opportunities, "AE opportunities discovered", "Value TBD until the AE qualifies it", true),
+      metric(m.tasks, "Tasks routed to people"),
+      metric(hours, "Estimated admin time saved", `Real conversations only: ${a.minutes_per_intake_call} min per intake call, ${a.minutes_per_follow_up} min per follow-up`),
+    );
+    els.impactStatus.textContent = "Demo metrics · updates live";
+  } catch {
+    els.impactStatus.textContent = "Demo metrics · reconnecting…";
+  }
+}
+
 render();
 refreshMics();
 loadScenarios();
+loadImpact(true);
 schedulePoll(0);
 </script>
 </body>

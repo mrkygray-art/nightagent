@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from app.routes_dashboard import router as dashboard_router
 from app.routes_demo import router as demo_router
+from app.routes_impact import router as impact_router
 from app.routes_lifecycle import router as lifecycle_router
 from app.routes_tools import router as tools_router
 from app.routes_webhooks import router as webhooks_router
@@ -26,6 +27,7 @@ app.include_router(webhooks_router)
 app.include_router(dashboard_router)
 app.include_router(demo_router)
 app.include_router(lifecycle_router)
+app.include_router(impact_router)
 
 
 @app.get("/health")
