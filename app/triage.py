@@ -11,6 +11,7 @@ PRIORITY_RANK = {"routine": 0, "urgent": 1, "emergency": 2}
 CATEGORY_POLICY = {
     "life_safety": ("emergency", "Fire or life-safety system issue"),
     "cannot_secure_site": ("emergency", "Site cannot be secured (door, gate, or perimeter)"),
+    "entry_blocked": ("emergency", "Main entrance unusable and no other way in for staff"),
     "active_alarm": ("emergency", "Alarm is actively going off"),
     "system_offline": ("urgent", "Security system or video recording is offline"),
     "panel_trouble": ("urgent", "Panel trouble condition"),
@@ -25,6 +26,9 @@ _ALIASES = {
     "door_wont_lock": "cannot_secure_site",
     "door_will_not_lock": "cannot_secure_site",
     "gate_stuck_open": "cannot_secure_site",
+    "entrance_wont_unlock": "entry_blocked",
+    "door_wont_unlock": "entry_blocked",
+    "locked_out": "entry_blocked",
     "alarm": "active_alarm",
     "camera_down": "system_offline",
     "cameras_offline": "system_offline",

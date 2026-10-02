@@ -73,6 +73,8 @@ class MemoryStore:
         self.customers = [dict(c) for c in SEED_CUSTOMERS]
         self.tickets: dict[str, dict] = {}
         self.calls: dict[str, dict] = {}
+        self.events: list[dict] = []
+        self._event_seq = 0
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -90,7 +92,8 @@ class MemoryStore:
         return next((c for c in self.customers if c["customer_id"] == customer_id), None)
 
     def create_ticket(self, ticket: dict) -> dict:
-        ticket = {**ticket, "ticket_id": new_ticket_id(), "status": "open", "created_at": now_iso()}
+        ticket = {"status": "awaiting_dispatch", "demo": False, **ticket,
+                  "ticket_id": new_ticket_id(), "created_at": now_iso()}
         self.tickets[ticket["ticket_id"]] = ticket
         return ticket
 
@@ -103,6 +106,23 @@ class MemoryStore:
 
     def upsert_call(self, call: dict) -> None:
         self.calls[call["conversation_id"]] = {**call, "received_at": now_iso()}
+
+    def add_event(self, event: dict) -> dict:
+        self._event_seq += 1
+        row = {"simulated": False, "source": "call", "occurred_at": now_iso(), **event,
+               "id": self._event_seq, "created_at": now_iso()}
+        self.events.append(row)
+        return row
+
+    def list_events(self, ticket_id: str) -> list[dict]:
+        rows = [e for e in self.events if e["ticket_id"] == ticket_id]
+        return sorted(rows, key=lambda e: (e["occurred_at"], e["id"]))
+
+    def delete_events(self, ticket_id: str, source: str) -> None:
+        self.events = [e for e in self.events if not (e["ticket_id"] == ticket_id and e["source"] == source)]
+
+    def count_demo_tickets_since(self, since_iso: str) -> int:
+        return sum(1 for t in self.tickets.values() if t.get("scenario") and t["created_at"] >= since_iso)
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         rows = sorted(self.tickets.values(), key=lambda t: t["created_at"], reverse=True)
@@ -122,6 +142,7 @@ class SupabaseStore:
         self.customers_table = f"{prefix}customers"
         self.tickets_table = f"{prefix}tickets"
         self.calls_table = f"{prefix}calls"
+        self.events_table = f"{prefix}ticket_events"
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -143,7 +164,7 @@ class SupabaseStore:
         return rows[0] if rows else None
 
     def create_ticket(self, ticket: dict) -> dict:
-        row = {**ticket, "ticket_id": new_ticket_id(), "status": "open"}
+        row = {"status": "awaiting_dispatch", **ticket, "ticket_id": new_ticket_id()}
         return self.db.table(self.tickets_table).insert(row).execute().data[0]
 
     def get_ticket(self, ticket_id: str) -> dict | None:
@@ -156,6 +177,25 @@ class SupabaseStore:
     def upsert_call(self, call: dict) -> None:
         # Upsert on conversation_id so webhook retries never create duplicates.
         self.db.table(self.calls_table).upsert(call, on_conflict="conversation_id").execute()
+
+    def add_event(self, event: dict) -> dict:
+        return self.db.table(self.events_table).insert(event).execute().data[0]
+
+    def list_events(self, ticket_id: str) -> list[dict]:
+        return (
+            self.db.table(self.events_table).select("*").eq("ticket_id", ticket_id)
+            .order("occurred_at").order("id").execute().data
+        )
+
+    def delete_events(self, ticket_id: str, source: str) -> None:
+        self.db.table(self.events_table).delete().eq("ticket_id", ticket_id).eq("source", source).execute()
+
+    def count_demo_tickets_since(self, since_iso: str) -> int:
+        res = (
+            self.db.table(self.tickets_table).select("ticket_id", count="exact")
+            .not_.is_("scenario", "null").gte("created_at", since_iso).limit(1).execute()
+        )
+        return res.count or 0
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         return (

@@ -1,0 +1,179 @@
+"""Public endpoints for the ticket timeline and Demo Mode.
+
+Demo Mode compresses hours of real dispatch work into a few clicks. Everything it adds is
+written as a simulated event. Only the browser that started a demo ticket (or whose own call
+created it) holds that ticket's demo key, so visitors can't push each other's tickets around.
+"""
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from app import demo, lifecycle
+from app.service import move_ticket, public_event, public_ticket, record_event, shift
+from app.store import get_store, now_iso
+from app.triage import triage
+
+router = APIRouter(prefix="/api")
+
+CLAIM_WINDOW_HOURS = 3
+
+
+class ScenarioRequest(BaseModel):
+    scenario: str = Field(..., max_length=40)
+
+
+class ClaimRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=20)
+    conversation_id: str = Field(..., min_length=8, max_length=120)
+
+
+class DemoKeyRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=20)
+    demo_key: str = Field(..., min_length=16, max_length=80)
+
+
+def _hash(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()
+
+
+def _new_key() -> tuple[str, str]:
+    key = secrets.token_urlsafe(24)
+    return key, _hash(key)
+
+
+def _ticket_or_404(ticket_id: str) -> dict:
+    ticket = get_store().get_ticket(ticket_id.strip().upper())
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found.")
+    return ticket
+
+
+def _owned_demo_ticket(req: DemoKeyRequest) -> dict:
+    ticket = _ticket_or_404(req.ticket_id)
+    stored = ticket.get("demo_key_hash") or ""
+    if not ticket.get("demo") or not stored or not hmac.compare_digest(stored, _hash(req.demo_key)):
+        raise HTTPException(status_code=403, detail="This ticket can only be advanced from the browser that started it.")
+    return ticket
+
+
+def _detail(ticket: dict) -> dict:
+    events = get_store().list_events(ticket["ticket_id"])
+    nxt = lifecycle.next_demo_step(ticket.get("status"))
+    return {
+        "ticket": public_ticket(ticket),
+        "events": [public_event(e) for e in events],
+        "next_step": lifecycle.STATE_LABELS[nxt[0]] if nxt else None,
+    }
+
+
+@router.get("/tickets/{ticket_id}")
+def ticket_detail(ticket_id: str) -> dict:
+    return _detail(_ticket_or_404(ticket_id))
+
+
+@router.get("/demo/scenarios")
+def scenarios() -> list[dict]:
+    return demo.public_scenarios()
+
+
+@router.post("/demo/scenario")
+def start_scenario(req: ScenarioRequest) -> dict:
+    scenario = demo.SCENARIOS.get(req.scenario)
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Unknown scenario.")
+    store = get_store()
+    hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    if store.count_demo_tickets_since(hour_ago) >= demo.SCENARIOS_PER_HOUR:
+        raise HTTPException(status_code=429, detail="The demo is busy right now. Please try again in a few minutes.")
+
+    category, priority, reason = triage(scenario["category"], scenario["suggested_priority"])
+    key, key_hash = _new_key()
+    ticket = store.create_ticket({
+        "customer_id": scenario["customer_id"],
+        "caller_name": scenario["caller_name"],
+        "callback_number": scenario["callback_number"],
+        "issue_summary": scenario["issue_summary"],
+        "category": category,
+        "priority": priority,
+        "priority_reason": reason,
+        "status": "awaiting_dispatch",
+        "demo": True,
+        "scenario": req.scenario,
+        "demo_key_hash": key_hash,
+        "base_status": "awaiting_dispatch",
+    })
+    tid, now = ticket["ticket_id"], now_iso()
+    customer = store.get_customer(scenario["customer_id"]) or {}
+    common = {"simulated": True, "source": "scenario"}
+    record_event(tid, "call_received",
+                 f"{customer.get('business_name', 'Customer')}: {scenario['issue_summary'][:160]} (simulated call)",
+                 occurred_at=shift(now, -4), actor_type="customer", **common)
+    record_event(tid, "triage_completed",
+                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Set by the priority rules, not the AI.",
+                 occurred_at=shift(now, -1), metadata={"category": category}, **common)
+    record_event(tid, "ticket_created", f"{tid} created. Awaiting dispatch.",
+                 occurred_at=now, actor_type="agent", **common)
+    return {"demo_key": key, **_detail(store.get_ticket(tid))}
+
+
+@router.post("/demo/claim")
+def claim_call_ticket(req: ClaimRequest) -> dict:
+    """Turn the ticket your own call just created into a demo ticket you can advance.
+    Proof of ownership is the conversation id, which only the caller's browser has."""
+    ticket = _ticket_or_404(req.ticket_id)
+    if not ticket.get("conversation_id") or not hmac.compare_digest(ticket["conversation_id"], req.conversation_id):
+        raise HTTPException(status_code=403, detail="That ticket came from a different call.")
+    if ticket.get("demo_key_hash"):
+        raise HTTPException(status_code=409, detail="Demo Mode is already running for this ticket.")
+    created = datetime.fromisoformat(ticket["created_at"])
+    if datetime.now(timezone.utc) - created > timedelta(hours=CLAIM_WINDOW_HOURS):
+        raise HTTPException(status_code=403, detail="This call is too old to start Demo Mode.")
+    key, key_hash = _new_key()
+    base = lifecycle.normalize_state(ticket.get("status"))
+    get_store().update_ticket(ticket["ticket_id"], {"demo": True, "demo_key_hash": key_hash, "base_status": base})
+    return {"demo_key": key, **_detail(get_store().get_ticket(ticket["ticket_id"]))}
+
+
+@router.post("/demo/advance")
+def advance(req: DemoKeyRequest) -> dict:
+    ticket = _owned_demo_ticket(req)
+    step = lifecycle.next_demo_step(ticket.get("status"))
+    if not step:
+        raise HTTPException(status_code=409, detail="This ticket is at the end of the demo path.")
+    target, event_type, minutes = step
+
+    events = get_store().list_events(ticket["ticket_id"])
+    last = events[-1]["occurred_at"] if events else ticket["created_at"]
+    extra, description = {}, lifecycle.EVENT_LABELS[event_type]
+    if target == "technician_assigned":
+        tech = demo.technician_for(ticket["priority"])
+        extra["technician_name"] = tech
+        description = f"{tech} assigned (fictional demo technician)"
+    elif target == "dispatched":
+        description = f"Dispatch notified of {lifecycle.PRIORITY_LABELS.get(ticket['priority'], ticket['priority'])} ticket"
+    elif target == "follow_up_pending":
+        description = "NightAgent will call the customer to confirm the fix"
+    elif ticket.get("technician_name"):
+        description = f"{lifecycle.EVENT_LABELS[event_type]}: {ticket['technician_name']}"
+
+    ticket = move_ticket(ticket, target, extra)
+    record_event(ticket["ticket_id"], event_type, description, simulated=True, source="demo",
+                 occurred_at=shift(last, minutes), actor_type="demo")
+    return _detail(get_store().get_ticket(ticket["ticket_id"]))
+
+
+@router.post("/demo/reset")
+def reset(req: DemoKeyRequest) -> dict:
+    """Undo every Advance Demo step. The original call or scenario events stay."""
+    ticket = _owned_demo_ticket(req)
+    store = get_store()
+    store.delete_events(ticket["ticket_id"], "demo")
+    store.update_ticket(ticket["ticket_id"], {
+        "status": ticket.get("base_status") or "awaiting_dispatch",
+        "technician_name": None,
+    })
+    return _detail(store.get_ticket(ticket["ticket_id"]))

@@ -7,9 +7,10 @@ Tool calls time out after about 20 seconds, so keep these fast.
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app import config
+from app import config, lifecycle
 from app.notify import page_on_call
 from app.security import require_tool_secret
+from app.service import move_ticket, record_event
 from app.store import get_store, now_iso, phone_digits
 from app.triage import triage
 
@@ -79,7 +80,18 @@ def create_ticket(req: CreateTicketRequest) -> dict:
         "priority": priority,
         "priority_reason": reason,
         "conversation_id": req.conversation_id,
+        "status": "awaiting_dispatch",
     })
+
+    tid, conv = ticket["ticket_id"], req.conversation_id
+    who = customer["business_name"] if customer else "Caller without a matching account"
+    record_event(tid, "call_received", f"{who}: {ticket['issue_summary'][:160]}",
+                 conversation_id=conv, actor_type="customer")
+    record_event(tid, "triage_completed",
+                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Set by the priority rules, not the AI.",
+                 conversation_id=conv, actor_type="system", metadata={"category": category})
+    record_event(tid, "ticket_created", f"{tid} created. Awaiting dispatch.",
+                 conversation_id=conv, actor_type="agent")
 
     if priority == "emergency":
         next_step = "This is an emergency. Call page_on_call_tech now with this ticket_id."
@@ -123,7 +135,15 @@ def page_on_call_tech(req: PageRequest) -> dict:
         f"{ticket['issue_summary'][:140]} | Callback {ticket['callback_number']}"
     )
     result = page_on_call(body)
-    store.update_ticket(ticket["ticket_id"], {"paged_at": now_iso(), "status": "dispatched"})
+    paged_at = now_iso()
+    if lifecycle.can_transition(ticket.get("status"), "dispatched"):
+        move_ticket(ticket, "dispatched", {"paged_at": paged_at})
+    else:
+        store.update_ticket(ticket["ticket_id"], {"paged_at": paged_at})
+    simulated = bool(result.get("simulated"))
+    record_event(ticket["ticket_id"], "technician_paged",
+                 f"{config.ONCALL_TECH_NAME} paged" + (" (simulated: no real text was sent)" if simulated else ""),
+                 simulated=simulated, conversation_id=ticket.get("conversation_id"), actor_type="agent")
 
     return {
         "paged": True,

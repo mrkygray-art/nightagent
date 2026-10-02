@@ -1,1 +1,1 @@
-# NightShift Dispatch application package
+# NightAgent application package
