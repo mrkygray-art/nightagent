@@ -340,7 +340,7 @@ DEMO_HTML = r"""<!doctype html>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="/demo">NightAgent</a>
-    <nav><a href="#lifecycle">Jump to Demo Mode</a><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
+    <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
   </header>
 
   <section class="intro">
