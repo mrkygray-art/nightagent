@@ -16,8 +16,8 @@ import logging
 
 from app import config, demo, lifecycle, report
 from app.follow_up import follow_up_variables
-from app.service import (move_ticket, public_event, public_opportunity, public_task, public_ticket,
-                         record_event, shift)
+from app.service import (move_ticket, public_event, public_message, public_opportunity, public_task,
+                         public_ticket, record_event, shift)
 from app.store import get_store, now_iso
 from app.triage import triage
 
@@ -103,6 +103,31 @@ def ticket_detail(ticket_id: str) -> dict:
     return _detail(_ticket_or_404(ticket_id))
 
 
+@router.get("/messages")
+def messages() -> list[dict]:
+    """Messages Sam took for a department or a person (calls that weren't a service problem)."""
+    return [public_message(t) for t in get_store().recent_messages()]
+
+
+@router.get("/messages/{message_id}")
+def message_detail(message_id: str) -> dict:
+    store = get_store()
+    task = store.get_task(message_id.strip().upper())
+    if not task or task.get("source_ticket_id") or not task.get("source_conversation_id"):
+        raise HTTPException(status_code=404, detail="Message not found.")
+    try:
+        tool_calls = store.tool_calls_for("", [task["source_conversation_id"]])
+    except Exception:  # noqa: BLE001
+        logging.getLogger("nightshift").exception("Could not load tool calls for %s", message_id)
+        tool_calls = []
+    msg = public_message(task)
+    return {
+        "message": msg,
+        "tool_calls": [report.public_tool_call(t) for t in tool_calls],
+        "report": report.build_message(task, tool_calls, msg["department"], msg["callback_number"]),
+    }
+
+
 @router.get("/demo/scenarios")
 def scenarios() -> list[dict]:
     return demo.public_scenarios()
@@ -170,15 +195,26 @@ def claim_call_ticket(req: ClaimRequest) -> dict:
 def note_voice(req: VoiceRequest) -> dict:
     """Remember which voice (or text chat) took the call, for the call report. Same proof as a
     claim: only the caller's browser knows the conversation id."""
-    ticket = _ticket_or_404(req.ticket_id)
-    if not ticket.get("conversation_id") or not hmac.compare_digest(ticket["conversation_id"], req.conversation_id):
-        raise HTTPException(status_code=403, detail="That ticket came from a different call.")
+    store = get_store()
+    record_id = req.ticket_id.strip().upper()
+    if record_id.startswith("TASK-"):  # a message rather than a ticket
+        record = store.get_task(record_id)
+        conv = (record or {}).get("source_conversation_id")
+        save = store.update_task
+    else:
+        record = store.get_ticket(record_id)
+        conv = (record or {}).get("conversation_id")
+        save = store.update_ticket
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found.")
+    if not conv or not hmac.compare_digest(conv, req.conversation_id):
+        raise HTTPException(status_code=403, detail="That record came from a different call.")
     voice = req.voice.strip()
     voice = report.TEXT_CHAT if voice.lower() == report.TEXT_CHAT else voice.capitalize()
     if voice != report.TEXT_CHAT and voice not in report.VOICES:
         raise HTTPException(status_code=400, detail="Unknown voice.")
-    if not ticket.get("voice"):
-        get_store().update_ticket(ticket["ticket_id"], {"voice": voice})
+    if not record.get("voice"):
+        save(record_id, {"voice": voice})
     return {"ok": True}
 
 

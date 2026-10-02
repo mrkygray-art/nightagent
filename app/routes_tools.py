@@ -11,7 +11,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 
 from app import config, lifecycle
-from app.follow_up import apply_outcome
+from app.follow_up import DEPARTMENT_LABELS, DESTINATIONS, apply_outcome
 from app.notify import page_on_call
 from app.security import require_tool_secret
 from app.service import log_tool_call, move_ticket, record_event
@@ -34,6 +34,18 @@ class CreateTicketRequest(BaseModel):
     category: str | None = "other"
     suggested_priority: str | None = "routine"
     conversation_id: str | None = None
+
+
+class MessageRequest(BaseModel):
+    department: str = Field(..., max_length=40)
+    reason: str = Field(..., max_length=600)
+    caller_name: str = Field(..., max_length=100)
+    callback_number: str = Field(..., max_length=40)
+    customer_id: str | None = Field(None, max_length=20)
+    person_requested: str | None = Field(None, max_length=100)
+    best_time: str | None = Field(None, max_length=120)
+    ticket_id: str | None = Field(None, max_length=20)
+    conversation_id: str | None = Field(None, max_length=120)
 
 
 class PageRequest(BaseModel):
@@ -62,6 +74,10 @@ class FollowUpOutcomeRequest(BaseModel):
     callback_reason: str | None = Field(None, max_length=400)
 
 FOLLOW_UP_TOKEN_MINUTES = 30
+
+# How Sam introduces the person who will call back
+ROLE_PHRASE = {"account_executive": ", your account executive,", "billing": " from billing",
+               "service_manager": ", our service manager,"}
 
 # Said back to the agent after every lookup, because the model tends to skip the read-back once
 # it knows the problem. Tool results steer it more reliably than the prompt alone.
@@ -158,6 +174,55 @@ def create_ticket(req: CreateTicketRequest) -> dict:
         "priority_reason": reason,
         "mention_billing": mention_billing,
         "next_step": next_step,
+    }
+
+
+@router.post("/take-message")
+def take_message(req: MessageRequest) -> dict:
+    """The front desk: the caller wants a department or a person, not (only) a repair. Code decides
+    who gets the message and what the caller is told; the agent just collects the details."""
+    started = now_iso()
+    store = get_store()
+    dept = req.department.strip().lower()
+    if dept not in DESTINATIONS:
+        dept = "service"  # only known teams can receive messages
+    customer = store.get_customer(req.customer_id) if req.customer_id else None
+    ticket = store.get_ticket(req.ticket_id.strip().upper()) if req.ticket_id else None
+    reason = " ".join(req.reason.split())[:600]
+    best_time = " ".join((req.best_time or "").split())[:120] or None
+    who = DESTINATIONS[dept]
+    task = store.create_task({
+        "destination": dept,
+        "assigned_to": who,
+        "customer_id": customer["customer_id"] if customer else None,
+        "contact_name": req.caller_name.strip(),
+        "site_address": (customer or {}).get("site_address"),
+        "source_ticket_id": ticket["ticket_id"] if ticket else None,
+        "source_conversation_id": req.conversation_id,
+        "reason": f"Message for {DEPARTMENT_LABELS[dept]}",
+        "summary": reason,
+        "priority": "high" if dept == "service_manager" else "normal",
+        "requested_follow_up": "Call the caller back" + (f" ({best_time})" if best_time else ""),
+        "callback_number": phone_digits(req.callback_number) or req.callback_number.strip(),
+        "person_requested": " ".join((req.person_requested or "").split())[:100] or None,
+        "best_time": best_time,
+        "demo": bool(ticket and ticket.get("demo")),
+    })
+    log_tool_call("take_message", f"{task['task_id']} for {who}", conversation_id=req.conversation_id,
+                  ticket_id=ticket["ticket_id"] if ticket else None, called_at=started)
+    if ticket:
+        record_event(ticket["ticket_id"], "task_created", f"{task['task_id']} for {who}: {reason[:160]}",
+                     conversation_id=req.conversation_id, actor_type="agent",
+                     metadata={"task_id": task["task_id"], "destination": dept})
+    name = who.split(",")[0].replace(" (fictional)", "")
+    speaker = f"Our {name.lower()}" if name.endswith("desk") else name + ROLE_PHRASE.get(dept, "")
+    when = f" {best_time}" if best_time else " on the next business day"
+    return {
+        "saved": True,
+        "message_id": task["task_id"],
+        "tell_the_caller": f"{speaker} will get your message and call you back{when}.",
+        "next_step": "Tell the caller who will call them back and when, in one or two sentences. "
+                     "Don't promise an exact time beyond that. Then ask if there's anything else.",
     }
 
 

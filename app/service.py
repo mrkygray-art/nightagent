@@ -109,6 +109,23 @@ def public_task(t: dict) -> dict:
     return {k: t.get(k) for k in keys}
 
 
+def public_message(t: dict) -> dict:
+    from app.follow_up import DEPARTMENT_LABELS  # here to avoid an import loop
+    return {
+        "message_id": t["task_id"],
+        "department": DEPARTMENT_LABELS.get(t.get("destination"), t.get("destination")),
+        "assigned_to": t.get("assigned_to"),
+        "person_requested": t.get("person_requested"),
+        "summary": t.get("summary"),
+        "contact_name": t.get("contact_name"),
+        "callback_number": mask_phone(t.get("callback_number")),
+        "best_time": t.get("best_time"),
+        "status": t.get("status"),
+        "created_at": t.get("created_at"),
+        "call_ref": call_ref(t.get("source_conversation_id")),
+    }
+
+
 def public_opportunity(o: dict) -> dict:
     keys = ("opportunity_id", "type", "scope", "interest", "device_count", "timeline",
             "estimated_value", "assigned_to", "status", "created_at")

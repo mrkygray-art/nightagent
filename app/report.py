@@ -25,6 +25,37 @@ VOICES = {"Lauren", "Sarah", "Matilda", "Eric", "Chris"}
 TEXT_CHAT = "text"
 
 
+TOOL_NAMES["take_message"] = "Took a message"
+
+
+def _agent_and_channel(voice: str | None) -> tuple[str, str]:
+    agent = "Sam, after-hours dispatcher" + (f" (voice: {voice})" if voice in VOICES else "")
+    channel = "Text chat" if voice == TEXT_CHAT else "Voice call" if voice else "Live call"
+    return agent, channel
+
+
+def _tools_line(tool_calls: list[dict]) -> str:
+    if not tool_calls:
+        return "Not recorded"
+    return f"{len(tool_calls)}: " + "; ".join(TOOL_NAMES.get(t["tool"], t["tool"]) for t in tool_calls)
+
+
+def build_message(task: dict, tool_calls: list[dict], department: str, callback: str) -> dict:
+    """The call report for a call that ended in a message, not a service ticket."""
+    agent, channel = _agent_and_channel(task.get("voice"))
+    rows = [
+        {"label": "Agent", "value": agent},
+        {"label": "Call", "value": channel},
+        {"label": "What they needed", "value": task.get("summary") or "Not recorded"},
+        {"label": "Asked for", "value": task.get("person_requested") or department},
+        {"label": "Tools Sam used", "value": _tools_line(tool_calls)},
+        {"label": "Service ticket", "value": "None: not a service problem"},
+        {"label": "Handed to", "value": task.get("assigned_to") or "Not recorded"},
+        {"label": "Callback", "value": f"{callback}, {task.get('best_time') or 'next business day'}"},
+    ]
+    return {"rows": rows, "tool_count": len(tool_calls)}
+
+
 def public_tool_call(row: dict) -> dict:
     return {
         "tool": row["tool"],

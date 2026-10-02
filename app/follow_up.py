@@ -18,6 +18,16 @@ DESTINATIONS = {
     "service_manager": "Alex Moreno, Service Manager (fictional)",
     "account_executive": "Sarah Johnson, Account Executive (fictional)",
     "support": "Support desk",
+    "billing": "Morgan Lee, Billing (fictional)",
+}
+
+# How the front desk names each team to a caller.
+DEPARTMENT_LABELS = {
+    "service": "Service desk",
+    "service_manager": "Service manager",
+    "account_executive": "Sales (account executive)",
+    "support": "Support",
+    "billing": "Billing",
 }
 
 VALUE_TBD = "TBD - the sales rep will work it out"

@@ -153,6 +153,17 @@ class MemoryStore:
         return sorted((t for t in self.tasks.values() if t.get("source_ticket_id") == source_ticket_id),
                       key=lambda t: t["created_at"])
 
+    def get_task(self, task_id: str) -> dict | None:
+        return self.tasks.get(task_id)
+
+    def update_task(self, task_id: str, fields: dict) -> None:
+        if task_id in self.tasks:
+            self.tasks[task_id].update(fields)
+
+    def recent_messages(self, limit: int = 25) -> list[dict]:
+        rows = [t for t in self.tasks.values() if not t.get("source_ticket_id") and t.get("source_conversation_id")]
+        return sorted(rows, key=lambda t: t["created_at"], reverse=True)[:limit]
+
     def create_opportunity(self, opp: dict) -> dict:
         row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP"), "created_at": now_iso()}
         self.opportunities[row["opportunity_id"]] = row
@@ -167,7 +178,8 @@ class MemoryStore:
 
     def tool_calls_for(self, ticket_id: str, conversation_ids: list[str]) -> list[dict]:
         rows = [r for r in self.tool_calls
-                if r.get("ticket_id") == ticket_id or (r.get("conversation_id") and r["conversation_id"] in conversation_ids)]
+                if (ticket_id and r.get("ticket_id") == ticket_id)
+                or (r.get("conversation_id") and r["conversation_id"] in conversation_ids)]
         return sorted(rows, key=lambda r: (r["called_at"], r["id"]))
 
     def impact_counts(self) -> dict:
@@ -296,6 +308,20 @@ class SupabaseStore:
             .order("created_at").execute().data
         )
 
+    def get_task(self, task_id: str) -> dict | None:
+        rows = self.db.table(self.tasks_table).select("*").eq("task_id", task_id).execute().data
+        return rows[0] if rows else None
+
+    def update_task(self, task_id: str, fields: dict) -> None:
+        self.db.table(self.tasks_table).update(fields).eq("task_id", task_id).execute()
+
+    def recent_messages(self, limit: int = 25) -> list[dict]:
+        return (
+            self.db.table(self.tasks_table).select("*").is_("source_ticket_id", "null")
+            .not_.is_("source_conversation_id", "null")
+            .order("created_at", desc=True).limit(limit).execute().data
+        )
+
     def create_opportunity(self, opp: dict) -> dict:
         row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP")}
         return self.db.table(self.opportunities_table).insert(row).execute().data[0]
@@ -309,11 +335,12 @@ class SupabaseStore:
     def tool_calls_for(self, ticket_id: str, conversation_ids: list[str]) -> list[dict]:
         # Ids go inside a filter expression, so only plain ids are allowed through.
         safe = [c for c in conversation_ids if c and _SAFE_ID.fullmatch(c)]
-        if not _SAFE_ID.fullmatch(ticket_id or ""):
-            return []
-        cond = f"ticket_id.eq.{ticket_id}"
+        parts = [f"ticket_id.eq.{ticket_id}"] if ticket_id and _SAFE_ID.fullmatch(ticket_id) else []
         if safe:
-            cond += f",conversation_id.in.({','.join(safe)})"
+            parts.append(f"conversation_id.in.({','.join(safe)})")
+        if not parts:
+            return []
+        cond = ",".join(parts)
         return (
             self.db.table(self.tool_calls_table).select("*").or_(cond)
             .order("called_at").order("id").limit(50).execute().data

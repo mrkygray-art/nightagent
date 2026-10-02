@@ -196,6 +196,8 @@ DEMO_HTML = r"""<!doctype html>
   .ticket[data-priority="emergency"] .bar { background: var(--alarm); }
   .ticket[data-priority="urgent"] .bar { background: var(--sodium); }
   .ticket[data-priority="routine"] .bar { background: var(--clear); }
+  .ticket[data-priority="message"] .bar { background: #8f9cff; }
+  .chip.message { border-color: #8f9cff; color: #c9d0ff; }
   .ticket .body { padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
   .ticket .row1 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .ticket .id { font-family: var(--display); font-weight: 700; font-size: 22px; }
@@ -1166,13 +1168,45 @@ function el(tag, cls, text) {
   return n;
 }
 
-function renderTickets(list) {
+let lastMessages = []; // messages Sam took for a department or a person
+
+function messageCard(m) {
+  const li = el("li", "ticket message");
+  li.dataset.priority = "message";
+  li.dataset.id = m.message_id;
+  li.tabIndex = 0;
+  li.setAttribute("aria-label", `${m.message_id}: open the message`);
+  if (m.message_id === selectedId) li.setAttribute("aria-current", "true");
+  if (!firstLoad && !seen.has(m.message_id)) li.classList.add("fresh");
+  seen.add(m.message_id);
+  li.appendChild(el("div", "bar"));
+  const body = el("div", "body");
+  const row1 = el("div", "row1");
+  row1.appendChild(el("span", "id", m.message_id));
+  row1.appendChild(el("span", "chip message", `Message for ${m.department}`));
+  if (myCallRef && m.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
+  row1.appendChild(el("span", "when", timeAgo(m.created_at)));
+  body.appendChild(row1);
+  body.appendChild(el("p", "issue", m.summary || ""));
+  const meta = el("div", "meta");
+  meta.appendChild(el("span", "", `Caller: ${m.contact_name || "Unknown"} ${m.callback_number || ""}`));
+  meta.appendChild(el("span", "", `For: ${(m.assigned_to || "").replace(" (fictional)", "")}`));
+  body.appendChild(meta);
+  li.appendChild(body);
+  return li;
+}
+
+function renderTickets(list, messages = lastMessages) {
   els.tickets.replaceChildren();
-  if (!list.length) {
+  if (!list.length && !messages.length) {
     els.tickets.appendChild(el("li", "empty", "No tickets yet. Start a call and report a problem; the ticket shows up here before you hang up."));
     return;
   }
-  for (const t of list) {
+  // Tickets and messages share the board, newest first
+  const items = [...list.map((t) => ({ at: t.created_at, t })), ...messages.map((m) => ({ at: m.created_at, m }))]
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+  for (const { t, m } of items) {
+    if (m) { els.tickets.appendChild(messageCard(m)); continue; }
     const li = el("li", "ticket");
     li.dataset.priority = t.priority || "";
     li.dataset.id = t.ticket_id;
@@ -1211,10 +1245,14 @@ function renderTickets(list) {
 
 async function refreshTickets() {
   try {
-    const res = await fetch("/api/tickets", { cache: "no-store" });
+    const [res, msgRes] = await Promise.all([
+      fetch("/api/tickets", { cache: "no-store" }),
+      fetch("/api/messages", { cache: "no-store" }).catch(() => null),
+    ]);
     if (!res.ok) throw new Error(res.status);
     const list = await res.json();
-    renderTickets(list);
+    try { lastMessages = msgRes && msgRes.ok ? await msgRes.json() : lastMessages; } catch {}
+    renderTickets(list, lastMessages);
     els.boardStatus.textContent = "Updates live";
     await claimMyCallTicket(list);
     if (selectedId && !busy) loadTicket(selectedId, { quiet: true });
@@ -1308,6 +1346,7 @@ function renderPanel(detail, message) {
     if (message) p.appendChild(el("p", "error", message));
     return;
   }
+  if (detail.message) { renderMessagePanel(detail); return; }
   const t = detail.ticket;
   const head = el("div", "ev-head");
   head.appendChild(el("span", "id", t.ticket_id));
@@ -1412,19 +1451,53 @@ function renderPanel(detail, message) {
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
   const acts = businessActions(detail, key);
   if (acts) p.appendChild(acts);
-  if (detail.report) p.appendChild(callReport(t, detail.report));
+  if (detail.report) p.appendChild(callReport(t.ticket_id, detail.report));
   p.appendChild(tl);
 }
 
-// What happened behind this ticket's conversation, from the server's own records.
-function callReport(t, report) {
+// A call that ended in a message for a department or a person, not a service ticket
+function renderMessagePanel(detail) {
+  const p = els.panel;
+  const m = detail.message;
+  const head = el("div", "ev-head");
+  head.appendChild(el("span", "id", m.message_id));
+  head.appendChild(el("span", "chip message", `Message for ${m.department}`));
+  if (myCallRef && m.call_ref === myCallRef) head.appendChild(el("span", "chip mine", "Your call"));
+  p.appendChild(head);
+  p.appendChild(el("p", "ev-issue", m.summary || ""));
+  const meta = el("div", "ev-meta");
+  meta.appendChild(el("span", "", `Caller: ${m.contact_name || "Unknown"}`));
+  meta.appendChild(el("span", "", "No repair needed, so there's no service ticket. Sam passed the message on."));
+  p.appendChild(meta);
+  p.appendChild(callReport(m.message_id, detail.report));
+  if (els.prefTech.checked && (detail.tool_calls || []).length) {
+    const tl = el("ol", "timeline");
+    tl.setAttribute("aria-label", "Tool calls");
+    for (const c of detail.tool_calls) {
+      const li = el("li", "tool-row");
+      const time = el("time", "", clock(c.called_at));
+      time.dateTime = c.called_at || "";
+      li.appendChild(time);
+      li.appendChild(el("span", "dot"));
+      const what = el("div", "what");
+      what.appendChild(el("b", "", `Tool: ${c.tool}`));
+      what.appendChild(el("p", "", `${c.label}${c.outcome ? ` · ${c.outcome}` : ""}`));
+      li.appendChild(what);
+      tl.appendChild(li);
+    }
+    p.appendChild(tl);
+  }
+}
+
+// What happened behind this conversation, from the server's own records.
+function callReport(id, report) {
   const box = el("section", "report");
   box.id = "call-report";
   box.setAttribute("aria-label", "Call report");
   const head = el("div", "report-head");
   head.appendChild(el("h3", "", "Call report"));
   const copy = button("copy", "Copy link", async () => {
-    const url = `${location.origin}/demo?ticket=${encodeURIComponent(t.ticket_id)}&view=report`;
+    const url = `${location.origin}/demo?ticket=${encodeURIComponent(id)}&view=report`;
     try { await navigator.clipboard.writeText(url); copy.textContent = "Link copied"; }
     catch { window.prompt("Copy this link:", url); }
     setTimeout(() => { copy.textContent = "Copy link"; }, 2500);
@@ -1437,7 +1510,8 @@ function callReport(t, report) {
     dl.appendChild(el("dd", "", r.value));
   }
   box.appendChild(dl);
-  box.appendChild(el("span", "tech-line", "Voice (ElevenLabs) → Sam's reasoning → tool calls → rules in code → ticket → handoff · GET /api/tickets/" + t.ticket_id));
+  const isMessage = id.startsWith("TASK-");
+  box.appendChild(el("span", "tech-line", `Voice (ElevenLabs) → Sam's reasoning → tool calls → rules in code → ${isMessage ? "message" : "ticket"} → handoff · GET /api/${isMessage ? "messages" : "tickets"}/${id}`));
   return box;
 }
 
@@ -1522,7 +1596,7 @@ async function loadTicket(id, { quiet = false, scroll = false } = {}) {
   selectedId = id;
   markSelected();
   try {
-    const detail = await api(`/api/tickets/${encodeURIComponent(id)}`);
+    const detail = await api(id.startsWith("TASK-") ? `/api/messages/${encodeURIComponent(id)}` : `/api/tickets/${encodeURIComponent(id)}`);
     if (selectedId !== id || busy) return;
     // Background refreshes only redraw when something changed, so a click is never lost mid-redraw
     if (quiet && JSON.stringify(detail) === JSON.stringify(selectedDetail)) return;
@@ -1598,6 +1672,17 @@ const claimed = new Set();
 async function claimMyCallTicket(list) {
   if (!conversationId) return;
   myCallRef = myCallRef || await sha16(conversationId);
+  const note = myCallRef && lastMessages.find((m) => m.call_ref === myCallRef);
+  if (note && !claimed.has(note.message_id)) {
+    claimed.add(note.message_id);
+    if (callVoiceName) {
+      api("/api/demo/voice", { ticket_id: note.message_id, conversation_id: conversationId, voice: callVoiceName })
+        .then(() => loadTicket(note.message_id, { quiet: true }))
+        .catch((err) => console.warn(err));
+    }
+    addMessage("note", `Sam passed your message to ${(note.assigned_to || "the team").replace(" (fictional)", "")}. It's on the board below.`);
+    loadTicket(note.message_id);
+  }
   const mine = myCallRef && list.find((t) => t.call_ref === myCallRef);
   if (!mine || claimed.has(mine.ticket_id)) return;
   claimed.add(mine.ticket_id);
@@ -1730,7 +1815,7 @@ function startRinging(id) {
   clearTimeout(ringTimer);
   ringTimer = setTimeout(() => stopRinging(true), RING_MS);
   render();
-  if (selectedDetail && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
+  if (selectedDetail && selectedDetail.ticket && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
 }
 
 function stopRinging(missedIt) {
@@ -1745,7 +1830,7 @@ function stopRinging(missedIt) {
     setStatus("idle", "Missed call from NightAgent", `Tap Call back on ${id} in Demo Mode to take it.`);
   }
   render();
-  if (selectedDetail && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
+  if (selectedDetail && selectedDetail.ticket && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
 }
 
 async function answerRing() {
@@ -1813,7 +1898,7 @@ schedulePoll(0);
   // A shared link: /demo?ticket=NS-1042&view=report opens that ticket's call report
   const params = new URLSearchParams(location.search);
   const shared = (params.get("ticket") || "").trim().toUpperCase();
-  if (/^NS-\d{4}$/.test(shared)) {
+  if (/^(NS|TASK)-\d{4}$/.test(shared)) {
     loadTicket(shared, { scroll: params.get("view") !== "report" }).then(() => {
       const r = document.getElementById("call-report");
       if (r && params.get("view") === "report") r.scrollIntoView({ behavior: "smooth", block: "start" });
