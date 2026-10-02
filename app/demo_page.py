@@ -588,6 +588,28 @@ let pollTimer = null;
 let fastPollUntil = 0;
 let followUpTicket = null; // set while a follow-up call is running
 
+// Sam's voice changes from call to call, so a demo shows off different ElevenLabs voices.
+// The check-in call keeps the voice the caller last heard, like the same person calling back.
+// ?voice=lauren (any name below) picks one on purpose.
+const VOICES = [
+  { name: "Lauren", id: "DODLEQrClDo8wCz460ld" },
+  { name: "Sarah", id: "EXAVITQu4vr4xnSDxMaL" },
+  { name: "Matilda", id: "XrExE9yKIg1WjnnlVkGX" },
+  { name: "Eric", id: "cjVigY5qzO86Huf0OWal" },
+  { name: "Chris", id: "iP95p4xoKVk53GoZ742B" },
+];
+const VOICE_KEY = "nightagent-last-voice";
+let lastVoice = null;
+function pickVoice() {
+  const asked = new URLSearchParams(location.search).get("voice");
+  const chosen = asked && VOICES.find((v) => v.name.toLowerCase() === asked.toLowerCase());
+  if (chosen) return chosen;
+  let before = lastVoice && lastVoice.id;
+  try { before = before || localStorage.getItem(VOICE_KEY); } catch {}
+  const pool = VOICES.filter((v) => v.id !== before);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 async function loadSdk() {
   if (Conversation) return Conversation;
   const sources = [
@@ -998,7 +1020,11 @@ async function startSession(nextMode, opts = {}) {
     if (mode === "text") {
       session = await C.startSession({ ...base, textOnly: true, overrides: { conversation: { textOnly: true } } });
     } else {
-      if (els.prefSlow.checked) base.overrides = { tts: { speed: 0.82 } };
+      const voice = followUpTicket && lastVoice ? lastVoice : pickVoice();
+      lastVoice = voice;
+      try { localStorage.setItem(VOICE_KEY, voice.id); } catch {}
+      base.overrides = { tts: { voiceId: voice.id, ...(els.prefSlow.checked ? { speed: 0.82 } : {}) } };
+      logTech("Voice", `${voice.name}${followUpTicket ? " (same voice as your last call)" : " (picked at random for this call)"}`);
       // WebSocket sends the page's origin, which the agent's allowed-sites list requires.
       // (A WebRTC call is rejected for a missing origin header after it connects, so it
       // just hangs up.)
