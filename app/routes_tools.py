@@ -129,8 +129,14 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     record_event(tid, "ticket_created", f"{tid} is waiting for a technician.",
                  conversation_id=conv, actor_type="agent")
 
+    # Billing is decided here, not by the model: only an emergency for a known account whose plan
+    # doesn't include after-hours service gets the after-hours rate note.
+    mention_billing = priority == "emergency" and bool(customer) and not customer.get("after_hours_coverage")
     if priority == "emergency":
         next_step = "This is an emergency. Call page_on_call_tech now with this ticket_id."
+        next_step += (" Their plan does not include after-hours service: when you give the ticket details, say once "
+                      "that after-hours dispatch is billed at the after-hours rate under their plan."
+                      if mention_billing else " Do not mention billing or rates.")
     elif priority == "urgent":
         next_step = "Tell the caller this is first in the queue for the morning crew, and they'll get a call when the office opens."
     else:
@@ -142,7 +148,7 @@ def create_ticket(req: CreateTicketRequest) -> dict:
         "ticket_number_spoken": "N S " + " ".join(digits),
         "priority": priority,
         "priority_reason": reason,
-        "after_hours_coverage": bool(customer and customer.get("after_hours_coverage")),
+        "mention_billing": mention_billing,
         "next_step": next_step,
     }
 

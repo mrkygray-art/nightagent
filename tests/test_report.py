@@ -97,3 +97,22 @@ def test_old_calls_say_tools_were_not_recorded(client, tool):
     rows = _rows(client.get(f"/api/tickets/{made['ticket_id']}").json())
     assert rows["Tools Sam used"].startswith("Not recorded")
     assert rows["Call"] == "Live call"
+
+
+def _emergency_for(tool, customer_id, phone):
+    return tool("create-ticket", {
+        "customer_id": customer_id, "caller_name": "Test Caller", "callback_number": phone,
+        "issue_summary": "Gate will not close.", "category": "cannot_secure_site", "suggested_priority": "emergency",
+    })
+
+
+def test_billing_note_only_when_the_plan_lacks_after_hours(tool):
+    covered = _emergency_for(tool, "C-1001", "3105550142")  # Gold: after-hours included
+    assert covered["mention_billing"] is False and "Do not mention billing" in covered["next_step"]
+    not_covered = _emergency_for(tool, "C-1002", "3105550178")  # Standard: business hours only
+    assert not_covered["mention_billing"] is True and "after-hours rate" in not_covered["next_step"]
+    unknown = _emergency_for(tool, None, "3105550100")  # no account: plan unknown, so no billing talk
+    assert unknown["mention_billing"] is False
+    routine = tool("create-ticket", {"customer_id": "C-1002", "caller_name": "T", "callback_number": "3105550178",
+                                     "issue_summary": "Badge not working", "category": "access_issue"})
+    assert routine["mention_billing"] is False
