@@ -160,6 +160,10 @@ class MemoryStore:
         if task_id in self.tasks:
             self.tasks[task_id].update(fields)
 
+    def message_for_call(self, conversation_id: str, destination: str) -> dict | None:
+        return next((t for t in self.tasks.values() if t.get("source_conversation_id") == conversation_id
+                     and t.get("destination") == destination), None)
+
     def recent_messages(self, limit: int = 25) -> list[dict]:
         rows = [t for t in self.tasks.values() if not t.get("source_ticket_id") and t.get("source_conversation_id")]
         return sorted(rows, key=lambda t: t["created_at"], reverse=True)[:limit]
@@ -314,6 +318,13 @@ class SupabaseStore:
 
     def update_task(self, task_id: str, fields: dict) -> None:
         self.db.table(self.tasks_table).update(fields).eq("task_id", task_id).execute()
+
+    def message_for_call(self, conversation_id: str, destination: str) -> dict | None:
+        rows = (
+            self.db.table(self.tasks_table).select("*").eq("source_conversation_id", conversation_id)
+            .eq("destination", destination).limit(1).execute().data
+        )
+        return rows[0] if rows else None
 
     def recent_messages(self, limit: int = 25) -> list[dict]:
         return (

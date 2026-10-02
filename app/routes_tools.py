@@ -85,7 +85,8 @@ CONFIRM_FIRST = ("Find out what the caller needs, if you don't know yet: a probl
                  "(what is happening and when it started), or a message for a department or person. Then, "
                  "before calling create_ticket or take_message, ask for the caller's full name if you don't "
                  "have it, read their name and callback number back (number in groups of three, three, four), "
-                 "and wait for them to say it's right. Do not call either tool until they confirm.")
+                 "and wait for them to say it's right. Do not call either tool until they confirm. For a "
+                 "message, also ask once, before take_message, if there's a good time to call them back.")
 
 
 def _public_customer(c: dict) -> dict:
@@ -192,6 +193,20 @@ def take_message(req: MessageRequest) -> dict:
     reason = " ".join(req.reason.split())[:600]
     best_time = " ".join((req.best_time or "").split())[:120] or None
     who = DESTINATIONS[dept]
+    # A second message to the same person on the same call (say, the caller added a good time to
+    # call back) updates the first one rather than leaving two.
+    earlier = store.message_for_call(req.conversation_id, dept) if req.conversation_id else None
+    if earlier:
+        fields = {"summary": reason or earlier.get("summary"),
+                  "best_time": best_time or earlier.get("best_time"),
+                  "person_requested": " ".join((req.person_requested or "").split())[:100] or earlier.get("person_requested"),
+                  "callback_number": phone_digits(req.callback_number) or earlier.get("callback_number")}
+        fields["requested_follow_up"] = "Call the caller back" + (f" ({fields['best_time']})" if fields["best_time"] else "")
+        store.update_task(earlier["task_id"], fields)
+        best_time = fields["best_time"]
+        log_tool_call("take_message", f"{earlier['task_id']} updated for {who}", conversation_id=req.conversation_id,
+                      ticket_id=earlier.get("source_ticket_id"), called_at=started)
+        return _message_reply(earlier["task_id"], dept, who, best_time)
     task = store.create_task({
         "destination": dept,
         "assigned_to": who,
@@ -215,15 +230,20 @@ def take_message(req: MessageRequest) -> dict:
         record_event(ticket["ticket_id"], "task_created", f"{task['task_id']} for {who}: {reason[:160]}",
                      conversation_id=req.conversation_id, actor_type="agent",
                      metadata={"task_id": task["task_id"], "destination": dept})
+    return _message_reply(task["task_id"], dept, who, best_time)
+
+
+def _message_reply(task_id: str, dept: str, who: str, best_time: str | None) -> dict:
     name = who.split(",")[0].replace(" (fictional)", "")
     speaker = f"Our {name.lower()}" if name.endswith("desk") else name + ROLE_PHRASE.get(dept, "")
     when = f" {best_time}" if best_time else " on the next business day"
     return {
         "saved": True,
-        "message_id": task["task_id"],
+        "message_id": task_id,
         "tell_the_caller": f"{speaker} will get your message and call you back{when}.",
         "next_step": "Tell the caller who will call them back and when, in one or two sentences. "
-                     "Don't promise an exact time beyond that. Then ask if there's anything else.",
+                     "Don't promise an exact time beyond that, and don't call take_message again for "
+                     "this person unless the caller changes something. Then ask if there's anything else.",
     }
 
 

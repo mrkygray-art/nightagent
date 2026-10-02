@@ -72,3 +72,14 @@ def test_voice_for_a_message_needs_the_calls_own_id(client, tool):
 
 def test_unknown_message_is_404(client):
     assert client.get("/api/messages/TASK-0000").status_code == 404
+
+
+def test_second_message_to_the_same_person_updates_the_first(client, tool):
+    first = _message(tool)
+    again = _message(tool, best_time="tomorrow after 10 AM")
+    assert again["message_id"] == first["message_id"]
+    assert again["tell_the_caller"].endswith("call you back tomorrow after 10 AM.")
+    board = client.get("/api/messages").json()
+    assert len(board) == 1 and board[0]["best_time"] == "tomorrow after 10 AM"
+    other = _message(tool, department="billing", reason="Invoice question")
+    assert other["message_id"] != first["message_id"]  # a different person gets their own message
