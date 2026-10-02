@@ -14,7 +14,7 @@ from app import config, lifecycle
 from app.follow_up import apply_outcome
 from app.notify import page_on_call
 from app.security import require_tool_secret
-from app.service import move_ticket, record_event
+from app.service import log_tool_call, move_ticket, record_event
 from app.store import get_store, now_iso, phone_digits
 from app.triage import triage
 
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/tools", dependencies=[Depends(require_tool_secret)])
 
 class LookupRequest(BaseModel):
     query: str = Field(..., description="Phone number or business/contact name")
+    conversation_id: str | None = Field(None, max_length=120)
 
 
 class CreateTicketRequest(BaseModel):
@@ -77,7 +78,11 @@ def _public_customer(c: dict) -> dict:
 
 @router.post("/lookup-customer")
 def lookup_customer(req: LookupRequest) -> dict:
+    started = now_iso()
     matches = get_store().find_customers(req.query)
+    outcome = ("Found " + matches[0]["business_name"] if len(matches) == 1
+               else f"{len(matches)} possible accounts" if matches else "No matching account")
+    log_tool_call("lookup_customer", outcome, conversation_id=req.conversation_id, called_at=started)
     if len(matches) == 1:
         return {"found": True, "customer": _public_customer(matches[0])}
     if len(matches) > 1:
@@ -95,6 +100,7 @@ def lookup_customer(req: LookupRequest) -> dict:
 
 @router.post("/create-ticket")
 def create_ticket(req: CreateTicketRequest) -> dict:
+    started = now_iso()
     store = get_store()
     category, priority, reason = triage(req.category, req.suggested_priority)
 
@@ -112,6 +118,8 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     })
 
     tid, conv = ticket["ticket_id"], req.conversation_id
+    log_tool_call("create_ticket", f"{tid} created, {lifecycle.PRIORITY_LABELS[priority].lower()}",
+                  conversation_id=conv, ticket_id=tid, called_at=started)
     who = customer["business_name"] if customer else "Caller without a matching account"
     record_event(tid, "call_received", f"{who}: {ticket['issue_summary'][:160]}",
                  conversation_id=conv, actor_type="customer")
@@ -141,19 +149,26 @@ def create_ticket(req: CreateTicketRequest) -> dict:
 
 @router.post("/page-on-call")
 def page_on_call_tech(req: PageRequest) -> dict:
+    started = now_iso()
     store = get_store()
     ticket = store.get_ticket(req.ticket_id.strip().upper())
     if not ticket:
         return {"paged": False, "message": "Ticket not found. Double-check the ticket_id."}
 
+    def note(outcome: str) -> None:
+        log_tool_call("page_on_call_tech", outcome, conversation_id=ticket.get("conversation_id"),
+                      ticket_id=ticket["ticket_id"], called_at=started)
+
     # Guardrail: only emergencies wake someone up, regardless of what the model asks for.
     if ticket["priority"] != "emergency":
+        note("Not sent: the rules say this isn't an emergency")
         return {
             "paged": False,
             "message": f"Ticket is {ticket['priority']}, not an emergency, so no page was sent. "
                        "Explain the follow-up timing instead.",
         }
     if ticket.get("paged_at"):
+        note("Already alerted earlier")
         return {"paged": True, "message": "The technician was already paged for this ticket."}
 
     customer = store.get_customer(ticket["customer_id"]) if ticket.get("customer_id") else None
@@ -169,6 +184,7 @@ def page_on_call_tech(req: PageRequest) -> dict:
     else:
         store.update_ticket(ticket["ticket_id"], {"paged_at": paged_at})
     simulated = bool(result.get("simulated"))
+    note(f"{config.ONCALL_TECH_NAME} alerted" + (" (simulated)" if simulated else ""))
     record_event(ticket["ticket_id"], "technician_paged",
                  f"{config.ONCALL_TECH_NAME} alerted" + (" (simulated: no real text was sent)" if simulated else ""),
                  simulated=simulated, conversation_id=ticket.get("conversation_id"), actor_type="agent")
@@ -187,6 +203,7 @@ def page_on_call_tech(req: PageRequest) -> dict:
 def follow_up_outcome(req: FollowUpOutcomeRequest) -> dict:
     """Called once by the follow-up agent near the end of the call. The pass proves which ticket
     this call is about; code decides everything that happens next."""
+    started = now_iso()
     store = get_store()
     token_hash = hashlib.sha256(req.follow_up_token.strip().encode()).hexdigest()
     ticket = store.find_ticket_by_follow_up_token(token_hash) if req.follow_up_token.strip() else None
@@ -197,6 +214,8 @@ def follow_up_outcome(req: FollowUpOutcomeRequest) -> dict:
             "recorded": False,
             "message": "This follow-up couldn't be saved. Tell the customer the service desk will call them to confirm everything, then close the call.",
         }
+    log_tool_call("record_follow_up_outcome", f"Saved: {req.resolution.replace('_', ' ')}",
+                  conversation_id=req.conversation_id, ticket_id=ticket["ticket_id"], called_at=started)
     result = apply_outcome(ticket, req.model_dump(), req.conversation_id)
     return {
         "recorded": True,

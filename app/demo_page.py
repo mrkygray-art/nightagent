@@ -285,6 +285,16 @@ DEMO_HTML = r"""<!doctype html>
   .tag-sim { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--sodium); border: 1px solid rgba(245,165,36,.5); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; }
   @media (max-width: 560px) { .timeline li { grid-template-columns: 60px 16px 1fr; gap: 0 8px; } }
 
+  .report { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; scroll-margin-top: 12px; }
+  .report-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+  .report h3 { margin: 0; font-size: 16px; }
+  .report dl { margin: 0; display: grid; grid-template-columns: minmax(118px, 32%) 1fr; gap: 7px 14px; font-size: 14px; }
+  .report dt { color: var(--muted); }
+  .report dd { margin: 0; overflow-wrap: anywhere; }
+  .report .copy { font: 600 14px var(--body); color: var(--sodium); background: transparent; border: 0; padding: 2px 0; cursor: pointer; text-decoration: underline; }
+  @media (max-width: 560px) { .report dl { grid-template-columns: 1fr; gap: 0; } .report dd { margin-bottom: 9px; } }
+  .timeline li.tool-row .dot::before { border-radius: 2px; background: transparent; border: 2px solid var(--muted); }
+  .timeline li.tool-row .what b { font: 600 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted); }
   .follow-box { border: 1px solid rgba(245,165,36,.45); background: var(--sodium-soft); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
   .follow-box p { margin: 0; font-size: 14px; }
   .follow-box .say { font-style: italic; color: var(--text); }
@@ -600,6 +610,7 @@ const VOICES = [
 ];
 const VOICE_KEY = "nightagent-last-voice";
 let lastVoice = null;
+let callVoiceName = null; // what took the current call: a voice name, or "text" for a text chat
 function pickVoice() {
   const asked = new URLSearchParams(location.search).get("voice");
   const chosen = asked && VOICES.find((v) => v.name.toLowerCase() === asked.toLowerCase());
@@ -1018,10 +1029,12 @@ async function startSession(nextMode, opts = {}) {
       ...handlers,
     };
     if (mode === "text") {
+      if (!followUpTicket) callVoiceName = "text";
       session = await C.startSession({ ...base, textOnly: true, overrides: { conversation: { textOnly: true } } });
     } else {
       const voice = followUpTicket && lastVoice ? lastVoice : pickVoice();
       lastVoice = voice;
+      if (!followUpTicket) callVoiceName = voice.name;
       try { localStorage.setItem(VOICE_KEY, voice.id); } catch {}
       base.overrides = { tts: { voiceId: voice.id, ...(els.prefSlow.checked ? { speed: 0.82 } : {}) } };
       logTech("Voice", `${voice.name}${followUpTicket ? " (same voice as your last call)" : " (picked at random for this call)"}`);
@@ -1358,12 +1371,32 @@ function renderPanel(detail, message) {
   if (key && detail.follow_up_ready) p.appendChild(followUpBox(t));
   if (message) p.appendChild(el("p", "error", message));
 
-  // Customer journey, oldest first
+  // Customer journey, oldest first. Behind the scenes adds each tool call Sam made, in time order.
   const tl = el("ol", "timeline");
   tl.setAttribute("aria-label", "Customer journey");
-  detail.events.forEach((e, i) => {
+  const lastEvent = detail.events[detail.events.length - 1];
+  const rows = detail.events.map((e) => ({ at: e.occurred_at, e }));
+  if (els.prefTech.checked) {
+    for (const c of detail.tool_calls || []) rows.push({ at: c.called_at, c });
+    // Same moment: the tool call comes first, since it caused the event
+    rows.sort((a, b) => (new Date(a.at) - new Date(b.at)) || ((b.c ? 1 : 0) - (a.c ? 1 : 0)));
+  }
+  rows.forEach(({ e, c }) => {
+    if (c) {
+      const li = el("li", "tool-row");
+      const time = el("time", "", clock(c.called_at));
+      time.dateTime = c.called_at || "";
+      li.appendChild(time);
+      li.appendChild(el("span", "dot"));
+      const what = el("div", "what");
+      what.appendChild(el("b", "", `Tool: ${c.tool}`));
+      what.appendChild(el("p", "", `${c.label}${c.outcome ? ` · ${c.outcome}` : ""}`));
+      li.appendChild(what);
+      tl.appendChild(li);
+      return;
+    }
     const li = el("li", e.simulated ? "sim" : "");
-    if (i === detail.events.length - 1) li.classList.add("latest");
+    if (e === lastEvent) li.classList.add("latest");
     const time = el("time", "", clock(e.occurred_at));
     time.dateTime = e.occurred_at || "";
     li.appendChild(time);
@@ -1379,7 +1412,33 @@ function renderPanel(detail, message) {
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
   const acts = businessActions(detail, key);
   if (acts) p.appendChild(acts);
+  if (detail.report) p.appendChild(callReport(t, detail.report));
   p.appendChild(tl);
+}
+
+// What happened behind this ticket's conversation, from the server's own records.
+function callReport(t, report) {
+  const box = el("section", "report");
+  box.id = "call-report";
+  box.setAttribute("aria-label", "Call report");
+  const head = el("div", "report-head");
+  head.appendChild(el("h3", "", "Call report"));
+  const copy = button("copy", "Copy link", async () => {
+    const url = `${location.origin}/demo?ticket=${encodeURIComponent(t.ticket_id)}&view=report`;
+    try { await navigator.clipboard.writeText(url); copy.textContent = "Link copied"; }
+    catch { window.prompt("Copy this link:", url); }
+    setTimeout(() => { copy.textContent = "Copy link"; }, 2500);
+  });
+  head.appendChild(copy);
+  box.appendChild(head);
+  const dl = el("dl");
+  for (const r of report.rows) {
+    dl.appendChild(el("dt", "", r.label));
+    dl.appendChild(el("dd", "", r.value));
+  }
+  box.appendChild(dl);
+  box.appendChild(el("span", "tech-line", "Voice (ElevenLabs) → Sam's reasoning → tool calls → rules in code → ticket → handoff · GET /api/tickets/" + t.ticket_id));
+  return box;
 }
 
 function followUpBox(t) {
@@ -1547,6 +1606,12 @@ async function claimMyCallTicket(list) {
       const data = await api("/api/demo/claim", { ticket_id: mine.ticket_id, conversation_id: conversationId });
       saveDemoKey(mine.ticket_id, data.demo_key);
     } catch (err) { console.warn(err); }
+  }
+  if (callVoiceName) {
+    // For the call report: which voice (or text chat) took this call
+    api("/api/demo/voice", { ticket_id: mine.ticket_id, conversation_id: conversationId, voice: callVoiceName })
+      .then(() => loadTicket(mine.ticket_id, { quiet: true }))
+      .catch((err) => console.warn(err));
   }
   addMessage("note", `Your ticket ${mine.ticket_id} is in Demo Mode below. It starts moving through dispatch when this call ends.`);
   callTicketId = mine.ticket_id;
@@ -1744,6 +1809,17 @@ refreshMics();
 loadScenarios();
 loadImpact(true);
 schedulePoll(0);
+{
+  // A shared link: /demo?ticket=NS-1042&view=report opens that ticket's call report
+  const params = new URLSearchParams(location.search);
+  const shared = (params.get("ticket") || "").trim().toUpperCase();
+  if (/^NS-\d{4}$/.test(shared)) {
+    loadTicket(shared, { scroll: params.get("view") !== "report" }).then(() => {
+      const r = document.getElementById("call-report");
+      if (r && params.get("view") === "report") r.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+}
 </script>
 </body>
 </html>

@@ -65,6 +65,9 @@ def new_record_id(prefix: str) -> str:
     return f"{prefix}-{secrets.randbelow(9000) + 1000}"
 
 
+_SAFE_ID = re.compile(r"[A-Za-z0-9_-]{1,120}")
+
+
 def _clean_name_query(text: str) -> str:
     # Letters, digits and spaces only, so the text is safe inside a filter expression.
     return re.sub(r"[^A-Za-z0-9 ]", "", text or "").strip()
@@ -81,6 +84,7 @@ class MemoryStore:
         self._event_seq = 0
         self.tasks: dict[str, dict] = {}
         self.opportunities: dict[str, dict] = {}
+        self.tool_calls: list[dict] = []
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -158,6 +162,14 @@ class MemoryStore:
         return sorted((o for o in self.opportunities.values() if o.get("source_ticket_id") == source_ticket_id),
                       key=lambda o: o["created_at"])
 
+    def add_tool_call(self, row: dict) -> None:
+        self.tool_calls.append({"called_at": now_iso(), "outcome": "", **row, "id": len(self.tool_calls) + 1})
+
+    def tool_calls_for(self, ticket_id: str, conversation_ids: list[str]) -> list[dict]:
+        rows = [r for r in self.tool_calls
+                if r.get("ticket_id") == ticket_id or (r.get("conversation_id") and r["conversation_id"] in conversation_ids)]
+        return sorted(rows, key=lambda r: (r["called_at"], r["id"]))
+
     def impact_counts(self) -> dict:
         def events(kind, source=None):
             return sum(1 for e in self.events if e["event_type"] == kind and (source is None or e["source"] == source))
@@ -199,6 +211,7 @@ class SupabaseStore:
         self.tasks_table = f"{prefix}routing_tasks"
         self.opportunities_table = f"{prefix}opportunities"
         self.impact_function = f"{prefix}impact"
+        self.tool_calls_table = f"{prefix}tool_calls"
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -289,6 +302,22 @@ class SupabaseStore:
 
     def impact_counts(self) -> dict:
         return self.db.rpc(self.impact_function).execute().data
+
+    def add_tool_call(self, row: dict) -> None:
+        self.db.table(self.tool_calls_table).insert(row).execute()
+
+    def tool_calls_for(self, ticket_id: str, conversation_ids: list[str]) -> list[dict]:
+        # Ids go inside a filter expression, so only plain ids are allowed through.
+        safe = [c for c in conversation_ids if c and _SAFE_ID.fullmatch(c)]
+        if not _SAFE_ID.fullmatch(ticket_id or ""):
+            return []
+        cond = f"ticket_id.eq.{ticket_id}"
+        if safe:
+            cond += f",conversation_id.in.({','.join(safe)})"
+        return (
+            self.db.table(self.tool_calls_table).select("*").or_(cond)
+            .order("called_at").order("id").limit(50).execute().data
+        )
 
     def opportunities_for(self, source_ticket_id: str) -> list[dict]:
         return (

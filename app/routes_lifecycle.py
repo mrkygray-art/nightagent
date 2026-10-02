@@ -12,7 +12,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app import config, demo, lifecycle
+import logging
+
+from app import config, demo, lifecycle, report
 from app.follow_up import follow_up_variables
 from app.service import (move_ticket, public_event, public_opportunity, public_task, public_ticket,
                          record_event, shift)
@@ -31,6 +33,12 @@ class ScenarioRequest(BaseModel):
 class ClaimRequest(BaseModel):
     ticket_id: str = Field(..., max_length=20)
     conversation_id: str = Field(..., min_length=8, max_length=120)
+
+
+class VoiceRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=20)
+    conversation_id: str = Field(..., min_length=8, max_length=120)
+    voice: str = Field(..., max_length=20)
 
 
 class DemoKeyRequest(BaseModel):
@@ -66,14 +74,25 @@ def _detail(ticket: dict) -> dict:
     store = get_store()
     tid = ticket["ticket_id"]
     nxt = lifecycle.next_demo_step(ticket.get("status"))
+    events = store.list_events(tid)
+    tasks = store.tasks_for(tid)
+    opportunities = store.opportunities_for(tid)
+    try:
+        convs = [c for c in (ticket.get("conversation_id"), ticket.get("follow_up_conversation_id")) if c]
+        tool_calls = store.tool_calls_for(tid, convs)
+    except Exception:  # noqa: BLE001 - the report is a bonus; the ticket must still load
+        logging.getLogger("nightshift").exception("Could not load tool calls for %s", tid)
+        tool_calls = []
     return {
         "ticket": public_ticket(ticket),
-        "events": [public_event(e) for e in store.list_events(tid)],
+        "events": [public_event(e) for e in events],
+        "tool_calls": [report.public_tool_call(t) for t in tool_calls],
+        "report": report.build(ticket, events, tool_calls, tasks, opportunities),
         "next_step": lifecycle.STATE_LABELS[nxt[0]] if nxt else None,
         "follow_up_ready": lifecycle.normalize_state(ticket.get("status")) == "follow_up_pending",
         "actions": {
-            "tasks": [public_task(t) for t in store.tasks_for(tid)],
-            "opportunities": [public_opportunity(o) for o in store.opportunities_for(tid)],
+            "tasks": [public_task(t) for t in tasks],
+            "opportunities": [public_opportunity(o) for o in opportunities],
             "tickets": [public_ticket(t) for t in store.linked_tickets(tid)],
         },
     }
@@ -145,6 +164,22 @@ def claim_call_ticket(req: ClaimRequest) -> dict:
     base = lifecycle.normalize_state(ticket.get("status"))
     get_store().update_ticket(ticket["ticket_id"], {"demo": True, "demo_key_hash": key_hash, "base_status": base})
     return {"demo_key": key, **_detail(get_store().get_ticket(ticket["ticket_id"]))}
+
+
+@router.post("/demo/voice")
+def note_voice(req: VoiceRequest) -> dict:
+    """Remember which voice (or text chat) took the call, for the call report. Same proof as a
+    claim: only the caller's browser knows the conversation id."""
+    ticket = _ticket_or_404(req.ticket_id)
+    if not ticket.get("conversation_id") or not hmac.compare_digest(ticket["conversation_id"], req.conversation_id):
+        raise HTTPException(status_code=403, detail="That ticket came from a different call.")
+    voice = req.voice.strip()
+    voice = report.TEXT_CHAT if voice.lower() == report.TEXT_CHAT else voice.capitalize()
+    if voice != report.TEXT_CHAT and voice not in report.VOICES:
+        raise HTTPException(status_code=400, detail="Unknown voice.")
+    if not ticket.get("voice"):
+        get_store().update_ticket(ticket["ticket_id"], {"voice": voice})
+    return {"ok": True}
 
 
 @router.post("/demo/advance")

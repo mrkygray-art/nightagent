@@ -41,6 +41,21 @@ def record_event(ticket_id: str, event_type: str, description: str = "", *, simu
         return None
 
 
+def log_tool_call(tool: str, outcome: str = "", *, conversation_id: str | None = None,
+                  ticket_id: str | None = None, called_at: str | None = None) -> None:
+    """Note one tool call for the call report. Like events, this must never break a live call."""
+    try:
+        get_store().add_tool_call({
+            "tool": tool,
+            "outcome": outcome[:200],
+            "conversation_id": conversation_id or None,
+            "ticket_id": ticket_id,
+            "called_at": called_at or now_iso(),
+        })
+    except Exception:  # noqa: BLE001
+        log.exception("Could not log the %s tool call", tool)
+
+
 def move_ticket(ticket: dict, target: str, extra: dict | None = None) -> dict:
     """Move a ticket to `target` if the lifecycle allows it. Raises TransitionError otherwise."""
     lifecycle.check_transition(ticket.get("status"), target)
