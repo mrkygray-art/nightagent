@@ -711,7 +711,17 @@ const TOOL_WORDS = {
 // Who's talking. Sam answers; after a handoff a specialist assistant takes over.
 const SPECIALISTS = { Jordan: "Jordan · billing assistant", Riley: "Riley · sales assistant" };
 let speaker = "Sam";      // "Sam", "pending" (just handed off), or a specialist's name
+let lastSamText = "";     // Sam's last line: it names who Sam is bringing in
+const TOOL_OWNER = { billing_lookup: "Jordan", request_billing_review: "Jordan", record_sales_interest: "Riley" };
 function speakerName() { return speaker === "pending" ? "The assistant" : speaker; }
+function nameFrom(text) { return Object.keys(SPECIALISTS).find((n) => new RegExp(`\\b${n}\\b`).test(text || "")); }
+// Once we know who took over, relabel any lines already shown as "Specialist assistant"
+function setSpeaker(name) {
+  if (!SPECIALISTS[name] || speaker === name) return;
+  speaker = name;
+  els.transcript.querySelectorAll(".msg.sam b[data-pending]").forEach((b) => { b.textContent = SPECIALISTS[name]; b.removeAttribute("data-pending"); });
+  logTech("Handoff", `${SPECIALISTS[name]} is on the call`);
+}
 // ElevenLabs can add voice-style tags such as [excited]; they're for the voice, not the transcript.
 function cleanSpeech(text) { return (text || "").replace(/\[[a-z][a-z ]{1,24}\]\s*/gi, "").trim(); }
 function logTech(what, detail) {
@@ -993,11 +1003,10 @@ const handlers = {
       addMessage("you", message);
     } else {
       const text = cleanSpeech(message);
-      if (speaker === "pending") {
-        const name = Object.keys(SPECIALISTS).find((n) => new RegExp(`\\b${n}\\b`).test(text));
-        if (name) { speaker = name; logTech("Handoff", `${SPECIALISTS[name]} is on the call`); }
-      }
+      if (speaker === "pending") { const name = nameFrom(text); if (name) setSpeaker(name); }
+      if (speaker === "Sam") lastSamText = text;
       addMessage("sam", text, SPECIALISTS[speaker] || (speaker === "pending" ? "Specialist assistant" : "Sam"));
+      if (speaker === "pending") { const b = els.transcript.querySelector(".msg.sam:last-child b"); if (b) b.dataset.pending = "1"; }
       if (mode === "text" && session) setStatus("listening", "Your turn", "Type your reply below.");
       schedulePoll(800);
     }
@@ -1009,12 +1018,17 @@ const handlers = {
   },
   onAgentToolRequest: (e) => {
     const name = (e && e.tool_name) || "tool";
+    if (TOOL_OWNER[name]) setSpeaker(TOOL_OWNER[name]);
     setOrb("thinking", name === "transfer_to_agent" ? "Bringing in a specialist…" : `${speakerName()} is looking that up…`);
     logTech(`→ ${name}`, (TOOL_WORDS[name] || [])[0] || "");
   },
   onAgentToolResponse: (e) => {
     const name = (e && e.tool_name) || "tool";
-    if (name === "transfer_to_agent" && !(e && e.is_error)) speaker = "pending";
+    if (name === "transfer_to_agent" && !(e && e.is_error)) {
+      speaker = "pending";
+      const named = nameFrom(lastSamText);  // "I'll bring in Jordan, our billing assistant"
+      if (named) setSpeaker(named);
+    }
     logTech(`← ${name}`, e && e.is_error ? "the tool reported an error" : (TOOL_WORDS[name] || [])[1] || "done");
   },
   onError: (message) => {
@@ -1029,6 +1043,7 @@ async function startSession(nextMode, opts = {}) {
   mode = nextMode || mode;
   connecting = true;
   speaker = "Sam";
+  lastSamText = "";
   showError("");
   setStatus("connecting", "Calling Sam…", "This takes a second or two.");
   if (opts.ring) ringbackStop = playRing(8000);
