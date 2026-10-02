@@ -28,6 +28,12 @@ TEXT_CHAT = "text"
 TOOL_NAMES["take_message"] = "Took a message"
 
 
+def tool_label(row: dict) -> str:
+    if row["tool"] == "take_message" and " updated " in f" {row.get('outcome') or ''} ":
+        return "Updated the message"
+    return TOOL_NAMES.get(row["tool"], row["tool"].replace("_", " ").capitalize())
+
+
 def _agent_and_channel(voice: str | None) -> tuple[str, str]:
     agent = "Sam, after-hours dispatcher" + (f" (voice: {voice})" if voice in VOICES else "")
     channel = "Text chat" if voice == TEXT_CHAT else "Voice call" if voice else "Live call"
@@ -37,7 +43,7 @@ def _agent_and_channel(voice: str | None) -> tuple[str, str]:
 def _tools_line(tool_calls: list[dict]) -> str:
     if not tool_calls:
         return "Not recorded"
-    return f"{len(tool_calls)}: " + "; ".join(TOOL_NAMES.get(t["tool"], t["tool"]) for t in tool_calls)
+    return f"{len(tool_calls)}: " + "; ".join(tool_label(t) for t in tool_calls)
 
 
 def build_message(task: dict, tool_calls: list[dict], department: str, callback: str) -> dict:
@@ -59,7 +65,7 @@ def build_message(task: dict, tool_calls: list[dict], department: str, callback:
 def public_tool_call(row: dict) -> dict:
     return {
         "tool": row["tool"],
-        "label": TOOL_NAMES.get(row["tool"], row["tool"].replace("_", " ").capitalize()),
+        "label": tool_label(row),
         "outcome": row.get("outcome") or "",
         "called_at": row.get("called_at"),
     }
@@ -106,7 +112,7 @@ def build(ticket: dict, events: list[dict], tool_calls: list[dict], tasks: list[
         escalated = "No"
 
     if tool_calls:
-        names = [TOOL_NAMES.get(t["tool"], t["tool"]) for t in tool_calls]
+        names = [tool_label(t) for t in tool_calls]
         tools = f"{len(tool_calls)}: " + "; ".join(names)
     elif example:
         tools = "None: this example skips the call"

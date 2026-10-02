@@ -81,5 +81,7 @@ def test_second_message_to_the_same_person_updates_the_first(client, tool):
     assert again["tell_the_caller"].endswith("call you back tomorrow after 10 AM.")
     board = client.get("/api/messages").json()
     assert len(board) == 1 and board[0]["best_time"] == "tomorrow after 10 AM"
+    rows = {r["label"]: r["value"] for r in client.get(f"/api/messages/{first['message_id']}").json()["report"]["rows"]}
+    assert rows["Tools Sam used"] == "2: Took a message; Updated the message"
     other = _message(tool, department="billing", reason="Invoice question")
     assert other["message_id"] != first["message_id"]  # a different person gets their own message
