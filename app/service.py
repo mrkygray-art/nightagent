@@ -81,6 +81,7 @@ def public_ticket(t: dict) -> dict:
         "status": status,
         "status_label": lifecycle.STATE_LABELS[status],
         "priority_label": lifecycle.PRIORITY_LABELS.get(t.get("priority"), t.get("priority")),
+        "priority_reason": lifecycle.plain_words(t.get("priority_reason")) or None,
         "call_ref": call_ref(t.get("conversation_id")),
         "demo": bool(t.get("demo")),
     })
@@ -100,10 +101,18 @@ def public_opportunity(o: dict) -> dict:
 
 
 def public_event(e: dict) -> dict:
+    label = lifecycle.EVENT_LABELS.get(e["event_type"], e["event_type"].replace("_", " ").capitalize())
+    description = lifecycle.plain_words(e.get("description"))
+    # "Problem saved: High priority" reads better than burying the priority in the details.
+    if e["event_type"] in ("triage_completed", "priority_reviewed"):
+        for word in lifecycle.PRIORITY_LABELS.values():
+            if description.startswith(word + ": "):
+                label, description = f"{label}: {word}", description[len(word) + 2:]
+                break
     return {
         "event_type": e["event_type"],
-        "label": lifecycle.EVENT_LABELS.get(e["event_type"], e["event_type"].replace("_", " ").capitalize()),
-        "description": e.get("description") or "",
+        "label": label,
+        "description": description,
         "simulated": bool(e.get("simulated")),
         "occurred_at": e.get("occurred_at"),
     }

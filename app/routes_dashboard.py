@@ -35,14 +35,14 @@ def dashboard() -> str:
         rows.append(
             "<tr>"
             f"<td><strong>{escape(t['ticket_id'])}</strong><br><small>{escape(str(t.get('created_at', ''))[:16].replace('T', ' '))} UTC</small></td>"
-            f"<td><span class='badge' style='background:{color}'>{escape(t['priority'])}</span><br><small>{escape(t.get('priority_reason') or '')}</small></td>"
+            f"<td><span class='badge' style='background:{color}'>{escape(t['priority_label'])}</span><br><small>{escape(t.get('priority_reason') or '')}</small></td>"
             f"<td>{escape(t.get('caller_name') or '')}<br><small>{escape(t['callback_number'])}</small></td>"
             f"<td>{escape(t.get('issue_summary') or '')}</td>"
             f"<td>{escape(t['status_label'])}</td>"
-            f"<td><small>{escape(t.get('call_summary') or 'Waiting for post-call webhook…')}</small></td>"
+            f"<td><small>{escape(t.get('call_summary') or 'Call summary on its way…')}</small></td>"
             "</tr>"
         )
-    body = "".join(rows) or "<tr><td colspan='6'>No tickets yet. Talk to the agent to create one.</td></tr>"
+    body = "".join(rows) or "<tr><td colspan='6'>No tickets yet. Talk to Sam to create one.</td></tr>"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -60,7 +60,7 @@ def dashboard() -> str:
 </style></head>
 <body>
 <h1>NightAgent</h1>
-<p class="sub">AI service lifecycle demo built on ElevenLabs Agents and Python/FastAPI. Demo data only. <a href="/demo">Try the live demo</a></p>
+<p class="sub">Every service call Sam has taken, newest first. Demo data only. <a href="/demo">Try the live demo</a></p>
 <div class="wrap"><table>
 <tr><th>Ticket</th><th>Priority</th><th>Caller</th><th>Issue</th><th>Status</th><th>Call summary</th></tr>
 {body}

@@ -162,7 +162,7 @@ def advance(req: DemoKeyRequest) -> dict:
         # The call already paged the on-call technician, so that's who takes the job.
         tech = config.ONCALL_TECH_NAME
         extra["technician_name"] = tech
-        description = f"{tech} (the on-call technician who was paged) takes the job"
+        description = f"{tech} (the on-call technician who was alerted) takes the job"
     elif target == "technician_assigned":
         tech = demo.technician_for(ticket["priority"])
         extra["technician_name"] = tech

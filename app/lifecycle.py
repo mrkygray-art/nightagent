@@ -6,6 +6,8 @@ information. Every move is checked against TRANSITIONS and written as an event, 
 history is never overwritten.
 """
 
+import re
+
 STATES = [
     "new",
     "awaiting_dispatch",
@@ -92,6 +94,41 @@ EVENT_LABELS = {
 }
 
 PRIORITY_LABELS = {"emergency": "High priority", "urgent": "Medium priority", "routine": "Normal priority"}
+
+# Tickets saved before the plain-English pass still hold older wording. The stored history is
+# never rewritten; these swaps only change how it reads on screen.
+_OLD_WORDING = [
+    ("P1 Emergency", "High priority"), ("P2 Urgent", "Medium priority"), ("P3 Routine", "Normal priority"),
+    ("Set by the priority rules, not the AI.", "Our rules set the priority, not the AI."),
+    ("Fire or life-safety system issue", "Fire or life-safety system problem"),
+    ("Site cannot be secured (door, gate, or perimeter)", "A door, gate, or fence can't be locked"),
+    ("Main entrance unusable and no other way in for staff", "Staff can't get in the building"),
+    ("Alarm is actively going off", "The alarm is going off right now"),
+    ("Security system or video recording is offline", "The security system or cameras stopped working"),
+    ("Panel trouble condition", "The alarm keypad is showing a problem"),
+    ("Individual credential or access issue", "A badge, fob, or code isn't working"),
+    ("; escalated based on the caller's description", "; raised because of what the caller described"),
+    (" paged (simulated", " alerted (simulated"),
+    ("who was paged)", "who was alerted)"),
+]
+_OLD_PATTERNS = [
+    (re.compile(r"^Dispatch notified of (\w+) priority ticket$"),
+     lambda m: f"The service team was told about this {m[1].lower()} priority problem"),
+    (re.compile(r"^(\S+) created\. Awaiting dispatch\.$"), lambda m: f"{m[1]} is waiting for a technician."),
+    (re.compile(r"^Technician en route: (.+)$"), lambda m: f"{m[1]}: technician on the way"),
+    (re.compile(r"^Technician onsite: (.+)$"), lambda m: f"{m[1]}: technician has arrived"),
+    (re.compile(r"^Work completed: (.+)$"), lambda m: f"{m[1]}: repair finished"),
+]
+
+
+def plain_words(text: str | None) -> str:
+    """Older stored wording, said the way the rest of the app says it now."""
+    text = text or ""
+    for old, new in _OLD_WORDING:
+        text = text.replace(old, new)
+    for pattern, swap in _OLD_PATTERNS:
+        text = pattern.sub(swap, text)
+    return text
 
 
 class TransitionError(ValueError):

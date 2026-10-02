@@ -170,7 +170,7 @@ def page_on_call_tech(req: PageRequest) -> dict:
         store.update_ticket(ticket["ticket_id"], {"paged_at": paged_at})
     simulated = bool(result.get("simulated"))
     record_event(ticket["ticket_id"], "technician_paged",
-                 f"{config.ONCALL_TECH_NAME} paged" + (" (simulated: no real text was sent)" if simulated else ""),
+                 f"{config.ONCALL_TECH_NAME} alerted" + (" (simulated: no real text was sent)" if simulated else ""),
                  simulated=simulated, conversation_id=ticket.get("conversation_id"), actor_type="agent")
 
     return {
