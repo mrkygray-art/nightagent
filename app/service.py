@@ -14,15 +14,23 @@ def record_event(ticket_id: str, event_type: str, description: str = "", *, simu
                  source: str = "call", occurred_at: str | None = None, conversation_id: str | None = None,
                  actor_type: str = "system", actor_id: str | None = None,
                  metadata: dict | None = None) -> dict | None:
-    """Write one history event. Never let a history write break a live call."""
+    """Write one history event. Never let a history write break a live call.
+
+    Without an explicit time, the event lands at "now" or just after the ticket's latest event,
+    whichever is later, so the timeline stays in order even after demo-clock steps."""
     try:
+        if not occurred_at:
+            occurred_at = now_iso()
+            events = get_store().list_events(ticket_id)
+            if events and datetime.fromisoformat(events[-1]["occurred_at"]) > datetime.fromisoformat(occurred_at):
+                occurred_at = events[-1]["occurred_at"]
         return get_store().add_event({
             "ticket_id": ticket_id,
             "event_type": event_type,
             "description": description,
             "simulated": simulated,
             "source": source,
-            "occurred_at": occurred_at or now_iso(),
+            "occurred_at": occurred_at,
             "conversation_id": conversation_id,
             "actor_type": actor_type,
             "actor_id": actor_id,
@@ -61,6 +69,7 @@ def mask_phone(number: str | None) -> str:
 PUBLIC_TICKET_FIELDS = (
     "ticket_id", "customer_id", "caller_name", "issue_summary", "category", "priority",
     "priority_reason", "paged_at", "created_at", "demo", "scenario", "technician_name",
+    "source_ticket_id", "resolution", "csat",
 )
 
 
@@ -76,6 +85,18 @@ def public_ticket(t: dict) -> dict:
         "demo": bool(t.get("demo")),
     })
     return out
+
+
+def public_task(t: dict) -> dict:
+    keys = ("task_id", "destination", "assigned_to", "reason", "summary", "priority",
+            "requested_follow_up", "status", "created_at")
+    return {k: t.get(k) for k in keys}
+
+
+def public_opportunity(o: dict) -> dict:
+    keys = ("opportunity_id", "type", "scope", "interest", "device_count", "timeline",
+            "estimated_value", "assigned_to", "status", "created_at")
+    return {k: o.get(k) for k in keys}
 
 
 def public_event(e: dict) -> dict:

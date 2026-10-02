@@ -61,6 +61,10 @@ def new_ticket_id() -> str:
     return f"NS-{secrets.randbelow(9000) + 1000}"
 
 
+def new_record_id(prefix: str) -> str:
+    return f"{prefix}-{secrets.randbelow(9000) + 1000}"
+
+
 def _clean_name_query(text: str) -> str:
     # Letters, digits and spaces only, so the text is safe inside a filter expression.
     return re.sub(r"[^A-Za-z0-9 ]", "", text or "").strip()
@@ -75,6 +79,8 @@ class MemoryStore:
         self.calls: dict[str, dict] = {}
         self.events: list[dict] = []
         self._event_seq = 0
+        self.tasks: dict[str, dict] = {}
+        self.opportunities: dict[str, dict] = {}
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -124,6 +130,34 @@ class MemoryStore:
     def count_demo_tickets_since(self, since_iso: str) -> int:
         return sum(1 for t in self.tickets.values() if t.get("scenario") and t["created_at"] >= since_iso)
 
+    def find_ticket_by_follow_up_token(self, token_hash: str) -> dict | None:
+        return next((t for t in self.tickets.values() if t.get("follow_up_token_hash") == token_hash), None)
+
+    def count_follow_ups_since(self, since_iso: str) -> int:
+        return sum(1 for t in self.tickets.values() if (t.get("follow_up_started_at") or "") >= since_iso)
+
+    def linked_tickets(self, source_ticket_id: str) -> list[dict]:
+        rows = [t for t in self.tickets.values() if t.get("source_ticket_id") == source_ticket_id]
+        return sorted(rows, key=lambda t: t["created_at"])
+
+    def create_task(self, task: dict) -> dict:
+        row = {"status": "open", **task, "task_id": new_record_id("TASK"), "created_at": now_iso()}
+        self.tasks[row["task_id"]] = row
+        return row
+
+    def tasks_for(self, source_ticket_id: str) -> list[dict]:
+        return sorted((t for t in self.tasks.values() if t.get("source_ticket_id") == source_ticket_id),
+                      key=lambda t: t["created_at"])
+
+    def create_opportunity(self, opp: dict) -> dict:
+        row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP"), "created_at": now_iso()}
+        self.opportunities[row["opportunity_id"]] = row
+        return row
+
+    def opportunities_for(self, source_ticket_id: str) -> list[dict]:
+        return sorted((o for o in self.opportunities.values() if o.get("source_ticket_id") == source_ticket_id),
+                      key=lambda o: o["created_at"])
+
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         rows = sorted(self.tickets.values(), key=lambda t: t["created_at"], reverse=True)
         return rows[:limit]
@@ -143,6 +177,8 @@ class SupabaseStore:
         self.tickets_table = f"{prefix}tickets"
         self.calls_table = f"{prefix}calls"
         self.events_table = f"{prefix}ticket_events"
+        self.tasks_table = f"{prefix}routing_tasks"
+        self.opportunities_table = f"{prefix}opportunities"
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)
@@ -196,6 +232,46 @@ class SupabaseStore:
             .not_.is_("scenario", "null").gte("created_at", since_iso).limit(1).execute()
         )
         return res.count or 0
+
+    def find_ticket_by_follow_up_token(self, token_hash: str) -> dict | None:
+        rows = (
+            self.db.table(self.tickets_table).select("*")
+            .eq("follow_up_token_hash", token_hash).limit(1).execute().data
+        )
+        return rows[0] if rows else None
+
+    def count_follow_ups_since(self, since_iso: str) -> int:
+        res = (
+            self.db.table(self.tickets_table).select("ticket_id", count="exact")
+            .gte("follow_up_started_at", since_iso).limit(1).execute()
+        )
+        return res.count or 0
+
+    def linked_tickets(self, source_ticket_id: str) -> list[dict]:
+        return (
+            self.db.table(self.tickets_table).select("*").eq("source_ticket_id", source_ticket_id)
+            .order("created_at").execute().data
+        )
+
+    def create_task(self, task: dict) -> dict:
+        row = {"status": "open", **task, "task_id": new_record_id("TASK")}
+        return self.db.table(self.tasks_table).insert(row).execute().data[0]
+
+    def tasks_for(self, source_ticket_id: str) -> list[dict]:
+        return (
+            self.db.table(self.tasks_table).select("*").eq("source_ticket_id", source_ticket_id)
+            .order("created_at").execute().data
+        )
+
+    def create_opportunity(self, opp: dict) -> dict:
+        row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP")}
+        return self.db.table(self.opportunities_table).insert(row).execute().data[0]
+
+    def opportunities_for(self, source_ticket_id: str) -> list[dict]:
+        return (
+            self.db.table(self.opportunities_table).select("*").eq("source_ticket_id", source_ticket_id)
+            .order("created_at").execute().data
+        )
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         return (

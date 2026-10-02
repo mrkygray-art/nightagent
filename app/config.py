@@ -21,6 +21,10 @@ TABLE_PREFIX = os.getenv("TABLE_PREFIX", "ns_")
 
 # Public agent ID used by the /demo page (safe to expose; the agent is locked to allowed domains).
 ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID", "agent_0301m3ws1zwae8ya6j72bcv7a193")
+# The follow-up agent (also public, also locked to the approved sites).
+FOLLOWUP_AGENT_ID = os.getenv("FOLLOWUP_AGENT_ID", "")
+# Demo-wide cap on follow-up calls started per hour (each one uses ElevenLabs minutes).
+FOLLOW_UPS_PER_HOUR = int(os.getenv("FOLLOW_UPS_PER_HOUR", "30"))
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")

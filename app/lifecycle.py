@@ -76,6 +76,18 @@ EVENT_LABELS = {
     "technician_onsite": "Technician onsite",
     "work_completed": "Work completed",
     "follow_up_ready": "Ready for NightAgent follow-up call",
+    "follow_up_started": "NightAgent follow-up call started",
+    "follow_up_completed": "NightAgent follow-up call completed",
+    "csat_recorded": "Customer satisfaction recorded",
+    "resolution_confirmed": "Customer confirmed the fix",
+    "ticket_closed": "Ticket closed",
+    "ticket_reopened": "Ticket reopened",
+    "priority_reviewed": "Priority re-evaluated",
+    "ticket_escalated": "Escalated to the service manager",
+    "follow_up_unclear": "Handed to a person",
+    "new_ticket_created": "New service request opened",
+    "opportunity_identified": "Sales opportunity identified",
+    "task_created": "Follow-up task created",
 }
 
 PRIORITY_LABELS = {"emergency": "P1 Emergency", "urgent": "P2 Urgent", "routine": "P3 Routine"}

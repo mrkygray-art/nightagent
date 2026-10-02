@@ -13,7 +13,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app import config, demo, lifecycle
-from app.service import move_ticket, public_event, public_ticket, record_event, shift
+from app.follow_up import follow_up_variables
+from app.service import (move_ticket, public_event, public_opportunity, public_task, public_ticket,
+                         record_event, shift)
 from app.store import get_store, now_iso
 from app.triage import triage
 
@@ -61,12 +63,19 @@ def _owned_demo_ticket(req: DemoKeyRequest) -> dict:
 
 
 def _detail(ticket: dict) -> dict:
-    events = get_store().list_events(ticket["ticket_id"])
+    store = get_store()
+    tid = ticket["ticket_id"]
     nxt = lifecycle.next_demo_step(ticket.get("status"))
     return {
         "ticket": public_ticket(ticket),
-        "events": [public_event(e) for e in events],
+        "events": [public_event(e) for e in store.list_events(tid)],
         "next_step": lifecycle.STATE_LABELS[nxt[0]] if nxt else None,
+        "follow_up_ready": lifecycle.normalize_state(ticket.get("status")) == "follow_up_pending",
+        "actions": {
+            "tasks": [public_task(t) for t in store.tasks_for(tid)],
+            "opportunities": [public_opportunity(o) for o in store.opportunities_for(tid)],
+            "tickets": [public_ticket(t) for t in store.linked_tickets(tid)],
+        },
     }
 
 
@@ -171,14 +180,38 @@ def advance(req: DemoKeyRequest) -> dict:
     return _detail(get_store().get_ticket(ticket["ticket_id"]))
 
 
+@router.post("/demo/follow-up")
+def start_follow_up(req: DemoKeyRequest) -> dict:
+    """Hand the page what it needs to start NightAgent's follow-up call: the agent id and the
+    ticket context, plus a single-use pass the agent sends back with the outcome."""
+    ticket = _owned_demo_ticket(req)
+    if lifecycle.normalize_state(ticket.get("status")) != "follow_up_pending":
+        raise HTTPException(status_code=409, detail="This ticket isn't ready for a follow-up call.")
+    if not config.FOLLOWUP_AGENT_ID:
+        raise HTTPException(status_code=503, detail="Follow-up calls aren't switched on yet.")
+    store = get_store()
+    hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    if store.count_follow_ups_since(hour_ago) >= config.FOLLOW_UPS_PER_HOUR:
+        raise HTTPException(status_code=429, detail="The demo is busy right now. Please try again in a few minutes.")
+    token, token_hash = _new_key()
+    store.update_ticket(ticket["ticket_id"], {"follow_up_token_hash": token_hash, "follow_up_started_at": now_iso()})
+    record_event(ticket["ticket_id"], "follow_up_started", "NightAgent is calling the customer to confirm the fix",
+                 source="follow_up", actor_type="agent")
+    return {"agent_id": config.FOLLOWUP_AGENT_ID, "dynamic_variables": follow_up_variables(ticket, token)}
+
+
 @router.post("/demo/reset")
 def reset(req: DemoKeyRequest) -> dict:
     """Undo every Advance Demo step. The original call or scenario events stay."""
     ticket = _owned_demo_ticket(req)
+    if ticket.get("resolution"):
+        raise HTTPException(status_code=409, detail="The follow-up call is on record, so this ticket's history is final. Start a new scenario to run it again.")
     store = get_store()
     store.delete_events(ticket["ticket_id"], "demo")
+    store.delete_events(ticket["ticket_id"], "follow_up")  # only "call started" rows; no outcome yet
     store.update_ticket(ticket["ticket_id"], {
         "status": ticket.get("base_status") or "awaiting_dispatch",
         "technician_name": None,
+        "follow_up_token_hash": None,
     })
     return _detail(store.get_ticket(ticket["ticket_id"]))

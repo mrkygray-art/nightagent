@@ -7,7 +7,11 @@ Tool calls time out after about 20 seconds, so keep these fast.
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+import hashlib
+from datetime import datetime, timedelta, timezone
+
 from app import config, lifecycle
+from app.follow_up import apply_outcome
 from app.notify import page_on_call
 from app.security import require_tool_secret
 from app.service import move_ticket, record_event
@@ -33,6 +37,30 @@ class CreateTicketRequest(BaseModel):
 
 class PageRequest(BaseModel):
     ticket_id: str
+
+
+class FollowUpOutcomeRequest(BaseModel):
+    follow_up_token: str = Field(..., max_length=80)
+    conversation_id: str | None = Field(None, max_length=120)
+    resolution: str = Field(..., max_length=30)
+    customer_comments: str | None = Field(None, max_length=1000)
+    satisfaction: int | None = None
+    current_category: str | None = Field(None, max_length=40)
+    suggested_priority: str | None = Field(None, max_length=20)
+    current_impact: str | None = Field(None, max_length=400)
+    new_issue_summary: str | None = Field(None, max_length=600)
+    new_issue_category: str | None = Field(None, max_length=40)
+    new_issue_priority: str | None = Field(None, max_length=20)
+    sales_interest: str | None = Field(None, max_length=600)
+    sales_type: str | None = Field(None, max_length=120)
+    sales_scope: str | None = Field(None, max_length=300)
+    sales_device_count: str | None = Field(None, max_length=60)
+    sales_timeline: str | None = Field(None, max_length=120)
+    sales_budget: str | None = Field(None, max_length=120)
+    callback_department: str | None = Field(None, max_length=40)
+    callback_reason: str | None = Field(None, max_length=400)
+
+FOLLOW_UP_TOKEN_MINUTES = 30
 
 
 def _public_customer(c: dict) -> dict:
@@ -152,4 +180,27 @@ def page_on_call_tech(req: PageRequest) -> dict:
         "simulated": result.get("simulated", False),
         "message": f"{config.ONCALL_TECH_NAME} has been paged and will call the caller back "
                    f"within {config.CALLBACK_WINDOW_MINUTES} minutes.",
+    }
+
+
+@router.post("/follow-up-outcome")
+def follow_up_outcome(req: FollowUpOutcomeRequest) -> dict:
+    """Called once by the follow-up agent near the end of the call. The pass proves which ticket
+    this call is about; code decides everything that happens next."""
+    store = get_store()
+    token_hash = hashlib.sha256(req.follow_up_token.strip().encode()).hexdigest()
+    ticket = store.find_ticket_by_follow_up_token(token_hash) if req.follow_up_token.strip() else None
+    started = ticket and ticket.get("follow_up_started_at")
+    fresh = started and datetime.now(timezone.utc) - datetime.fromisoformat(started) < timedelta(minutes=FOLLOW_UP_TOKEN_MINUTES)
+    if not ticket or not fresh or lifecycle.normalize_state(ticket.get("status")) != "follow_up_pending":
+        return {
+            "recorded": False,
+            "message": "This follow-up couldn't be saved. Tell the customer the service desk will call them to confirm everything, then close the call.",
+        }
+    result = apply_outcome(ticket, req.model_dump(), req.conversation_id)
+    return {
+        "recorded": True,
+        "ticket_id": ticket["ticket_id"],
+        "tell_the_customer": " ".join(result["said"]),
+        "message": "Saved. Tell the customer what happens next in one or two sentences, then close the call warmly.",
     }
