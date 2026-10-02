@@ -695,8 +695,25 @@ const TOOL_WORDS = {
                       "Server confirmed it's an emergency and sent the alert (simulated in this demo)"],
   record_follow_up_outcome: ["Sam sends what the customer said, with the single-use pass",
                              "Server rules decided what happens next"],
+  take_message: ["Sam sends the message details to the server",
+                 "Server saved one message for the right person and wrote what Sam tells the caller"],
+  transfer_to_agent: ["Sam hands the call to a specialist assistant (ElevenLabs agent transfer)",
+                      "Handoff done: the specialist has the conversation so far and its own voice"],
+  billing_lookup: ["Jordan asks the server for the caller's invoices (demo data)",
+                   "Server returned the invoices; code flags any duplicate charge"],
+  request_billing_review: ["Jordan opens a billing review for Morgan Lee",
+                           "Server saved the review and wrote what Jordan tells the caller"],
+  record_sales_interest: ["Riley sends the upgrade details",
+                          "Server opened a sales opportunity and a callback for Sarah Johnson"],
   end_call: ["Sam ends the call", "Call ended by Sam"],
 };
+
+// Who's talking. Sam answers; after a handoff a specialist assistant takes over.
+const SPECIALISTS = { Jordan: "Jordan · billing assistant", Riley: "Riley · sales assistant" };
+let speaker = "Sam";      // "Sam", "pending" (just handed off), or a specialist's name
+function speakerName() { return speaker === "pending" ? "The assistant" : speaker; }
+// ElevenLabs can add voice-style tags such as [excited]; they're for the voice, not the transcript.
+function cleanSpeech(text) { return (text || "").replace(/\[[a-z][a-z ]{1,24}\]\s*/gi, "").trim(); }
 function logTech(what, detail) {
   if (els.techLog.dataset.started !== "1") { els.techLog.replaceChildren(); els.techLog.dataset.started = "1"; }
   const li = document.createElement("li");
@@ -912,14 +929,14 @@ async function turnOnSound() {
   els.sound.hidden = out.context.state === "running";
 }
 
-function addMessage(who, text) {
+function addMessage(who, text, label) {
   if (!text) return;
   els.empty.hidden = true;
   const div = document.createElement("div");
   div.className = `msg ${who}`;
   if (who !== "note") {
     const b = document.createElement("b");
-    b.textContent = who === "sam" ? "Sam" : "Sam heard you say";
+    b.textContent = label || (who === "sam" ? "Sam" : "Sam heard you say");
     div.appendChild(b);
   }
   div.appendChild(document.createTextNode(text));
@@ -975,23 +992,29 @@ const handlers = {
       if (lastTyped && message && message.trim() === lastTyped) { lastTyped = null; return; }
       addMessage("you", message);
     } else {
-      addMessage("sam", message);
+      const text = cleanSpeech(message);
+      if (speaker === "pending") {
+        const name = Object.keys(SPECIALISTS).find((n) => new RegExp(`\\b${n}\\b`).test(text));
+        if (name) { speaker = name; logTech("Handoff", `${SPECIALISTS[name]} is on the call`); }
+      }
+      addMessage("sam", text, SPECIALISTS[speaker] || (speaker === "pending" ? "Specialist assistant" : "Sam"));
       if (mode === "text" && session) setStatus("listening", "Your turn", "Type your reply below.");
       schedulePoll(800);
     }
   },
   onModeChange: ({ mode: m }) => {
     if (!session) return;
-    if (m === "speaking") setStatus("speaking", "Sam is speaking", "You can jump in anytime.");
+    if (m === "speaking") setStatus("speaking", `${speakerName()} is speaking`, "You can jump in anytime.");
     else if (els.orb.dataset.state !== "thinking") setStatus("listening", "Your turn", mode === "voice" ? "Go ahead and speak." : "Type your reply below.");
   },
   onAgentToolRequest: (e) => {
     const name = (e && e.tool_name) || "tool";
-    setOrb("thinking", "Sam is looking that up…");
+    setOrb("thinking", name === "transfer_to_agent" ? "Bringing in a specialist…" : `${speakerName()} is looking that up…`);
     logTech(`→ ${name}`, (TOOL_WORDS[name] || [])[0] || "");
   },
   onAgentToolResponse: (e) => {
     const name = (e && e.tool_name) || "tool";
+    if (name === "transfer_to_agent" && !(e && e.is_error)) speaker = "pending";
     logTech(`← ${name}`, e && e.is_error ? "the tool reported an error" : (TOOL_WORDS[name] || [])[1] || "done");
   },
   onError: (message) => {
@@ -1005,6 +1028,7 @@ async function startSession(nextMode, opts = {}) {
   if (session || connecting) return;
   mode = nextMode || mode;
   connecting = true;
+  speaker = "Sam";
   showError("");
   setStatus("connecting", "Calling Sam…", "This takes a second or two.");
   if (opts.ring) ringbackStop = playRing(8000);

@@ -26,11 +26,32 @@ TEXT_CHAT = "text"
 
 
 TOOL_NAMES["take_message"] = "Took a message"
+TOOL_NAMES["billing_lookup"] = "Jordan looked up the invoices"
+TOOL_NAMES["request_billing_review"] = "Jordan opened a billing review"
+TOOL_NAMES["record_sales_interest"] = "Riley recorded the upgrade interest"
+
+# Which specialist made which tool call, so the report can show who was on the call
+SPECIALISTS = {
+    "billing_lookup": "Jordan (billing assistant)",
+    "request_billing_review": "Jordan (billing assistant)",
+    "record_sales_interest": "Riley (sales assistant)",
+}
+
+
+def agents_line(tool_calls: list[dict]) -> str | None:
+    """'Sam → Jordan (billing assistant)' when a specialist took part, from the tools they used."""
+    seen = []
+    for t in tool_calls:
+        who = SPECIALISTS.get(t["tool"])
+        if who and who not in seen:
+            seen.append(who)
+    return " → ".join(["Sam (front desk)", *seen]) if seen else None
 
 
 def tool_label(row: dict) -> str:
-    if row["tool"] == "take_message" and " updated " in f" {row.get('outcome') or ''} ":
-        return "Updated the message"
+    if " updated " in f" {row.get('outcome') or ''} " and row["tool"] in ("take_message", "request_billing_review", "record_sales_interest"):
+        return {"take_message": "Updated the message", "request_billing_review": "Jordan updated the review",
+                "record_sales_interest": "Riley updated the details"}[row["tool"]]
     return TOOL_NAMES.get(row["tool"], row["tool"].replace("_", " ").capitalize())
 
 
@@ -46,11 +67,14 @@ def _tools_line(tool_calls: list[dict]) -> str:
     return f"{len(tool_calls)}: " + "; ".join(tool_label(t) for t in tool_calls)
 
 
-def build_message(task: dict, tool_calls: list[dict], department: str, callback: str) -> dict:
+def build_message(task: dict, tool_calls: list[dict], department: str, callback: str,
+                  opportunities: list[dict] | None = None) -> dict:
     """The call report for a call that ended in a message, not a service ticket."""
     agent, channel = _agent_and_channel(task.get("voice"))
+    team = agents_line(tool_calls)
     rows = [
         {"label": "Agent", "value": agent},
+        *([{"label": "Agents on this call", "value": team}] if team else []),
         {"label": "Call", "value": channel},
         {"label": "What they needed", "value": task.get("summary") or "Not recorded"},
         {"label": "Asked for", "value": task.get("person_requested") or department},
@@ -59,6 +83,8 @@ def build_message(task: dict, tool_calls: list[dict], department: str, callback:
         {"label": "Handed to", "value": task.get("assigned_to") or "Not recorded"},
         {"label": "Callback", "value": f"{callback}, {task.get('best_time') or 'next business day'}"},
     ]
+    if opportunities:
+        rows.append({"label": "New opportunity", "value": "; ".join(o.get("interest") or o.get("type") or "" for o in opportunities)})
     return {"rows": rows, "tool_count": len(tool_calls)}
 
 

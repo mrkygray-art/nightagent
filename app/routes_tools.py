@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-from app import config, lifecycle
-from app.follow_up import DEPARTMENT_LABELS, DESTINATIONS, apply_outcome
+from app import billing, config, lifecycle
+from app.follow_up import DEPARTMENT_LABELS, DESTINATIONS, VALUE_TBD, apply_outcome
 from app.notify import page_on_call
 from app.security import require_tool_secret
 from app.service import log_tool_call, move_ticket, record_event
@@ -45,6 +45,35 @@ class MessageRequest(BaseModel):
     person_requested: str | None = Field(None, max_length=100)
     best_time: str | None = Field(None, max_length=120)
     ticket_id: str | None = Field(None, max_length=20)
+    conversation_id: str | None = Field(None, max_length=120)
+
+
+class BillingLookupRequest(BaseModel):
+    customer_id: str | None = Field(None, max_length=20)
+    conversation_id: str | None = Field(None, max_length=120)
+
+
+class BillingReviewRequest(BaseModel):
+    customer_id: str | None = Field(None, max_length=20)
+    invoice_id: str | None = Field(None, max_length=30)
+    reason: str = Field(..., max_length=600)
+    caller_name: str = Field(..., max_length=100)
+    callback_number: str = Field(..., max_length=40)
+    best_time: str | None = Field(None, max_length=120)
+    conversation_id: str | None = Field(None, max_length=120)
+
+
+class SalesInterestRequest(BaseModel):
+    customer_id: str | None = Field(None, max_length=20)
+    interest: str = Field(..., max_length=600)
+    sales_type: str | None = Field(None, max_length=120)
+    scope: str | None = Field(None, max_length=300)
+    device_count: str | None = Field(None, max_length=60)
+    timeline: str | None = Field(None, max_length=120)
+    budget: str | None = Field(None, max_length=120)
+    caller_name: str = Field(..., max_length=100)
+    callback_number: str = Field(..., max_length=40)
+    best_time: str | None = Field(None, max_length=120)
     conversation_id: str | None = Field(None, max_length=120)
 
 
@@ -183,6 +212,12 @@ def create_ticket(req: CreateTicketRequest) -> dict:
 def take_message(req: MessageRequest) -> dict:
     """The front desk: the caller wants a department or a person, not (only) a repair. Code decides
     who gets the message and what the caller is told; the agent just collects the details."""
+    task_id, dept, who, best_time = save_message(req, "take_message")
+    return _message_reply(task_id, dept, who, best_time)
+
+
+def save_message(req: MessageRequest, tool: str, task_reason: str | None = None) -> tuple[str, str, str, str | None]:
+    """Save (or update) the one message per person per call. Returns (task_id, dept, who, best_time)."""
     started = now_iso()
     store = get_store()
     dept = req.department.strip().lower()
@@ -204,9 +239,9 @@ def take_message(req: MessageRequest) -> dict:
         fields["requested_follow_up"] = "Call the caller back" + (f" ({fields['best_time']})" if fields["best_time"] else "")
         store.update_task(earlier["task_id"], fields)
         best_time = fields["best_time"]
-        log_tool_call("take_message", f"{earlier['task_id']} updated for {who}", conversation_id=req.conversation_id,
+        log_tool_call(tool, f"{earlier['task_id']} updated for {who}", conversation_id=req.conversation_id,
                       ticket_id=earlier.get("source_ticket_id"), called_at=started)
-        return _message_reply(earlier["task_id"], dept, who, best_time)
+        return earlier["task_id"], dept, who, best_time
     task = store.create_task({
         "destination": dept,
         "assigned_to": who,
@@ -215,7 +250,7 @@ def take_message(req: MessageRequest) -> dict:
         "site_address": (customer or {}).get("site_address"),
         "source_ticket_id": ticket["ticket_id"] if ticket else None,
         "source_conversation_id": req.conversation_id,
-        "reason": f"Message for {DEPARTMENT_LABELS[dept]}",
+        "reason": task_reason or f"Message for {DEPARTMENT_LABELS[dept]}",
         "summary": reason,
         "priority": "high" if dept == "service_manager" else "normal",
         "requested_follow_up": "Call the caller back" + (f" ({best_time})" if best_time else ""),
@@ -224,13 +259,100 @@ def take_message(req: MessageRequest) -> dict:
         "best_time": best_time,
         "demo": bool(ticket and ticket.get("demo")),
     })
-    log_tool_call("take_message", f"{task['task_id']} for {who}", conversation_id=req.conversation_id,
+    log_tool_call(tool, f"{task['task_id']} for {who}", conversation_id=req.conversation_id,
                   ticket_id=ticket["ticket_id"] if ticket else None, called_at=started)
     if ticket:
         record_event(ticket["ticket_id"], "task_created", f"{task['task_id']} for {who}: {reason[:160]}",
                      conversation_id=req.conversation_id, actor_type="agent",
                      metadata={"task_id": task["task_id"], "destination": dept})
-    return _message_reply(task["task_id"], dept, who, best_time)
+    return task["task_id"], dept, who, best_time
+
+
+def _callback_when(best_time: str | None) -> str:
+    return f" {best_time}" if best_time else " on the next business day"
+
+
+@router.post("/billing-lookup")
+def billing_lookup(req: BillingLookupRequest) -> dict:
+    """Jordan, the billing assistant: the caller's recent invoices. Duplicates are flagged by code."""
+    started = now_iso()
+    out = billing.invoices_for(req.customer_id)
+    found = out.get("invoices") or []
+    flagged = sum(len(i["possible_duplicates"]) for i in found)
+    log_tool_call("billing_lookup", f"{len(found)} invoices" + (f", {flagged} possible duplicate" if flagged else ""),
+                  conversation_id=req.conversation_id, called_at=started)
+    if found:
+        out["next_step"] = ("Explain what you see in plain words, one invoice at a time, only if it's relevant to the "
+                            "caller's question. If there's a possible duplicate, say so and offer a billing review. "
+                            "Never promise a refund or credit; a person in billing decides.")
+    return out
+
+
+@router.post("/billing-review")
+def billing_review(req: BillingReviewRequest) -> dict:
+    """Open a review for Morgan Lee in billing. Code, not the model, decides what the caller is told."""
+    inv = billing.find_invoice(req.customer_id, req.invoice_id)
+    label = f"Billing review: {inv['invoice_id']} ({inv['month']})" if inv else "Billing review"
+    task_id, dept, who, best_time = save_message(MessageRequest(
+        department="billing", reason=req.reason, caller_name=req.caller_name, callback_number=req.callback_number,
+        customer_id=req.customer_id, best_time=req.best_time, conversation_id=req.conversation_id,
+    ), "request_billing_review", task_reason=label)
+    about = f" {inv['invoice_id']}" if inv else " your invoice"
+    return {
+        "saved": True,
+        "review_id": task_id,
+        "tell_the_caller": (f"Morgan Lee from billing will review{about} and call you back{_callback_when(best_time)}. "
+                            "If the charge is confirmed as a duplicate, the correction will show on your next invoice."),
+        "next_step": "Tell the caller this in your own words, in one or two sentences. Don't promise a refund "
+                     "or an amount. If they then give a good time to call back, call request_billing_review again "
+                     "with best_time; it updates the same review. Then ask if there's anything else.",
+    }
+
+
+@router.post("/sales-interest")
+def sales_interest(req: SalesInterestRequest) -> dict:
+    """Riley, the sales assistant: a new opportunity for the account executive, plus a callback."""
+    started = now_iso()
+    store = get_store()
+    customer = store.get_customer(req.customer_id) if req.customer_id else None
+    clean = lambda t, n: " ".join((t or "").split())[:n] or None  # noqa: E731
+    interest = clean(req.interest, 300)
+    existing = store.opportunity_for_call(req.conversation_id) if req.conversation_id else None
+    fields = {
+        "type": clean(req.sales_type, 80) or "System upgrade",
+        "scope": clean(req.scope, 200),
+        "interest": interest,
+        "device_count": clean(req.device_count, 40),
+        "timeline": clean(req.timeline, 80),
+        "estimated_value": f"Customer-stated budget: {clean(req.budget, 80)}" if clean(req.budget, 80) else VALUE_TBD,
+    }
+    if existing:
+        store.update_opportunity(existing["opportunity_id"], {k: v for k, v in fields.items() if v})
+        opp_id = existing["opportunity_id"]
+    else:
+        opp_id = store.create_opportunity({
+            **fields,
+            "customer_id": customer["customer_id"] if customer else None,
+            "contact_name": req.caller_name.strip(),
+            "site_address": (customer or {}).get("site_address"),
+            "source_conversation_id": req.conversation_id,
+            "assigned_to": DESTINATIONS["account_executive"],
+            "demo": False,
+        })["opportunity_id"]
+    log_tool_call("record_sales_interest", f"{opp_id}: {interest[:80]}", conversation_id=req.conversation_id, called_at=started)
+    task_id, dept, who, best_time = save_message(MessageRequest(
+        department="account_executive", reason=f"{opp_id}: {interest}", caller_name=req.caller_name,
+        callback_number=req.callback_number, customer_id=req.customer_id, best_time=req.best_time,
+        conversation_id=req.conversation_id,
+    ), "record_sales_interest", task_reason="New sales opportunity from a call")
+    return {
+        "saved": True,
+        "opportunity_id": opp_id,
+        "tell_the_caller": f"Sarah Johnson, your account executive, will call you back{_callback_when(best_time)} to go over options and pricing.",
+        "next_step": "Tell the caller this in your own words. Never quote prices or estimate a value yourself. "
+                     "If they add details or a good time to call back, call record_sales_interest again; it "
+                     "updates the same opportunity. Then ask if there's anything else.",
+    }
 
 
 def _message_reply(task_id: str, dept: str, who: str, best_time: str | None) -> dict:

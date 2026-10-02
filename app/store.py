@@ -177,6 +177,14 @@ class MemoryStore:
         return sorted((o for o in self.opportunities.values() if o.get("source_ticket_id") == source_ticket_id),
                       key=lambda o: o["created_at"])
 
+    def opportunity_for_call(self, conversation_id: str) -> dict | None:
+        return next((o for o in self.opportunities.values() if o.get("source_conversation_id") == conversation_id
+                     and not o.get("source_ticket_id")), None)
+
+    def update_opportunity(self, opportunity_id: str, fields: dict) -> None:
+        if opportunity_id in self.opportunities:
+            self.opportunities[opportunity_id].update(fields)
+
     def add_tool_call(self, row: dict) -> None:
         self.tool_calls.append({"called_at": now_iso(), "outcome": "", **row, "id": len(self.tool_calls) + 1})
 
@@ -362,6 +370,16 @@ class SupabaseStore:
             self.db.table(self.opportunities_table).select("*").eq("source_ticket_id", source_ticket_id)
             .order("created_at").execute().data
         )
+
+    def opportunity_for_call(self, conversation_id: str) -> dict | None:
+        rows = (
+            self.db.table(self.opportunities_table).select("*").eq("source_conversation_id", conversation_id)
+            .is_("source_ticket_id", "null").limit(1).execute().data
+        )
+        return rows[0] if rows else None
+
+    def update_opportunity(self, opportunity_id: str, fields: dict) -> None:
+        self.db.table(self.opportunities_table).update(fields).eq("opportunity_id", opportunity_id).execute()
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
         return (

@@ -121,10 +121,12 @@ def message_detail(message_id: str) -> dict:
         logging.getLogger("nightshift").exception("Could not load tool calls for %s", message_id)
         tool_calls = []
     msg = public_message(task)
+    opp = store.opportunity_for_call(task["source_conversation_id"]) if task.get("destination") == "account_executive" else None
     return {
         "message": msg,
         "tool_calls": [report.public_tool_call(t) for t in tool_calls],
-        "report": report.build_message(task, tool_calls, msg["department"], msg["callback_number"]),
+        "report": report.build_message(task, tool_calls, msg["department"], msg["callback_number"],
+                                       [opp] if opp else None),
     }
 
 
