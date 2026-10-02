@@ -242,8 +242,11 @@ def _message_reply(task_id: str, dept: str, who: str, best_time: str | None) -> 
         "message_id": task_id,
         "tell_the_caller": f"{speaker} will get your message and call you back{when}.",
         "next_step": "Tell the caller who will call them back and when, in one or two sentences. "
-                     "Don't promise an exact time beyond that, and don't call take_message again for "
-                     "this person unless the caller changes something. Then ask if there's anything else.",
+                     "Don't promise an exact time beyond that. If the caller then gives a good time to call "
+                     "back, or changes their number or reason, call take_message again with the same "
+                     "department and the new details: it updates this same message, it doesn't send a "
+                     "second one. Never say you've noted something without calling the tool. "
+                     "Then ask if there's anything else.",
     }
 
 
