@@ -20,6 +20,7 @@ SCENARIOS = {
         "issue_summary": "Main employee entrance will not unlock. About 30 employees on the night shift can't get in, and there's no other entrance with a reader.",
         "category": "entry_blocked",
         "suggested_priority": "urgent",
+        "follow_up_hint": "Everything's working great now, thanks. I'd give the visit a 5.",
     },
     "problem_returns": {
         "title": "The problem comes back",
@@ -30,6 +31,7 @@ SCENARIOS = {
         "issue_summary": "Back door will not lock while closing up the office for the night.",
         "category": "cannot_secure_site",
         "suggested_priority": "urgent",
+        "follow_up_hint": "It worked for a day, but the back door stopped locking again last night.",
     },
     "expansion": {
         "title": "Repair leads to an upgrade",
@@ -40,6 +42,7 @@ SCENARIOS = {
         "issue_summary": "Two badge readers at the loading dock stopped reading employee badges.",
         "category": "access_issue",
         "suggested_priority": "routine",
+        "follow_up_hint": "The readers work now. We're also thinking about replacing the readers across the building, about 14 doors, maybe with mobile badges, in the next 3 to 6 months.",
     },
     "poor_service": {
         "title": "Unhappy with the visit",
@@ -50,6 +53,7 @@ SCENARIOS = {
         "issue_summary": "Cameras stopped recording after a power outage this evening.",
         "category": "system_offline",
         "suggested_priority": "routine",
+        "follow_up_hint": "Honestly, it never really worked after the technician left. I'm not happy.",
     },
 }
 
@@ -62,4 +66,5 @@ def technician_for(priority: str) -> str:
 
 
 def public_scenarios() -> list[dict]:
-    return [{"id": key, "title": s["title"], "story": s["story"]} for key, s in SCENARIOS.items()]
+    return [{"id": key, "title": s["title"], "story": s["story"], "follow_up_hint": s["follow_up_hint"]}
+            for key, s in SCENARIOS.items()]

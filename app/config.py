@@ -22,7 +22,7 @@ TABLE_PREFIX = os.getenv("TABLE_PREFIX", "ns_")
 # Public agent ID used by the /demo page (safe to expose; the agent is locked to allowed domains).
 ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID", "agent_0301m3ws1zwae8ya6j72bcv7a193")
 # The follow-up agent (also public, also locked to the approved sites).
-FOLLOWUP_AGENT_ID = os.getenv("FOLLOWUP_AGENT_ID", "")
+FOLLOWUP_AGENT_ID = os.getenv("FOLLOWUP_AGENT_ID", "agent_5401m3x8ezgferwsyzb2rz1jdbc8")
 # Demo-wide cap on follow-up calls started per hour (each one uses ElevenLabs minutes).
 FOLLOW_UPS_PER_HOUR = int(os.getenv("FOLLOW_UPS_PER_HOUR", "30"))
 

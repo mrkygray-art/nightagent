@@ -272,6 +272,19 @@ DEMO_HTML = r"""<!doctype html>
   .tag-sim { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--sodium); border: 1px solid rgba(245,165,36,.5); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; }
   @media (max-width: 560px) { .timeline li { grid-template-columns: 60px 16px 1fr; gap: 0 8px; } }
 
+  .follow-box { border: 1px solid rgba(245,165,36,.45); background: var(--sodium-soft); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+  .follow-box p { margin: 0; font-size: 14px; }
+  .follow-box .say { font-style: italic; color: var(--text); }
+  .follow-box ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  .actions { display: grid; gap: 10px; }
+  .actions h3 { margin: 0; font-family: var(--display); font-size: 22px; letter-spacing: .01em; }
+  .action { border: 1px solid var(--line); border-left: 4px solid var(--clear); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; font-size: 14px; }
+  .action.high { border-left-color: var(--alarm); }
+  .action.opp { border-left-color: var(--sodium); }
+  .action b { font-size: 15px; }
+  .action span { color: var(--muted); }
+  .action button { justify-self: start; font: 600 14px var(--body); color: var(--sodium); background: transparent; border: 0; padding: 2px 0; cursor: pointer; text-decoration: underline; }
+
   .how { padding: 48px 0 24px; }
   .how ol { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
   @media (max-width: 900px) { .how ol { grid-template-columns: 1fr 1fr; } }
@@ -424,6 +437,7 @@ let seen = new Set();
 let firstLoad = true;
 let pollTimer = null;
 let fastPollUntil = 0;
+let followUpTicket = null; // set while a follow-up call is running
 
 async function loadSdk() {
   if (Conversation) return Conversation;
@@ -636,7 +650,8 @@ function clearTranscript() {
 const handlers = {
   onConnect: (info) => {
     if (info && info.conversationId) conversationId = info.conversationId;
-    setStatus("listening", mode === "voice" ? "Connected to Sam" : "Chatting with Sam",
+    const who = followUpTicket ? `Sam is following up on ${followUpTicket}` : (mode === "voice" ? "Connected to Sam" : "Chatting with Sam");
+    setStatus("listening", who,
       mode === "voice" ? "Speak naturally. You can interrupt Sam anytime." : "Type your messages below.");
     fastPollUntil = Date.now() + 10 * 60 * 1000;
     schedulePoll(1500);
@@ -648,6 +663,12 @@ const handlers = {
     if (why) showError(`The call couldn't continue: ${why}`);
     setStatus("idle", "Call ended", "The ticket stays on the board. Start another call anytime.");
     addMessage("note", mode === "voice" ? "Call ended" : "Chat ended");
+    if (followUpTicket) {
+      const id = followUpTicket;
+      followUpTicket = null;
+      addMessage("note", `See what NightAgent did with ${id} in Demo Mode below.`);
+      setTimeout(() => loadTicket(id, { scroll: true }), 1200);
+    }
     fastPollUntil = Date.now() + 90 * 1000;
     schedulePoll(1000);
     render();
@@ -673,7 +694,7 @@ const handlers = {
   },
 };
 
-async function startSession(nextMode) {
+async function startSession(nextMode, opts = {}) {
   if (session || connecting) return;
   mode = nextMode || mode;
   connecting = true;
@@ -693,7 +714,11 @@ async function startSession(nextMode) {
         throw new Error("Microphone access is blocked. Allow it from your browser's address bar, or switch to Text.");
       }
     }
-    const base = { agentId: AGENT_ID, ...handlers };
+    const base = {
+      agentId: opts.agentId || AGENT_ID,
+      ...(opts.dynamicVariables ? { dynamicVariables: opts.dynamicVariables } : {}),
+      ...handlers,
+    };
     if (mode === "text") {
       session = await C.startSession({ ...base, textOnly: true, overrides: { conversation: { textOnly: true } } });
     } else {
@@ -710,6 +735,7 @@ async function startSession(nextMode) {
     try { conversationId = conversationId || (session.getId && session.getId()) || null; } catch {}
   } catch (err) {
     session = null;
+    followUpTicket = null;
     const msg = (err && err.message) || String(err);
     showError(/quota|credit/i.test(msg)
       ? "The demo has used up its call minutes for now. Please check back later."
@@ -856,7 +882,18 @@ let busy = false;
 const STAGES = [
   ["awaiting_dispatch", "Ticket"], ["dispatched", "Dispatched"], ["technician_assigned", "Assigned"],
   ["en_route", "En route"], ["onsite", "Onsite"], ["work_completed", "Completed"], ["follow_up_pending", "Follow-up"],
+  ["outcome", "Outcome"],
 ];
+const OUTCOME_STATES = ["resolved", "closed", "reopened", "escalated"];
+const GENERIC_HINTS = [
+  "It's working great now.",
+  "It stopped working again last night.",
+  "It never really worked after the technician left.",
+  "That's fixed, but another reader isn't working.",
+  "We're thinking about upgrading our cameras next year.",
+  "Can someone from sales call me?",
+];
+const scenarioHints = {};
 
 // Demo keys prove this browser started a ticket. Kept in memory too, for when storage is blocked.
 const memoryKeys = {};
@@ -925,11 +962,13 @@ function renderPanel(detail, message) {
   p.appendChild(meta);
 
   // Where the ticket is now
-  const at = STAGES.findIndex(([s]) => s === t.status);
+  const stage = OUTCOME_STATES.includes(t.status) ? "outcome" : t.status;
+  const at = STAGES.findIndex(([s]) => s === stage);
   const strip = el("ol", "stages");
   strip.setAttribute("aria-label", "Service stages");
-  STAGES.forEach(([, label], i) => {
-    const li = el("li", at < 0 ? "" : i < at ? "done" : i === at ? "now" : "", label);
+  STAGES.forEach(([s, label], i) => {
+    const text = s === "outcome" && stage === "outcome" ? t.status_label : label;
+    const li = el("li", at < 0 ? "" : i < at ? "done" : i === at ? "now" : "", text);
     if (i === at) li.setAttribute("aria-current", "step");
     strip.appendChild(li);
   });
@@ -941,20 +980,21 @@ function renderPanel(detail, message) {
   // Controls only for the browser holding this ticket's demo key
   const key = keyFor(t.ticket_id);
   const actions = el("div", "ev-actions");
-  if (key) {
-    actions.appendChild(button("advance",
-      detail.next_step ? `Advance Demo → ${detail.next_step}` : "Service complete",
-      () => demoAction("advance"), busy || !detail.next_step));
-    actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
+  if (key && detail.follow_up_ready) {
+    actions.appendChild(button("advance", "Start follow-up call", () => startFollowUp(t), busy || session || connecting));
+    actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy || session));
+  } else if (key && detail.next_step) {
+    actions.appendChild(button("advance", `Advance Demo → ${detail.next_step}`, () => demoAction("advance"), busy));
+    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
+  } else if (key) {
+    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
   } else if (t.demo) {
     actions.appendChild(el("p", "ev-note", "Viewing only. This demo ticket can be advanced from the browser that started it."));
   } else {
     actions.appendChild(el("p", "ev-note", "Viewing only. Start a scenario, or make a call, to step through a ticket yourself."));
   }
-  p.appendChild(actions);
-  if (key && !detail.next_step) {
-    p.appendChild(el("p", "ev-note", "Next, NightAgent calls the customer to confirm the fix. That follow-up call is coming soon."));
-  }
+  if (actions.childNodes.length) p.appendChild(actions);
+  if (key && detail.follow_up_ready) p.appendChild(followUpBox(t));
   if (message) p.appendChild(el("p", "error", message));
 
   // Customer journey, oldest first
@@ -975,7 +1015,78 @@ function renderPanel(detail, message) {
     tl.appendChild(li);
   });
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
+  const acts = businessActions(detail, key);
+  if (acts) p.appendChild(acts);
   p.appendChild(tl);
+}
+
+function followUpBox(t) {
+  const box = el("div", "follow-box");
+  box.appendChild(el("p", "", "Sam calls the customer to confirm the fix. You play the customer, by voice or text (pick at the top of the page). What you say decides what NightAgent does next."));
+  const hint = t.scenario && scenarioHints[t.scenario];
+  if (hint) {
+    box.appendChild(el("p", "", "For this scenario, try saying:"));
+    box.appendChild(el("p", "say", `"${hint}"`));
+  } else {
+    box.appendChild(el("p", "", "Try one of these:"));
+    const ul = el("ul");
+    GENERIC_HINTS.forEach((h) => ul.appendChild(el("li", "", `"${h}"`)));
+    box.appendChild(ul);
+  }
+  return box;
+}
+
+function businessActions(detail, key) {
+  const a = detail.actions || {};
+  const items = [];
+  for (const tk of a.tickets || []) {
+    if (key && !keyFor(tk.ticket_id)) saveDemoKey(tk.ticket_id, key); // same browser owns follow-on tickets
+    const n = el("div", "action");
+    n.appendChild(el("b", "", `New ticket ${tk.ticket_id} · ${tk.priority_label}`));
+    n.appendChild(el("span", "", tk.issue_summary || ""));
+    n.appendChild(button("", "Open this ticket", () => loadTicket(tk.ticket_id)));
+    items.push(n);
+  }
+  for (const o of a.opportunities || []) {
+    const n = el("div", "action opp");
+    n.appendChild(el("b", "", `${o.opportunity_id} · ${o.type}`));
+    n.appendChild(el("span", "", o.interest || ""));
+    const bits = [o.scope, o.device_count && `${o.device_count} devices`, o.timeline].filter(Boolean).join(" · ");
+    if (bits) n.appendChild(el("span", "", bits));
+    n.appendChild(el("span", "", `Estimated value: ${o.estimated_value}`));
+    n.appendChild(el("span", "", `Assigned to ${o.assigned_to}`));
+    items.push(n);
+  }
+  for (const k of a.tasks || []) {
+    const n = el("div", `action${k.priority === "high" ? " high" : ""}`);
+    n.appendChild(el("b", "", `${k.task_id} · ${k.reason}`));
+    if (k.summary) n.appendChild(el("span", "", k.summary));
+    n.appendChild(el("span", "", `For ${k.assigned_to}${k.requested_follow_up ? ` · ${k.requested_follow_up}` : ""}`));
+    items.push(n);
+  }
+  if (!items.length) return null;
+  const box = el("div", "actions");
+  box.appendChild(el("h3", "", "Business actions"));
+  items.forEach((n) => box.appendChild(n));
+  return box;
+}
+
+async function startFollowUp(t) {
+  if (busy || session || connecting) return;
+  busy = true;
+  renderPanel(selectedDetail);
+  try {
+    const fu = await api("/api/demo/follow-up", { ticket_id: t.ticket_id, demo_key: keyFor(t.ticket_id) });
+    busy = false;
+    followUpTicket = t.ticket_id;
+    document.querySelector(".console").scrollIntoView({ behavior: "smooth", block: "start" });
+    await startSession(mode, { agentId: fu.agent_id, dynamicVariables: fu.dynamic_variables });
+    loadTicket(t.ticket_id, { quiet: true });
+  } catch (err) {
+    busy = false;
+    followUpTicket = null;
+    renderPanel(selectedDetail, err.message);
+  }
 }
 
 function markSelected() {
@@ -1041,6 +1152,7 @@ async function loadScenarios() {
     const list = await api("/api/demo/scenarios");
     els.scenarios.replaceChildren();
     for (const s of list) {
+      scenarioHints[s.id] = s.follow_up_hint;
       const li = el("li");
       const b = el("button");
       b.type = "button";
