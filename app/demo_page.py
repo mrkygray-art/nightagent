@@ -57,6 +57,7 @@ DEMO_HTML = r"""<!doctype html>
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
   .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
   .brand { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: 0.02em; color: var(--text); text-decoration: none; }
+  .top nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 18px; }
   .top nav a { font-weight: 500; text-decoration: none; }
   .top nav a:hover { text-decoration: underline; }
 
@@ -112,6 +113,10 @@ DEMO_HTML = r"""<!doctype html>
   .call:hover { background: #ffb43b; }
   .call:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); }
   .call[data-live="true"] { background: var(--alarm); color: #fff; }
+  .call[data-ring="true"] { background: var(--clear); color: #04210f; animation: ring-shake 1.2s ease-in-out infinite, ring-glow 1.2s ease-in-out infinite; }
+  @keyframes ring-shake { 0%, 50%, 100% { transform: rotate(0); } 5%, 15%, 25% { transform: rotate(-1.4deg); } 10%, 20%, 30% { transform: rotate(1.4deg); } }
+  @keyframes ring-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(76,183,130,.55); } 50% { box-shadow: 0 0 0 12px rgba(76,183,130,0); } }
+  .lamp[data-state="ringing"] { background: var(--clear); box-shadow: 0 0 0 6px rgba(76,183,130,.25); animation: glow 1.2s ease-in-out infinite; }
   .call:disabled { opacity: .65; cursor: progress; }
 
   .mic { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -177,7 +182,12 @@ DEMO_HTML = r"""<!doctype html>
   .live { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
   .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--clear); }
 
-  .tickets { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .tickets {
+    list-style: none; margin: 0; padding: 0 4px 0 0; display: grid; gap: 12px; align-content: start;
+    max-height: 640px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  @media (max-width: 900px) { .tickets { max-height: 430px; } }
   .ticket {
     display: grid; grid-template-columns: 6px 1fr; border-radius: 12px; overflow: hidden;
     background: var(--night); border: 1px solid var(--line);
@@ -253,8 +263,11 @@ DEMO_HTML = r"""<!doctype html>
     padding: 10px 18px; border-radius: 12px; background: var(--sodium); color: #1a1205; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18);
   }
   .advance:disabled { opacity: .55; cursor: not-allowed; }
-  .reset { font: 500 14px var(--body); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
-  .reset:hover { color: var(--text); }
+  .reset, .step { font: 500 14px var(--body); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+  .reset:hover, .step:hover { color: var(--text); }
+  .advance.answer { background: var(--clear); color: #04210f; animation: ring-glow 1.2s ease-in-out infinite; }
+  .running { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; font-weight: 600; }
+  .running::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--sodium); animation: glow 1.2s ease-in-out infinite; }
   .ev-note { color: var(--muted); font-size: 14px; margin: 0; }
 
   .timeline { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -316,7 +329,8 @@ DEMO_HTML = r"""<!doctype html>
   footer { border-top: 1px solid var(--line); margin-top: 32px; padding: 20px 0 32px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .lamp[data-state="speaking"], .ticket.fresh { animation: none; }
+    .lamp[data-state="speaking"], .ticket.fresh, .call[data-ring="true"], .advance.answer, .running::before,
+    .lamp[data-state="ringing"] { animation: none; }
     .timeline li.latest .dot::before { box-shadow: none; }
     * { transition: none !important; }
   }
@@ -326,7 +340,7 @@ DEMO_HTML = r"""<!doctype html>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="/demo">NightAgent</a>
-    <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
+    <nav><a href="#lifecycle">Jump to Demo Mode</a><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
   </header>
 
   <section class="intro">
@@ -409,7 +423,7 @@ DEMO_HTML = r"""<!doctype html>
     <div class="life-body">
       <div>
         <h2 id="life-title">Follow a ticket</h2>
-        <p class="lead">Pick a scenario to skip the call, or make a call above. Your call's ticket opens here automatically. You can also click any ticket on the board to see its history.</p>
+        <p class="lead">Make a call above, or pick a scenario to skip it. The ticket then runs through dispatch and repair on its own, and NightAgent calls you back when the work is done. Click any ticket on the board to see its history.</p>
         <ul class="scenarios" id="scenarios"></ul>
       </div>
       <div class="event-panel" id="event-panel" aria-live="polite">
@@ -498,7 +512,9 @@ function render() {
   els.call.dataset.live = String(live);
   els.call.disabled = connecting;
   const noun = mode === "voice" ? "call" : "chat";
-  els.call.textContent = connecting ? "Connecting…" : live ? `End ${noun}` : `Start ${noun}`;
+  const ring = Boolean(ringing) && !live && !connecting;
+  els.call.dataset.ring = String(ring);
+  els.call.textContent = connecting ? "Connecting…" : live ? `End ${noun}` : ring ? "Incoming call · Answer" : `Start ${noun}`;
   els.modeButtons.forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
     b.disabled = live || connecting;
@@ -689,8 +705,11 @@ const handlers = {
     if (soundCleanup) { soundCleanup(); soundCleanup = null; }
     const why = details && details.reason === "error" ? (details.message || "The connection to Sam failed.") : "";
     if (why) showError(`The call couldn't continue: ${why}`);
-    setStatus("idle", "Call ended", "The ticket stays on the board. Start another call anytime.");
+    setStatus("idle", "Call ended", autoId
+      ? "Your ticket is moving through dispatch below. NightAgent will call you back when the work is done."
+      : "The ticket stays on the board. Start another call anytime.");
     addMessage("note", mode === "voice" ? "Call ended" : "Chat ended");
+    if (pendingRing && !followUpTicket) { const id = pendingRing; pendingRing = null; setTimeout(() => startRinging(id), 1500); }
     if (followUpTicket) {
       const id = followUpTicket;
       followUpTicket = null;
@@ -780,7 +799,7 @@ async function endSession() {
   try { await session.endSession(); } catch (err) { console.warn(err); }
 }
 
-els.call.addEventListener("click", () => (session ? endSession() : startSession()));
+els.call.addEventListener("click", () => (session ? endSession() : ringing ? answerRing() : startSession()));
 
 els.modeButtons.forEach((b) => b.addEventListener("click", () => {
   if (session || connecting) return;
@@ -1009,14 +1028,26 @@ function renderPanel(detail, message) {
   // Controls only for the browser holding this ticket's demo key
   const key = keyFor(t.ticket_id);
   const actions = el("div", "ev-actions");
+  const id = t.ticket_id;
   if (key && detail.follow_up_ready) {
-    actions.appendChild(button("advance", "Start follow-up call", () => startFollowUp(t), busy || session || connecting));
-    actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy || session));
+    if (ringing === id) {
+      actions.appendChild(button("advance answer", "Answer the call", answerRing, connecting));
+    } else {
+      actions.appendChild(button("advance", missed.has(id) ? "Call back" : "Take the follow-up call",
+        () => startFollowUp(t), busy || session || connecting));
+    }
+    actions.appendChild(button("reset", "Reset", () => resetTicket(id), busy || session));
   } else if (key && detail.next_step) {
-    actions.appendChild(button("advance", `Advance Demo → ${detail.next_step}`, () => demoAction("advance"), busy));
-    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
+    if (autoId === id && !autoPaused) {
+      actions.appendChild(el("span", "running", `Running on its own · next: ${detail.next_step}`));
+      actions.appendChild(button("step", "Pause", pauseAuto));
+    } else {
+      actions.appendChild(button("advance", autoId === id ? "Resume" : "Run it for me", () => resumeAuto(id), busy));
+      actions.appendChild(button("step", `Next step → ${detail.next_step}`, () => demoAction("advance"), busy));
+    }
+    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => resetTicket(id), busy));
   } else if (key) {
-    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
+    if (!t.resolution) actions.appendChild(button("reset", "Reset", () => resetTicket(id), busy));
   } else if (t.demo) {
     actions.appendChild(el("p", "ev-note", "Viewing only. This demo ticket can be advanced from the browser that started it."));
   } else {
@@ -1051,7 +1082,7 @@ function renderPanel(detail, message) {
 
 function followUpBox(t) {
   const box = el("div", "follow-box");
-  box.appendChild(el("p", "", "Sam calls the customer to confirm the fix. You play the customer, by voice or text (pick at the top of the page). What you say decides what NightAgent does next."));
+  box.appendChild(el("p", "", "NightAgent calls the customer to confirm the fix. You're the customer: answer by voice or text (pick at the top of the page). What you say decides what NightAgent does next."));
   const hint = t.scenario && scenarioHints[t.scenario];
   if (hint) {
     box.appendChild(el("p", "", "For this scenario, try saying:"));
@@ -1167,6 +1198,7 @@ async function startScenario(id, btn) {
     saveDemoKey(detail.ticket.ticket_id, key);
     selectedId = detail.ticket.ticket_id;
     busy = false;
+    startAutoRun(detail.ticket.ticket_id);
     renderPanel(detail);
     impactAt = 0;
     refreshTickets();
@@ -1213,8 +1245,144 @@ async function claimMyCallTicket(list) {
       saveDemoKey(mine.ticket_id, data.demo_key);
     } catch (err) { console.warn(err); }
   }
-  addMessage("note", `Your ticket ${mine.ticket_id} is ready in Demo Mode below.`);
+  addMessage("note", `Your ticket ${mine.ticket_id} is in Demo Mode below. It starts moving through dispatch when this call ends.`);
+  if (keyFor(mine.ticket_id)) startAutoRun(mine.ticket_id);
   loadTicket(mine.ticket_id);
+}
+
+/* ---------- Hands-free: the ticket runs itself, then NightAgent calls you ---------- */
+
+const STEP_MS = 3000;   // time between simulated steps
+const RING_MS = 30000;  // how long the phone rings before it's a missed call
+let autoId = null;      // the ticket stepping on its own
+let autoPaused = false;
+let autoTimer = null;
+let ringing = null;     // ticket id while NightAgent is "calling"
+let pendingRing = null; // ring as soon as the current call ends
+let ringTimer = null;
+let ringStop = null;
+const missed = new Set();
+
+function startAutoRun(id) {
+  autoId = id;
+  autoPaused = false;
+  scheduleAuto(1500);
+}
+function scheduleAuto(ms) {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(autoStep, ms);
+}
+async function autoStep() {
+  const id = autoId;
+  if (!id || autoPaused) return;
+  if (session || connecting || busy) { scheduleAuto(1500); return; } // wait for the current call to end
+  try {
+    const detail = await api("/api/demo/advance", { ticket_id: id, demo_key: keyFor(id) });
+    if (autoId !== id) return;
+    if (detail.next_step) {
+      scheduleAuto(STEP_MS);
+    } else {
+      autoId = null;
+      if (detail.follow_up_ready) startRinging(id);
+    }
+    if (selectedId === id && !busy) renderPanel(detail);
+    impactAt = 0;
+    refreshTickets();
+  } catch (err) {
+    autoId = null;
+    if (selectedId === id) renderPanel(selectedDetail, err.message);
+  }
+}
+function pauseAuto() {
+  autoPaused = true;
+  clearTimeout(autoTimer);
+  renderPanel(selectedDetail);
+}
+function resumeAuto(id) {
+  autoId = id;
+  autoPaused = false;
+  scheduleAuto(300);
+  renderPanel(selectedDetail);
+}
+function resetTicket(id) {
+  if (autoId === id) { autoId = null; clearTimeout(autoTimer); }
+  if (ringing === id) stopRinging(false);
+  if (pendingRing === id) pendingRing = null;
+  missed.delete(id);
+  demoAction("reset");
+}
+
+// A classic two-tone phone ring, made by the page (no sound file). Browsers only allow sound
+// after the visitor has clicked something, so the audio is unlocked on the first click.
+let ringCtx = null;
+function unlockAudio() {
+  try {
+    if (!ringCtx) ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ringCtx.state === "suspended") ringCtx.resume().catch(() => {});
+  } catch {}
+}
+document.addEventListener("pointerdown", unlockAudio, true);
+document.addEventListener("keydown", unlockAudio, true);
+
+function playRing() {
+  unlockAudio();
+  if (!ringCtx) return () => {};
+  const ctx = ringCtx;
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  gain.connect(ctx.destination);
+  const oscs = [440, 480].map((f) => {
+    const o = ctx.createOscillator();
+    o.frequency.value = f;
+    o.connect(gain);
+    o.start();
+    return o;
+  });
+  const t0 = ctx.currentTime + 0.05;
+  for (let i = 0; i < Math.ceil(RING_MS / 4000); i++) { // 2 s ring, 2 s quiet
+    gain.gain.setTargetAtTime(0.12, t0 + i * 4, 0.015);
+    gain.gain.setTargetAtTime(0, t0 + i * 4 + 2, 0.015);
+  }
+  return () => {
+    oscs.forEach((o) => { try { o.stop(); } catch {} });
+    try { gain.disconnect(); } catch {}
+  };
+}
+
+function startRinging(id) {
+  if (session || connecting) { pendingRing = id; return; } // don't ring over a call in progress
+  if (ringing) stopRinging(false);
+  ringing = id;
+  missed.delete(id);
+  ringStop = playRing();
+  try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 1600, 400, 200, 400]); } catch {}
+  setStatus("ringing", "NightAgent is calling", `Tap Answer to talk to Sam about ${id}.`);
+  clearTimeout(ringTimer);
+  ringTimer = setTimeout(() => stopRinging(true), RING_MS);
+  render();
+  if (selectedDetail && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
+}
+
+function stopRinging(missedIt) {
+  if (!ringing) return;
+  const id = ringing;
+  ringing = null;
+  clearTimeout(ringTimer);
+  if (ringStop) { ringStop(); ringStop = null; }
+  try { if (navigator.vibrate) navigator.vibrate(0); } catch {}
+  if (missedIt) {
+    missed.add(id);
+    setStatus("idle", "Missed call from NightAgent", `Tap Call back on ${id} in Demo Mode to take it.`);
+  }
+  render();
+  if (selectedDetail && selectedDetail.ticket.ticket_id === id) renderPanel(selectedDetail);
+}
+
+async function answerRing() {
+  const id = ringing;
+  if (!id) return;
+  stopRinging(false);
+  await startFollowUp({ ticket_id: id });
 }
 
 function pickFromBoard(e) {
