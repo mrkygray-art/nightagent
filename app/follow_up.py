@@ -20,7 +20,7 @@ DESTINATIONS = {
     "support": "Support desk",
 }
 
-VALUE_TBD = "TBD - AE qualification required"
+VALUE_TBD = "TBD - the sales rep will work it out"
 
 
 def _clean(text: str | None, limit: int = 400) -> str:
@@ -102,18 +102,18 @@ def apply_outcome(ticket: dict, report: dict, conversation_id: str | None) -> di
         ticket = {**ticket, "priority": priority, "priority_reason": reason, "category": category}
         impact = _clean(report.get("current_impact"), 200)
         record_event(tid, "priority_reviewed",
-                     f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Re-evaluated by the priority rules"
-                     + (f" from today's impact: {impact}" if impact else ""), actor_type="system", **common)
-        done["tasks"].append(_task(ticket, customer, "service", "Recurring problem: send a technician back",
+                     f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Our rules checked the priority again"
+                     + (f", based on what's happening now: {impact}" if impact else ""), actor_type="system", **common)
+        done["tasks"].append(_task(ticket, customer, "service", "The problem came back: send a technician",
                                    comments or "The original problem returned after service.",
                                    "high", conversation_id, "Priority review and return visit"))
-        said.append(f"The ticket is reopened as {lifecycle.PRIORITY_LABELS[priority]} and the service desk will schedule a return visit.")
+        said.append(f"The ticket is reopened as {lifecycle.PRIORITY_LABELS[priority].lower()}, and the service desk will schedule a return visit.")
 
     elif resolution == "never_fixed":
         ticket = move_ticket(ticket, "escalated")
         record_event(tid, "ticket_escalated", "Customer said the problem was never really fixed",
                      actor_type="customer", **common)
-        done["tasks"].append(_task(ticket, customer, "service_manager", "Customer recovery: repair did not hold",
+        done["tasks"].append(_task(ticket, customer, "service_manager", "Unhappy customer: the repair didn't hold",
                                    comments or "Customer says the problem was never fixed.", "high",
                                    conversation_id, "Service manager to call the customer"))
         said.append("This is escalated to the service manager, who will call you.")
@@ -147,14 +147,14 @@ def apply_outcome(ticket: dict, report: dict, conversation_id: str | None) -> di
         record_event(new["ticket_id"], "call_received", f"Raised on NightAgent's follow-up call for {tid}: {new_issue}",
                      actor_type="customer", **common)
         record_event(new["ticket_id"], "triage_completed",
-                     f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Set by the priority rules, not the AI.",
+                     f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Our rules set the priority, not the AI.",
                      actor_type="system", **common)
-        record_event(new["ticket_id"], "ticket_created", f"{new['ticket_id']} created. Awaiting dispatch.",
+        record_event(new["ticket_id"], "ticket_created", f"{new['ticket_id']} is waiting for a technician.",
                      actor_type="agent", **common)
         record_event(tid, "new_ticket_created", f"{new['ticket_id']}: {new_issue}", actor_type="system",
                      metadata={"ticket_id": new["ticket_id"]}, **common)
         done["tickets"].append(new)
-        said.append(f"I opened a new {lifecycle.PRIORITY_LABELS[priority]} ticket, {new['ticket_id']}, for the new problem.")
+        said.append(f"I opened a new {lifecycle.PRIORITY_LABELS[priority].lower()} ticket, {new['ticket_id']}, for the new problem.")
 
     # Sales interest is not service work: open a lead for the account executive.
     interest = _clean(report.get("sales_interest"), 300)
@@ -178,9 +178,9 @@ def apply_outcome(ticket: dict, report: dict, conversation_id: str | None) -> di
         record_event(tid, "opportunity_identified", f"{opp['opportunity_id']}: {interest}",
                      actor_type="system", metadata={"opportunity_id": opp["opportunity_id"]}, **common)
         done["opportunities"].append(opp)
-        done["tasks"].append(_task(ticket, customer, "account_executive", "New sales opportunity from a service follow-up",
+        done["tasks"].append(_task(ticket, customer, "account_executive", "Upgrade interest from a check-in call",
                                    f"{opp['opportunity_id']}: {interest}", "normal", conversation_id,
-                                   "AE to qualify scope, timeline, and budget"))
+                                   "Sales rep to learn the details and budget"))
         said.append("I passed your upgrade interest to your account executive, who will reach out.")
 
     # The customer asked for a person: route to the team they need.

@@ -317,6 +317,59 @@ DEMO_HTML = r"""<!doctype html>
     .metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
   }
 
+  /* ---------- Friendly call panel: big status circle, start over, options ---------- */
+  .lamp { display: none; }
+  .orb-area { display: grid; justify-items: center; gap: 10px; padding: 4px 0 0; }
+  .orb {
+    --lvl: 0; width: 112px; height: 112px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 38%, #4a5a7d, #24324f 70%);
+    transform: scale(calc(1 + var(--lvl) * .32));
+    transition: transform .08s linear, background .35s, box-shadow .35s;
+  }
+  .orb[data-state="idle"] { animation: breathe 4.5s ease-in-out infinite; }
+  .orb[data-state="connecting"] { background: radial-gradient(circle at 50% 38%, #a9b4cc, #55617f 70%); animation: breathe 1.3s ease-in-out infinite; }
+  .orb[data-state="ringing"] { background: radial-gradient(circle at 50% 38%, #8fe6b9, var(--clear) 70%); box-shadow: 0 0 0 12px rgba(76,183,130,.18); animation: breathe 1s ease-in-out infinite; }
+  .orb[data-state="listening"] { background: radial-gradient(circle at 50% 38%, #8fe6b9, var(--clear) 70%); box-shadow: 0 0 0 calc(6px + var(--lvl) * 26px) rgba(76,183,130,.18); }
+  .orb[data-state="thinking"] { background: radial-gradient(circle at 50% 38%, #cdbdff, #7b61d9 70%); box-shadow: 0 0 0 10px rgba(123,97,217,.18); animation: breathe 1.5s ease-in-out infinite; }
+  .orb[data-state="speaking"] { background: radial-gradient(circle at 50% 38%, #ffd88a, var(--sodium) 70%); box-shadow: 0 0 0 calc(6px + var(--lvl) * 30px) var(--sodium-soft); }
+  @keyframes breathe { 50% { transform: scale(1.07); } }
+  .orb-label { margin: 0; font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: .01em; text-align: center; min-height: 1.2em; }
+  .calm { margin: 0; text-align: center; color: var(--muted); font-size: 15px; }
+  .calm b { color: var(--text); }
+  .incall { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .incall[hidden] { display: none; }
+  .incall button {
+    font: 600 17px var(--body); padding: 12px 14px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+  }
+  .incall .restart { border: 2px solid var(--sodium); }
+  .incall button:disabled { opacity: .55; cursor: progress; }
+  .prefs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .prefs label {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 14px; color: var(--muted); background: var(--night);
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
+  }
+  .prefs input { accent-color: var(--sodium); width: 17px; height: 17px; margin: 0; }
+  .prefs label:has(input:checked) { color: var(--text); border-color: var(--sodium); }
+  .tech { border: 1px dashed #3b5288; border-radius: 12px; padding: 12px 14px; background: var(--night); display: grid; gap: 8px; }
+  .tech[hidden] { display: none; }
+  .tech h3 { margin: 0; font-size: 16px; }
+  .tech ol {
+    list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 240px; overflow-y: auto;
+    font: 13px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted);
+  }
+  .tech li b { color: var(--text); font-weight: 600; }
+  .tech-line { display: block; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; color: #8e9ab5; margin-top: 2px; }
+  body:not(.tech-on) .tech-line { display: none; }
+
+  /* Bigger text option */
+  body.big .msg, body.big .composer input, body.big .ev-issue, body.big .ticket .issue, body.big .timeline .what b { font-size: 19px; }
+  body.big .status strong { font-size: 19px; }
+  body.big .status span, body.big .calm, body.big .prefs label, body.big .timeline .what p,
+  body.big .ticket .meta, body.big .ev-meta, body.big .accounts .say, body.big .follow-box p { font-size: 17px; }
+  body.big .orb-label { font-size: 32px; }
+
   .how { padding: 48px 0 24px; }
   .how ol { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
   @media (max-width: 900px) { .how ol { grid-template-columns: 1fr 1fr; } }
@@ -330,7 +383,8 @@ DEMO_HTML = r"""<!doctype html>
 
   @media (prefers-reduced-motion: reduce) {
     .lamp[data-state="speaking"], .ticket.fresh, .call[data-ring="true"], .advance.answer, .running::before,
-    .lamp[data-state="ringing"] { animation: none; }
+    .lamp[data-state="ringing"], .orb { animation: none !important; }
+    .orb { transition: none; }
     .timeline li.latest .dot::before { box-shadow: none; }
     * { transition: none !important; }
   }
@@ -345,7 +399,7 @@ DEMO_HTML = r"""<!doctype html>
 
   <section class="intro">
     <h1>Call the <span class="nowrap">after-hours</span> line.</h1>
-    <p>Sam, the NightAgent voice, answers the night desk for a security integrator. Report a problem as one of the demo customers and watch the dispatch board fill in while you're still on the call. Then follow the ticket through dispatch, repair, and follow-up in <a href="#lifecycle">Demo Mode</a>.</p>
+    <p>Sam, the NightAgent voice, answers the night desk for a security integrator. Report a problem as one of the demo customers and watch your ticket appear while you're still on the call. Then watch the repair play out and get a check-in call in <a href="#lifecycle">Demo Mode</a>.</p>
   </section>
 
   <div class="grid">
@@ -369,7 +423,22 @@ DEMO_HTML = r"""<!doctype html>
         <button type="button" id="mic-names">Find microphones</button>
       </div>
 
+      <div class="orb-area">
+        <div class="orb" id="orb" data-state="idle" aria-hidden="true"></div>
+        <p class="orb-label" id="orb-label" role="status" aria-live="polite">Ready when you are</p>
+      </div>
+      <p class="calm">This is a practice line. You can't break anything. Tap <b>Start over</b> anytime.</p>
+
       <button type="button" class="call" id="call" data-live="false">Start call</button>
+      <div class="incall" id="incall" hidden>
+        <button type="button" class="restart" id="restart">↺ Start over</button>
+        <button type="button" id="repeat">Repeat that</button>
+      </div>
+      <div class="prefs" role="group" aria-label="Call options">
+        <label><input type="checkbox" id="pref-slow"> Sam speaks slower</label>
+        <label><input type="checkbox" id="pref-big"> Bigger text</label>
+        <label><input type="checkbox" id="pref-tech"> Show what's happening behind the scenes</label>
+      </div>
       <button type="button" class="sound" id="sound" hidden>Can't hear Sam? Tap here to turn on sound</button>
       <p class="error" id="error" role="alert" hidden></p>
 
@@ -401,12 +470,18 @@ DEMO_HTML = r"""<!doctype html>
         <button type="submit">Send</button>
       </form>
 
+      <section class="tech" id="tech" hidden aria-label="Behind the scenes">
+        <h3>Behind the scenes</h3>
+        <p class="fine">What Sam and NightAgent's server are doing, live. ElevenLabs Agents runs the voice. Sam calls tools on a Python FastAPI server, rules in code decide priority and what happens next, and tickets and their history are saved in Supabase.</p>
+        <ol id="tech-log"><li>Start a call to watch Sam's tool calls appear here.</li></ol>
+      </section>
+
       <p class="fine">Made-up demo data. Please don't share real names, numbers, or alarm codes. Conversations are processed and recorded by ElevenLabs.</p>
     </section>
 
     <section class="board" aria-labelledby="board-title">
       <div class="board-head">
-        <h2 id="board-title">Dispatch board</h2>
+        <h2 id="board-title">Ticket board</h2>
         <span class="live" id="board-status">Updates live</span>
       </div>
       <ol class="tickets" id="tickets">
@@ -417,13 +492,13 @@ DEMO_HTML = r"""<!doctype html>
 
   <section class="life" id="lifecycle" aria-labelledby="life-title">
     <div class="life-banner">
-      <strong>DEMO MODE — Accelerated Service Lifecycle</strong>
-      <span>Steps after the call are simulated so you can see hours of field work in a minute. Technicians and times are made up.</span>
+      <strong>DEMO MODE — a whole repair, sped up</strong>
+      <span>Everything after your call is pretend and sped up, so you can watch hours of work in about a minute. The technicians and times are made up.</span>
     </div>
     <div class="life-body">
       <div>
         <h2 id="life-title">Follow a ticket</h2>
-        <p class="lead">Make a call above, or pick a scenario to skip it. The ticket then runs through dispatch and repair on its own, and NightAgent calls you back when the work is done. Click any ticket on the board to see its history.</p>
+        <p class="lead">Make a call above, or pick an example to skip the call. Your ticket then moves along on its own, and NightAgent calls you back when the repair is done. Click any ticket on the board to see its story.</p>
         <ul class="scenarios" id="scenarios"></ul>
       </div>
       <div class="event-panel" id="event-panel" aria-live="polite">
@@ -444,10 +519,10 @@ DEMO_HTML = r"""<!doctype html>
   <section class="how" aria-labelledby="how-title">
     <h2 id="how-title">What happens on a call</h2>
     <ol>
-      <li><h3>Sam answers</h3><p>ElevenLabs handles speech recognition, the conversation, and Sam's voice in real time.</p></li>
-      <li><h3>Account lookup</h3><p>Sam calls a Python tool on this server to find the customer by phone number or business name.</p></li>
-      <li><h3>Triage and ticket</h3><p>Sam suggests a priority, but server-side rules make the final call. An emergency can't be downgraded.</p></li>
-      <li><h3>Dispatch and follow-up</h3><p>Emergencies page the on-call technician. Every step after that is written to the ticket's history, through repair and NightAgent's follow-up.</p></li>
+      <li><h3>Sam answers</h3><p>You talk to Sam in your browser, just like a phone call. You can also type.</p></li>
+      <li><h3>Sam finds your account</h3><p>Give your phone number or business name, and Sam looks it up.</p></li>
+      <li><h3>Sam saves your problem</h3><p>Our rules decide how urgent it is, not the AI, so an emergency always goes first.</p></li>
+      <li><h3>Help, then a check-in</h3><p>Emergencies alert the on-call technician. After the repair, NightAgent calls you to make sure it's fixed.</p></li>
     </ol>
   </section>
 
@@ -467,6 +542,8 @@ const els = {
   modeButtons: document.querySelectorAll(".mode button"),
   micRow: $("mic-row"), mic: $("mic"), micNames: $("mic-names"), sound: $("sound"),
   scenarios: $("scenarios"), panel: $("event-panel"), metrics: $("metrics"), impactStatus: $("impact-status"),
+  orb: $("orb"), orbLabel: $("orb-label"), incall: $("incall"), restart: $("restart"), repeat: $("repeat"),
+  prefSlow: $("pref-slow"), prefBig: $("pref-big"), prefTech: $("pref-tech"), tech: $("tech"), techLog: $("tech-log"),
 };
 
 let Conversation = null;
@@ -501,11 +578,100 @@ function showError(message) {
   els.error.hidden = !message;
 }
 
+// The big circle says what's happening in plain words.
+const ORB_WORDS = {
+  idle: "Ready when you are", connecting: "Calling Sam…", ringing: "NightAgent is calling…",
+  listening: "Listening…", thinking: "Sam is thinking…", speaking: "Sam is speaking…",
+};
+function setOrb(state, words) {
+  els.orb.dataset.state = state;
+  els.orbLabel.textContent = words || ORB_WORDS[state] || "";
+}
+
 function setStatus(state, title, detail) {
   els.lamp.dataset.state = state;
+  setOrb(state);
   if (title) els.title.textContent = title;
   if (detail !== undefined) els.detail.textContent = detail;
 }
+
+// The circle grows with the real voice level: yours while you talk, Sam's while Sam talks.
+let levelRaf = 0;
+let heardAt = 0;
+function startLevelLoop() {
+  cancelAnimationFrame(levelRaf);
+  const tick = () => {
+    if (!session || mode !== "voice") { els.orb.style.setProperty("--lvl", "0"); return; }
+    const state = els.orb.dataset.state;
+    let lvl = 0;
+    try { lvl = state === "speaking" ? session.getOutputVolume() : session.getInputVolume(); } catch {}
+    lvl = Math.min(1, Math.max(0, (lvl || 0) * 2.2));
+    els.orb.style.setProperty("--lvl", state === "listening" || state === "speaking" ? lvl.toFixed(3) : "0");
+    if (state === "listening") {
+      if (lvl > 0.12) heardAt = performance.now();
+      const hearing = performance.now() - heardAt < 900;
+      const words = hearing ? "Hearing you…" : "Listening…";
+      if (els.orbLabel.textContent !== words) els.orbLabel.textContent = words;
+    }
+    levelRaf = requestAnimationFrame(tick);
+  };
+  levelRaf = requestAnimationFrame(tick);
+}
+
+/* ---------- Behind the scenes (for the technically curious) ---------- */
+const TOOL_WORDS = {
+  lookup_customer: ["Sam asks NightAgent's server (Python, FastAPI) to find the account",
+                    "Server found the account and its after-hours coverage"],
+  create_ticket: ["Sam sends the caller's details and a suggested priority",
+                  "Server rules set the final priority and saved the ticket in Supabase"],
+  page_on_call_tech: ["Sam asks the server to alert the on-call technician",
+                      "Server confirmed it's an emergency and sent the alert (simulated in this demo)"],
+  record_follow_up_outcome: ["Sam sends what the customer said, with the single-use pass",
+                             "Server rules decided what happens next"],
+  end_call: ["Sam ends the call", "Call ended by Sam"],
+};
+function logTech(what, detail) {
+  if (els.techLog.dataset.started !== "1") { els.techLog.replaceChildren(); els.techLog.dataset.started = "1"; }
+  const li = document.createElement("li");
+  const t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  li.appendChild(document.createTextNode(`${t}  `));
+  const b = document.createElement("b");
+  b.textContent = what;
+  li.appendChild(b);
+  if (detail) li.appendChild(document.createTextNode(`  ${detail}`));
+  els.techLog.appendChild(li);
+  els.techLog.scrollTop = els.techLog.scrollHeight;
+}
+
+/* ---------- Options: slower speech, bigger text, behind the scenes ---------- */
+const PREFS_KEY = "nightagent-prefs";
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
+}
+function applyPrefs() {
+  document.body.classList.toggle("big", els.prefBig.checked);
+  document.body.classList.toggle("tech-on", els.prefTech.checked);
+  els.tech.hidden = !els.prefTech.checked;
+}
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({
+      slow: els.prefSlow.checked, big: els.prefBig.checked, tech: els.prefTech.checked,
+    }));
+  } catch {}
+}
+{
+  const p = loadPrefs();
+  els.prefSlow.checked = Boolean(p.slow);
+  els.prefBig.checked = Boolean(p.big);
+  els.prefTech.checked = Boolean(p.tech);
+  applyPrefs();
+}
+[els.prefBig, els.prefTech].forEach((n) => n.addEventListener("change", () => { applyPrefs(); savePrefs(); if (selectedDetail) renderPanel(selectedDetail); }));
+els.prefSlow.addEventListener("change", () => {
+  savePrefs();
+  if (session) addMessage("note", els.prefSlow.checked ? "Sam will speak slower starting with your next call." : "Sam will speak at normal speed starting with your next call.");
+});
 
 function render() {
   const live = Boolean(session);
@@ -520,6 +686,9 @@ function render() {
     b.disabled = live || connecting;
   });
   els.micRow.hidden = mode !== "voice";
+  els.incall.hidden = !live;
+  els.restart.disabled = restarting;
+  els.repeat.disabled = restarting;
   els.mic.disabled = live || connecting;
 }
 
@@ -678,7 +847,7 @@ function addMessage(who, text) {
   div.className = `msg ${who}`;
   if (who !== "note") {
     const b = document.createElement("b");
-    b.textContent = who === "sam" ? "Sam" : "You";
+    b.textContent = who === "sam" ? "Sam" : "Sam heard you say";
     div.appendChild(b);
   }
   div.appendChild(document.createTextNode(text));
@@ -693,7 +862,10 @@ function clearTranscript() {
 
 const handlers = {
   onConnect: (info) => {
+    stopRingback();
     if (info && info.conversationId) conversationId = info.conversationId;
+    logTech("Connected", `ElevenLabs agent over a WebSocket${conversationId ? ` · conversation ${conversationId.slice(0, 14)}…` : ""}`);
+    startLevelLoop();
     const who = followUpTicket ? `Sam is following up on ${followUpTicket}` : (mode === "voice" ? "Connected to Sam" : "Chatting with Sam");
     setStatus("listening", who,
       mode === "voice" ? "Speak naturally. You can interrupt Sam anytime." : "Type your messages below.");
@@ -702,7 +874,12 @@ const handlers = {
   },
   onDisconnect: (details) => {
     session = null;
+    stopRingback();
+    cancelAnimationFrame(levelRaf);
+    els.orb.style.setProperty("--lvl", "0");
     if (soundCleanup) { soundCleanup(); soundCleanup = null; }
+    logTech("Call ended");
+    if (restarting) { render(); return; } // Start over: the next call starts right away
     const why = details && details.reason === "error" ? (details.message || "The connection to Sam failed.") : "";
     if (why) showError(`The call couldn't continue: ${why}`);
     setStatus("idle", "Call ended", autoId
@@ -722,17 +899,28 @@ const handlers = {
   },
   onMessage: ({ message, source }) => {
     if (source === "user") {
+      if (session && els.orb.dataset.state !== "speaking") setStatus("thinking", "Sam is thinking", "One moment…");
       if (lastTyped && message && message.trim() === lastTyped) { lastTyped = null; return; }
       addMessage("you", message);
     } else {
       addMessage("sam", message);
+      if (mode === "text" && session) setStatus("listening", "Your turn", "Type your reply below.");
       schedulePoll(800);
     }
   },
   onModeChange: ({ mode: m }) => {
     if (!session) return;
-    if (m === "speaking") setStatus("speaking", "Sam is talking", "Jump in anytime.");
-    else setStatus("listening", "Sam is listening", mode === "voice" ? "Go ahead and speak." : "Type your reply below.");
+    if (m === "speaking") setStatus("speaking", "Sam is speaking", "You can jump in anytime.");
+    else if (els.orb.dataset.state !== "thinking") setStatus("listening", "Your turn", mode === "voice" ? "Go ahead and speak." : "Type your reply below.");
+  },
+  onAgentToolRequest: (e) => {
+    const name = (e && e.tool_name) || "tool";
+    setOrb("thinking", "Sam is looking that up…");
+    logTech(`→ ${name}`, (TOOL_WORDS[name] || [])[0] || "");
+  },
+  onAgentToolResponse: (e) => {
+    const name = (e && e.tool_name) || "tool";
+    logTech(`← ${name}`, e && e.is_error ? "the tool reported an error" : (TOOL_WORDS[name] || [])[1] || "done");
   },
   onError: (message) => {
     console.error(message);
@@ -746,7 +934,9 @@ async function startSession(nextMode, opts = {}) {
   mode = nextMode || mode;
   connecting = true;
   showError("");
-  setStatus("connecting", "Connecting to Sam…", "This takes a second or two.");
+  setStatus("connecting", "Calling Sam…", "This takes a second or two.");
+  if (opts.ring) ringbackStop = playRing(8000);
+  lastCall = followUpTicket ? { followUp: followUpTicket } : { mode };
   render();
   try {
     const C = await loadSdk();
@@ -769,6 +959,7 @@ async function startSession(nextMode, opts = {}) {
     if (mode === "text") {
       session = await C.startSession({ ...base, textOnly: true, overrides: { conversation: { textOnly: true } } });
     } else {
+      if (els.prefSlow.checked) base.overrides = { tts: { speed: 0.82 } };
       // WebSocket sends the page's origin, which the agent's allowed-sites list requires.
       // (A WebRTC call is rejected for a missing origin header after it connects, so it
       // just hangs up.)
@@ -783,6 +974,7 @@ async function startSession(nextMode, opts = {}) {
   } catch (err) {
     session = null;
     followUpTicket = null;
+    stopRingback();
     const msg = (err && err.message) || String(err);
     showError(/quota|credit/i.test(msg)
       ? "The demo has used up its call minutes for now. Please check back later."
@@ -799,7 +991,48 @@ async function endSession() {
   try { await session.endSession(); } catch (err) { console.warn(err); }
 }
 
-els.call.addEventListener("click", () => (session ? endSession() : ringing ? answerRing() : startSession()));
+els.call.addEventListener("click", () => (session ? endSession() : ringing ? answerRing() : startSession(undefined, { ring: true })));
+
+/* ---------- Start over and Repeat that ---------- */
+let lastCall = null;   // what to start again: { mode } or { followUp: ticketId }
+let callTicketId = null; // the ticket this call created, if any
+let restarting = false;
+let ringbackStop = null;
+function stopRingback() { if (ringbackStop) { ringbackStop(); ringbackStop = null; } }
+
+async function startOver() {
+  if (!session || restarting) return;
+  restarting = true;
+  render();
+  const again = lastCall;
+  // The call is being redone, so the ticket it already created shouldn't keep moving or ring later.
+  if (callTicketId && autoId === callTicketId) { autoId = null; clearTimeout(autoTimer); }
+  if (callTicketId && pendingRing === callTicketId) pendingRing = null;
+  callTicketId = null;
+  try { await session.endSession(); } catch (err) { console.warn(err); }
+  for (let i = 0; i < 60 && session; i++) await new Promise((r) => setTimeout(r, 50));
+  restarting = false;
+  clearTranscript();
+  addMessage("note", "Starting over. Nothing you said before is kept on this call.");
+  if (again && again.followUp) {
+    followUpTicket = null;
+    await startFollowUp({ ticket_id: again.followUp });
+  } else {
+    await startSession(mode, { ring: true });
+  }
+}
+
+function repeatThat() {
+  if (!session) return;
+  const text = "Sorry, could you repeat that?";
+  lastTyped = text;
+  addMessage("you", text);
+  setStatus("thinking", "Sam is thinking", "One moment…");
+  try { session.sendUserMessage(text); } catch (err) { showError("That didn't send. Try again."); }
+}
+
+els.restart.addEventListener("click", startOver);
+els.repeat.addEventListener("click", repeatThat);
 
 els.modeButtons.forEach((b) => b.addEventListener("click", () => {
   if (session || connecting) return;
@@ -829,6 +1062,7 @@ els.composer.addEventListener("submit", async (e) => {
   els.input.value = "";
   lastTyped = text;
   addMessage("you", text);
+  setStatus("thinking", "Sam is thinking", "One moment…");
   try { session.sendUserMessage(text); } catch (err) { showError("That message didn't send. Try again."); }
 });
 
@@ -874,9 +1108,9 @@ function renderTickets(list) {
 
     const row1 = el("div", "row1");
     row1.appendChild(el("span", "id", t.ticket_id));
-    row1.appendChild(el("span", `chip ${t.priority}`, t.priority));
+    row1.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
     if (myCallRef && t.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
-    if (t.scenario) row1.appendChild(el("span", "chip demo", "Demo scenario"));
+    if (t.scenario) row1.appendChild(el("span", "chip demo", "Example"));
     row1.appendChild(el("span", "when", timeAgo(t.created_at)));
     body.appendChild(row1);
 
@@ -928,9 +1162,9 @@ let selectedDetail = null;
 let myCallRef = null;
 let busy = false;
 const STAGES = [
-  ["awaiting_dispatch", "Ticket"], ["dispatched", "Dispatched"], ["technician_assigned", "Assigned"],
-  ["en_route", "En route"], ["onsite", "Onsite"], ["work_completed", "Completed"], ["follow_up_pending", "Follow-up"],
-  ["outcome", "Outcome"],
+  ["awaiting_dispatch", "Saved"], ["dispatched", "Notified"], ["technician_assigned", "Assigned"],
+  ["en_route", "On the way"], ["onsite", "Arrived"], ["work_completed", "Fixed"], ["follow_up_pending", "Check-in"],
+  ["outcome", "Result"],
 ];
 const OUTCOME_STATES = ["resolved", "closed", "reopened", "escalated"];
 const GENERIC_HINTS = [
@@ -1008,6 +1242,7 @@ function renderPanel(detail, message) {
   if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
   if (t.technician_name) meta.appendChild(el("span", "", `Technician: ${t.technician_name} (demo)`));
   p.appendChild(meta);
+  p.appendChild(el("span", "tech-line", `status=${t.status} · priority=${t.priority} · category=${t.category || "-"} · GET /api/tickets/${t.ticket_id}`));
 
   // Where the ticket is now
   const stage = OUTCOME_STATES.includes(t.status) ? "outcome" : t.status;
@@ -1033,13 +1268,13 @@ function renderPanel(detail, message) {
     if (ringing === id) {
       actions.appendChild(button("advance answer", "Answer the call", answerRing, connecting));
     } else {
-      actions.appendChild(button("advance", missed.has(id) ? "Call back" : "Take the follow-up call",
+      actions.appendChild(button("advance", missed.has(id) ? "Call back" : "Take the check-in call",
         () => startFollowUp(t), busy || session || connecting));
     }
     actions.appendChild(button("reset", "Reset", () => resetTicket(id), busy || session));
   } else if (key && detail.next_step) {
     if (autoId === id && !autoPaused) {
-      actions.appendChild(el("span", "running", `Running on its own · next: ${detail.next_step}`));
+      actions.appendChild(el("span", "running", `Moving along on its own · next: ${detail.next_step}`));
       actions.appendChild(button("step", "Pause", pauseAuto));
     } else {
       actions.appendChild(button("advance", autoId === id ? "Resume" : "Run it for me", () => resumeAuto(id), busy));
@@ -1049,9 +1284,9 @@ function renderPanel(detail, message) {
   } else if (key) {
     if (!t.resolution) actions.appendChild(button("reset", "Reset", () => resetTicket(id), busy));
   } else if (t.demo) {
-    actions.appendChild(el("p", "ev-note", "Viewing only. This demo ticket can be advanced from the browser that started it."));
+    actions.appendChild(el("p", "ev-note", "Just looking. Only the person who started this ticket can move it along."));
   } else {
-    actions.appendChild(el("p", "ev-note", "Viewing only. Start a scenario, or make a call, to step through a ticket yourself."));
+    actions.appendChild(el("p", "ev-note", "Just looking. Make a call or pick an example to follow a ticket yourself."));
   }
   if (actions.childNodes.length) p.appendChild(actions);
   if (key && detail.follow_up_ready) p.appendChild(followUpBox(t));
@@ -1071,6 +1306,7 @@ function renderPanel(detail, message) {
     what.appendChild(el("b", "", e.label));
     if (e.simulated) what.appendChild(el("span", "tag-sim", "Simulated"));
     if (e.description) what.appendChild(el("p", "", e.description));
+    what.appendChild(el("span", "tech-line", `event=${e.event_type}${e.simulated ? " · simulated" : ""}`));
     li.appendChild(what);
     tl.appendChild(li);
   });
@@ -1113,8 +1349,8 @@ function businessActions(detail, key) {
     n.appendChild(el("span", "", o.interest || ""));
     const bits = [o.scope, o.device_count && `${o.device_count} devices`, o.timeline].filter(Boolean).join(" · ");
     if (bits) n.appendChild(el("span", "", bits));
-    n.appendChild(el("span", "", `Estimated value: ${o.estimated_value}`));
-    n.appendChild(el("span", "", `Assigned to ${o.assigned_to}`));
+    n.appendChild(el("span", "", `Value: ${String(o.estimated_value || "").startsWith("TBD") ? "not guessed; the sales rep will work it out" : o.estimated_value}`));
+    n.appendChild(el("span", "", `Goes to ${o.assigned_to}`));
     items.push(n);
   }
   for (const k of a.tasks || []) {
@@ -1126,7 +1362,7 @@ function businessActions(detail, key) {
   }
   if (!items.length) return null;
   const box = el("div", "actions");
-  box.appendChild(el("h3", "", "Business actions"));
+  box.appendChild(el("h3", "", "What happens next"));
   items.forEach((n) => box.appendChild(n));
   return box;
 }
@@ -1137,6 +1373,7 @@ async function startFollowUp(t) {
   renderPanel(selectedDetail);
   try {
     const fu = await api("/api/demo/follow-up", { ticket_id: t.ticket_id, demo_key: keyFor(t.ticket_id) });
+    logTech("Check-in call", `POST /api/demo/follow-up → follow-up agent + single-use pass for ${t.ticket_id}`);
     busy = false;
     followUpTicket = t.ticket_id;
     document.querySelector(".console").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1246,6 +1483,7 @@ async function claimMyCallTicket(list) {
     } catch (err) { console.warn(err); }
   }
   addMessage("note", `Your ticket ${mine.ticket_id} is in Demo Mode below. It starts moving through dispatch when this call ends.`);
+  callTicketId = mine.ticket_id;
   if (keyFor(mine.ticket_id)) startAutoRun(mine.ticket_id);
   loadTicket(mine.ticket_id);
 }
@@ -1278,6 +1516,7 @@ async function autoStep() {
   if (session || connecting || busy) { scheduleAuto(1500); return; } // wait for the current call to end
   try {
     const detail = await api("/api/demo/advance", { ticket_id: id, demo_key: keyFor(id) });
+    logTech("Demo step", `POST /api/demo/advance → ${detail.ticket.status} (simulated)`);
     if (autoId !== id) return;
     if (detail.next_step) {
       scheduleAuto(STEP_MS);
@@ -1324,7 +1563,7 @@ function unlockAudio() {
 document.addEventListener("pointerdown", unlockAudio, true);
 document.addEventListener("keydown", unlockAudio, true);
 
-function playRing() {
+function playRing(totalMs = RING_MS) {
   unlockAudio();
   if (!ringCtx) return () => {};
   const ctx = ringCtx;
@@ -1339,7 +1578,7 @@ function playRing() {
     return o;
   });
   const t0 = ctx.currentTime + 0.05;
-  for (let i = 0; i < Math.ceil(RING_MS / 4000); i++) { // 2 s ring, 2 s quiet
+  for (let i = 0; i < Math.ceil(totalMs / 4000); i++) { // 2 s ring, 2 s quiet
     gain.gain.setTargetAtTime(0.12, t0 + i * 4, 0.015);
     gain.gain.setTargetAtTime(0, t0 + i * 4 + 2, 0.015);
   }
@@ -1417,15 +1656,15 @@ async function loadImpact(force) {
     const a = m.assumptions;
     els.metrics.replaceChildren(
       metric(m.calls_handled, "Calls handled", `${m.live_calls} live, ${m.scenario_calls} demo scenario${m.scenario_calls === 1 ? "" : "s"}`, true),
-      metric(m.emergencies, "Emergencies triaged", "P1 by the priority rules"),
-      metric(m.tickets, "Service tickets created"),
-      metric(m.needed_a_person, "After-hours calls that paged a technician", `${m.handled_without_waking_anyone} handled without waking anyone`),
-      metric(m.follow_ups, "Follow-up calls completed", "", true),
-      metric(m.resolved, "Issues confirmed resolved", "The customer said so on the follow-up"),
-      metric(m.reopened, "Tickets reopened"),
-      metric(m.escalated, "Escalations created"),
-      metric(m.opportunities, "AE opportunities discovered", "Value TBD until the AE qualifies it", true),
-      metric(m.tasks, "Tasks routed to people"),
+      metric(m.emergencies, "Emergencies handled", "Set by our rules, not the AI"),
+      metric(m.tickets, "Tickets created"),
+      metric(m.needed_a_person, "Night calls that woke a technician", `${m.handled_without_waking_anyone} handled without waking anyone`),
+      metric(m.follow_ups, "Check-in calls made", "", true),
+      metric(m.resolved, "Customers who said it's fixed", "Heard on the check-in call"),
+      metric(m.reopened, "Problems that came back"),
+      metric(m.escalated, "Passed to a manager"),
+      metric(m.opportunities, "Upgrade leads for sales", "Value not guessed; sales works it out", true),
+      metric(m.tasks, "Follow-ups for staff"),
       metric(hours, "Estimated admin time saved", `Real conversations only: ${a.minutes_per_intake_call} min per intake call, ${a.minutes_per_follow_up} min per follow-up`),
     );
     els.impactStatus.textContent = "Demo metrics · updates live";

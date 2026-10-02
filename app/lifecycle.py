@@ -24,19 +24,20 @@ STATES = [
 # Tickets created before the lifecycle existed used "open"; treat it as awaiting dispatch.
 LEGACY_STATES = {"open": "awaiting_dispatch"}
 
+# What customers see. Plain, everyday words; the technical state names stay in code.
 STATE_LABELS = {
     "new": "New",
-    "awaiting_dispatch": "Awaiting dispatch",
-    "dispatched": "Dispatched",
+    "awaiting_dispatch": "Waiting for a technician",
+    "dispatched": "Technician notified",
     "technician_assigned": "Technician assigned",
-    "en_route": "Technician en route",
-    "onsite": "Technician onsite",
-    "work_completed": "Work completed",
-    "follow_up_pending": "Follow-up ready",
-    "resolved": "Resolved",
-    "reopened": "Reopened",
-    "escalated": "Escalated",
-    "closed": "Closed",
+    "en_route": "Technician on the way",
+    "onsite": "Technician has arrived",
+    "work_completed": "Repair finished",
+    "follow_up_pending": "Check-in call next",
+    "resolved": "Fixed",
+    "reopened": "Problem came back",
+    "escalated": "Passed to a manager",
+    "closed": "Closed: fixed",
 }
 
 TRANSITIONS = {
@@ -67,30 +68,30 @@ DEMO_STEPS = {
 
 EVENT_LABELS = {
     "call_received": "Customer called NightAgent",
-    "triage_completed": "AI triage completed",
-    "ticket_created": "Service ticket created",
-    "technician_paged": "On-call technician paged",
-    "dispatch_notified": "Dispatch notified",
+    "triage_completed": "Problem saved",
+    "ticket_created": "Ticket created",
+    "technician_paged": "On-call technician alerted",
+    "dispatch_notified": "Technician notified",
     "technician_assigned": "Technician assigned",
-    "technician_en_route": "Technician en route",
-    "technician_onsite": "Technician onsite",
-    "work_completed": "Work completed",
-    "follow_up_ready": "Ready for NightAgent follow-up call",
-    "follow_up_started": "NightAgent follow-up call started",
-    "follow_up_completed": "NightAgent follow-up call completed",
-    "csat_recorded": "Customer satisfaction recorded",
-    "resolution_confirmed": "Customer confirmed the fix",
+    "technician_en_route": "Technician on the way",
+    "technician_onsite": "Technician has arrived",
+    "work_completed": "Repair finished",
+    "follow_up_ready": "Check-in call coming",
+    "follow_up_started": "NightAgent called to check in",
+    "follow_up_completed": "Check-in call finished",
+    "csat_recorded": "Rating saved",
+    "resolution_confirmed": "Customer said it's fixed",
     "ticket_closed": "Ticket closed",
-    "ticket_reopened": "Ticket reopened",
-    "priority_reviewed": "Priority re-evaluated",
-    "ticket_escalated": "Escalated to the service manager",
-    "follow_up_unclear": "Handed to a person",
-    "new_ticket_created": "New service request opened",
-    "opportunity_identified": "Sales opportunity identified",
-    "task_created": "Follow-up task created",
+    "ticket_reopened": "Problem came back",
+    "priority_reviewed": "Priority checked again",
+    "ticket_escalated": "Passed to a manager",
+    "follow_up_unclear": "A person will call",
+    "new_ticket_created": "New problem saved",
+    "opportunity_identified": "Upgrade interest passed to sales",
+    "task_created": "Someone will follow up",
 }
 
-PRIORITY_LABELS = {"emergency": "P1 Emergency", "urgent": "P2 Urgent", "routine": "P3 Routine"}
+PRIORITY_LABELS = {"emergency": "High priority", "urgent": "Medium priority", "routine": "Normal priority"}
 
 
 class TransitionError(ValueError):

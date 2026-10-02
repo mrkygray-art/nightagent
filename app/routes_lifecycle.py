@@ -122,9 +122,9 @@ def start_scenario(req: ScenarioRequest) -> dict:
                  f"{customer.get('business_name', 'Customer')}: {scenario['issue_summary'][:160]} (simulated call)",
                  occurred_at=shift(now, -4), actor_type="customer", **common)
     record_event(tid, "triage_completed",
-                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Set by the priority rules, not the AI.",
+                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Our rules set the priority, not the AI.",
                  occurred_at=shift(now, -1), metadata={"category": category}, **common)
-    record_event(tid, "ticket_created", f"{tid} created. Awaiting dispatch.",
+    record_event(tid, "ticket_created", f"{tid} is waiting for a technician.",
                  occurred_at=now, actor_type="agent", **common)
     return {"demo_key": key, **_detail(store.get_ticket(tid))}
 
@@ -168,11 +168,11 @@ def advance(req: DemoKeyRequest) -> dict:
         extra["technician_name"] = tech
         description = f"{tech} assigned (fictional demo technician)"
     elif target == "dispatched":
-        description = f"Dispatch notified of {lifecycle.PRIORITY_LABELS.get(ticket['priority'], ticket['priority'])} ticket"
+        description = f"The service team was told about this {lifecycle.PRIORITY_LABELS.get(ticket['priority'], ticket['priority']).lower()} problem"
     elif target == "follow_up_pending":
-        description = "NightAgent will call the customer to confirm the fix"
+        description = "NightAgent will call the customer to make sure it's fixed"
     elif ticket.get("technician_name"):
-        description = f"{lifecycle.EVENT_LABELS[event_type]}: {ticket['technician_name']}"
+        description = f"{ticket['technician_name']}: {lifecycle.EVENT_LABELS[event_type].lower()}"
 
     ticket = move_ticket(ticket, target, extra)
     record_event(ticket["ticket_id"], event_type, description, simulated=True, source="demo",

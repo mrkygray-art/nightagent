@@ -116,9 +116,9 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     record_event(tid, "call_received", f"{who}: {ticket['issue_summary'][:160]}",
                  conversation_id=conv, actor_type="customer")
     record_event(tid, "triage_completed",
-                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Set by the priority rules, not the AI.",
+                 f"{lifecycle.PRIORITY_LABELS[priority]}: {reason}. Our rules set the priority, not the AI.",
                  conversation_id=conv, actor_type="system", metadata={"category": category})
-    record_event(tid, "ticket_created", f"{tid} created. Awaiting dispatch.",
+    record_event(tid, "ticket_created", f"{tid} is waiting for a technician.",
                  conversation_id=conv, actor_type="agent")
 
     if priority == "emergency":

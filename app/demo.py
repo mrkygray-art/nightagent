@@ -13,7 +13,7 @@ TECHNICIANS = {
 SCENARIOS = {
     "emergency_resolved": {
         "title": "Emergency, fixed the same night",
-        "story": "Main entrance won't unlock. P1 dispatch, technician fixes it, and the customer confirms on the follow-up call.",
+        "story": "Main entrance won't unlock. A technician comes that night, fixes it, and the customer confirms on the check-in call.",
         "customer_id": "C-1003",
         "caller_name": "Priya Shah",
         "callback_number": "4245550119",
@@ -24,7 +24,7 @@ SCENARIOS = {
     },
     "problem_returns": {
         "title": "The problem comes back",
-        "story": "Back door won't lock. The technician fixes it, but on the follow-up call the customer says it failed again.",
+        "story": "Back door won't lock. The technician fixes it, but on the check-in call the customer says it failed again.",
         "customer_id": "C-1001",
         "caller_name": "Maria Lopez",
         "callback_number": "3105550142",
@@ -46,7 +46,7 @@ SCENARIOS = {
     },
     "poor_service": {
         "title": "Unhappy with the visit",
-        "story": "Cameras stop recording after a power outage. On the follow-up call the customer says it never really worked after the visit.",
+        "story": "Cameras stop recording after a power outage. On the check-in call the customer says it never really worked after the visit.",
         "customer_id": "C-1002",
         "caller_name": "James Carter",
         "callback_number": "3105550178",

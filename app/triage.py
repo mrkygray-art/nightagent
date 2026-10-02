@@ -9,13 +9,13 @@ and auditable no matter how the conversation goes.
 PRIORITY_RANK = {"routine": 0, "urgent": 1, "emergency": 2}
 
 CATEGORY_POLICY = {
-    "life_safety": ("emergency", "Fire or life-safety system issue"),
-    "cannot_secure_site": ("emergency", "Site cannot be secured (door, gate, or perimeter)"),
-    "entry_blocked": ("emergency", "Main entrance unusable and no other way in for staff"),
-    "active_alarm": ("emergency", "Alarm is actively going off"),
-    "system_offline": ("urgent", "Security system or video recording is offline"),
-    "panel_trouble": ("urgent", "Panel trouble condition"),
-    "access_issue": ("routine", "Individual credential or access issue"),
+    "life_safety": ("emergency", "Fire or life-safety system problem"),
+    "cannot_secure_site": ("emergency", "A door, gate, or fence can't be locked"),
+    "entry_blocked": ("emergency", "Staff can't get in the building"),
+    "active_alarm": ("emergency", "The alarm is going off right now"),
+    "system_offline": ("urgent", "The security system or cameras stopped working"),
+    "panel_trouble": ("urgent", "The alarm keypad is showing a problem"),
+    "access_issue": ("routine", "A badge, fob, or code isn't working"),
     "other": ("routine", "General service request"),
 }
 
@@ -58,5 +58,5 @@ def triage(category: str | None, suggested_priority: str | None) -> tuple[str, s
     suggested = normalize_priority(suggested_priority)
 
     if PRIORITY_RANK[suggested] > PRIORITY_RANK[policy_priority]:
-        return category, suggested, f"{reason}; escalated based on the caller's description"
+        return category, suggested, f"{reason}; raised because of what the caller described"
     return category, policy_priority, reason
