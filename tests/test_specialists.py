@@ -60,3 +60,17 @@ def test_sales_interest_creates_an_opportunity_and_a_callback(client, tool):
     from app.store import get_store
     opp = get_store().opportunities[out["opportunity_id"]]
     assert opp["estimated_value"] == "Customer-stated budget: about $8,000"  # never estimated by the AI
+
+
+def test_placeholder_answers_are_treated_as_blank(client, tool):
+    out = tool("sales-interest", {"customer_id": "C-1002", "interest": "Add cameras", "budget": "not specified",
+                                  "best_time": "Not specified", "device_count": "N/A", "caller_name": "James Carter",
+                                  "callback_number": "3105550178", "conversation_id": "conv_sales_ph"})
+    assert out["tell_the_caller"].endswith("call you back on the next business day to go over options and pricing.")
+    from app.store import get_store
+    opp = get_store().opportunities[out["opportunity_id"]]
+    assert opp["estimated_value"].startswith("TBD") and opp["device_count"] is None
+    msg = tool("take-message", {"department": "support", "reason": "How do I add a user?", "caller_name": "A",
+                                "callback_number": "3105550100", "best_time": "none", "person_requested": "unknown",
+                                "conversation_id": "conv_ph_2"})
+    assert msg["tell_the_caller"].endswith("on the next business day.")

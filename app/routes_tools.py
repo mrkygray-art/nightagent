@@ -104,6 +104,17 @@ class FollowUpOutcomeRequest(BaseModel):
 
 FOLLOW_UP_TOKEN_MINUTES = 30
 
+# Models sometimes fill an optional field with a placeholder instead of leaving it out.
+_PLACEHOLDERS = {"", "none", "n/a", "na", "not specified", "unspecified", "not provided", "not given",
+                 "unknown", "tbd", "not stated", "not mentioned", "no", "null", "-"}
+
+
+def given(text: str | None, limit: int = 300) -> str | None:
+    """The caller's words, or None if the field was left empty or filled with a placeholder."""
+    t = " ".join((text or "").split())[:limit]
+    return None if t.lower().strip(" .") in _PLACEHOLDERS else t
+
+
 # How Sam introduces the person who will call back
 ROLE_PHRASE = {"account_executive": ", your account executive,", "billing": " from billing",
                "service_manager": ", our service manager,"}
@@ -226,7 +237,7 @@ def save_message(req: MessageRequest, tool: str, task_reason: str | None = None)
     customer = store.get_customer(req.customer_id) if req.customer_id else None
     ticket = store.get_ticket(req.ticket_id.strip().upper()) if req.ticket_id else None
     reason = " ".join(req.reason.split())[:600]
-    best_time = " ".join((req.best_time or "").split())[:120] or None
+    best_time = given(req.best_time, 120)
     who = DESTINATIONS[dept]
     # A second message to the same person on the same call (say, the caller added a good time to
     # call back) updates the first one rather than leaving two.
@@ -234,7 +245,7 @@ def save_message(req: MessageRequest, tool: str, task_reason: str | None = None)
     if earlier:
         fields = {"summary": reason or earlier.get("summary"),
                   "best_time": best_time or earlier.get("best_time"),
-                  "person_requested": " ".join((req.person_requested or "").split())[:100] or earlier.get("person_requested"),
+                  "person_requested": given(req.person_requested, 100) or earlier.get("person_requested"),
                   "callback_number": phone_digits(req.callback_number) or earlier.get("callback_number")}
         fields["requested_follow_up"] = "Call the caller back" + (f" ({fields['best_time']})" if fields["best_time"] else "")
         store.update_task(earlier["task_id"], fields)
@@ -255,7 +266,7 @@ def save_message(req: MessageRequest, tool: str, task_reason: str | None = None)
         "priority": "high" if dept == "service_manager" else "normal",
         "requested_follow_up": "Call the caller back" + (f" ({best_time})" if best_time else ""),
         "callback_number": phone_digits(req.callback_number) or req.callback_number.strip(),
-        "person_requested": " ".join((req.person_requested or "").split())[:100] or None,
+        "person_requested": given(req.person_requested, 100),
         "best_time": best_time,
         "demo": bool(ticket and ticket.get("demo")),
     })
@@ -314,7 +325,7 @@ def sales_interest(req: SalesInterestRequest) -> dict:
     """Riley, the sales assistant: a new opportunity for the account executive, plus a callback."""
     store = get_store()
     customer = store.get_customer(req.customer_id) if req.customer_id else None
-    clean = lambda t, n: " ".join((t or "").split())[:n] or None  # noqa: E731
+    clean = given
     interest = clean(req.interest, 300)
     existing = store.opportunity_for_call(req.conversation_id) if req.conversation_id else None
     fields = {
