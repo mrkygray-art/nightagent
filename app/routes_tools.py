@@ -63,6 +63,13 @@ class FollowUpOutcomeRequest(BaseModel):
 
 FOLLOW_UP_TOKEN_MINUTES = 30
 
+# Said back to the agent after every lookup, because the model tends to skip the read-back once
+# it knows the problem. Tool results steer it more reliably than the prompt alone.
+CONFIRM_FIRST = ("Ask what is happening and when it started, if you don't know yet. Then, before calling "
+                 "create_ticket, ask for the caller's full name if you don't have it, read their name and "
+                 "callback number back (number in groups of three, three, four), and wait for them to say "
+                 "it's right. Do not call create_ticket until they confirm.")
+
 
 def _public_customer(c: dict) -> dict:
     return {
@@ -84,7 +91,7 @@ def lookup_customer(req: LookupRequest) -> dict:
                else f"{len(matches)} possible accounts" if matches else "No matching account")
     log_tool_call("lookup_customer", outcome, conversation_id=req.conversation_id, called_at=started)
     if len(matches) == 1:
-        return {"found": True, "customer": _public_customer(matches[0])}
+        return {"found": True, "customer": _public_customer(matches[0]), "next_step": CONFIRM_FIRST}
     if len(matches) > 1:
         return {
             "found": False,
@@ -94,7 +101,8 @@ def lookup_customer(req: LookupRequest) -> dict:
     return {
         "found": False,
         "message": "No account found. Ask once more for the phone number on the account; "
-                   "if still not found, continue and create the ticket without a customer_id.",
+                   "if still not found, continue without a customer_id.",
+        "next_step": CONFIRM_FIRST,
     }
 
 
