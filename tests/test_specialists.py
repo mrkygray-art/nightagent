@@ -55,6 +55,8 @@ def test_sales_interest_creates_an_opportunity_and_a_callback(client, tool):
     assert rows["Agents on this call"] == "Sam (front desk) → Riley (sales assistant)"
     assert rows["New opportunity"] == "Add six cameras around the lot"
     assert rows["Callback"].endswith("Friday morning")
+    assert rows["What they needed"] == "Add six cameras around the lot"  # no internal ids
+    assert rows["Tools Sam used"] == "3: Looked up the account; Riley recorded the upgrade interest; Riley updated the details"
     from app.store import get_store
     opp = get_store().opportunities[out["opportunity_id"]]
     assert opp["estimated_value"] == "Customer-stated budget: about $8,000"  # never estimated by the AI

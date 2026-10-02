@@ -312,7 +312,6 @@ def billing_review(req: BillingReviewRequest) -> dict:
 @router.post("/sales-interest")
 def sales_interest(req: SalesInterestRequest) -> dict:
     """Riley, the sales assistant: a new opportunity for the account executive, plus a callback."""
-    started = now_iso()
     store = get_store()
     customer = store.get_customer(req.customer_id) if req.customer_id else None
     clean = lambda t, n: " ".join((t or "").split())[:n] or None  # noqa: E731
@@ -339,9 +338,8 @@ def sales_interest(req: SalesInterestRequest) -> dict:
             "assigned_to": DESTINATIONS["account_executive"],
             "demo": False,
         })["opportunity_id"]
-    log_tool_call("record_sales_interest", f"{opp_id}: {interest[:80]}", conversation_id=req.conversation_id, called_at=started)
     task_id, dept, who, best_time = save_message(MessageRequest(
-        department="account_executive", reason=f"{opp_id}: {interest}", caller_name=req.caller_name,
+        department="account_executive", reason=interest, caller_name=req.caller_name,
         callback_number=req.callback_number, customer_id=req.customer_id, best_time=req.best_time,
         conversation_id=req.conversation_id,
     ), "record_sales_interest", task_reason="New sales opportunity from a call")
