@@ -1,0 +1,10 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+python-dotenv>=1.0
+requests>=2.32
+supabase>=2.4
+twilio>=9.0
+# dev / tests
+httpx>=0.27
+pytest>=8.0
