@@ -585,7 +585,9 @@ const ORB_WORDS = {
 };
 function setOrb(state, words) {
   els.orb.dataset.state = state;
-  els.orbLabel.textContent = words || ORB_WORDS[state] || "";
+  // When typing, "Listening" is the wrong word: it's simply your turn.
+  const fallback = state === "listening" && mode === "text" ? "Your turn" : ORB_WORDS[state];
+  els.orbLabel.textContent = words || fallback || "";
 }
 
 function setStatus(state, title, detail) {
@@ -941,6 +943,7 @@ async function startSession(nextMode, opts = {}) {
   try {
     const C = await loadSdk();
     clearTranscript();
+    if (pendingNote) { addMessage("note", pendingNote); pendingNote = null; }
     conversationId = null;
     myCallRef = null;
     let inputDeviceId = "";
@@ -997,6 +1000,7 @@ els.call.addEventListener("click", () => (session ? endSession() : ringing ? ans
 let lastCall = null;   // what to start again: { mode } or { followUp: ticketId }
 let callTicketId = null; // the ticket this call created, if any
 let restarting = false;
+let pendingNote = null; // shown at the top of the next call's transcript
 let ringbackStop = null;
 function stopRingback() { if (ringbackStop) { ringbackStop(); ringbackStop = null; } }
 
@@ -1013,7 +1017,7 @@ async function startOver() {
   for (let i = 0; i < 60 && session; i++) await new Promise((r) => setTimeout(r, 50));
   restarting = false;
   clearTranscript();
-  addMessage("note", "Starting over. Nothing you said before is kept on this call.");
+  pendingNote = "Started over. This is a fresh call.";
   if (again && again.followUp) {
     followUpTicket = null;
     await startFollowUp({ ticket_id: again.followUp });
