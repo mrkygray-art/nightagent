@@ -156,6 +156,18 @@ def test_claim_your_own_call_once(client, tool):
     assert back["ticket"]["status"] == "awaiting_dispatch" and len(back["events"]) == 3
 
 
+def test_paged_call_assigns_the_technician_who_was_paged(client, tool):
+    from app import config
+    live = _live_ticket(tool, conv="conv_paged_abcdef")
+    tool("page-on-call", {"ticket_id": live["ticket_id"]})
+    key = client.post("/api/demo/claim", json={"ticket_id": live["ticket_id"],
+                                               "conversation_id": "conv_paged_abcdef"}).json()["demo_key"]
+    out = client.post("/api/demo/advance", json={"ticket_id": live["ticket_id"], "demo_key": key}).json()
+    assert out["ticket"]["status"] == "technician_assigned"
+    assert out["ticket"]["technician_name"] == config.ONCALL_TECH_NAME
+    assert "fictional" not in out["events"][-1]["description"]
+
+
 def test_scenario_rate_limit(client, monkeypatch):
     from app import demo
     monkeypatch.setattr(demo, "SCENARIOS_PER_HOUR", 2)

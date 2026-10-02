@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app import demo, lifecycle
+from app import config, demo, lifecycle
 from app.service import move_ticket, public_event, public_ticket, record_event, shift
 from app.store import get_store, now_iso
 from app.triage import triage
@@ -149,7 +149,12 @@ def advance(req: DemoKeyRequest) -> dict:
     events = get_store().list_events(ticket["ticket_id"])
     last = events[-1]["occurred_at"] if events else ticket["created_at"]
     extra, description = {}, lifecycle.EVENT_LABELS[event_type]
-    if target == "technician_assigned":
+    if target == "technician_assigned" and ticket.get("paged_at"):
+        # The call already paged the on-call technician, so that's who takes the job.
+        tech = config.ONCALL_TECH_NAME
+        extra["technician_name"] = tech
+        description = f"{tech} (the on-call technician who was paged) takes the job"
+    elif target == "technician_assigned":
         tech = demo.technician_for(ticket["priority"])
         extra["technician_name"] = tech
         description = f"{tech} assigned (fictional demo technician)"
