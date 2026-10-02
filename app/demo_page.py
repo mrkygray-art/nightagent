@@ -1,4 +1,5 @@
-"""The public /demo page: talk to Sam (voice or text) and watch the dispatch board update.
+"""The public /demo page: talk to Sam (voice or text), watch the dispatch board update, and
+follow a ticket through its whole service lifecycle in Demo Mode.
 
 Kept as a Python string so it always ships with the serverless function.
 __AGENT_ID__ is replaced at request time with the configured agent ID.
@@ -9,8 +10,9 @@ DEMO_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NightShift Dispatch: live voice agent demo</title>
-<meta name="description" content="Talk to Sam, an after-hours dispatch voice agent built on ElevenLabs Agents with a Python FastAPI backend, and watch tickets appear live.">
+<title>NightAgent: AI service lifecycle demo</title>
+<meta name="description" content="Talk to Sam, the NightAgent voice, report a problem, and follow the service ticket from the first call through dispatch, repair, and follow-up.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101a2e'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f5a524'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -200,6 +202,76 @@ DEMO_HTML = r"""<!doctype html>
   @keyframes arrive { 0% { border-color: var(--sodium); box-shadow: 0 0 0 3px var(--sodium-soft); } 100% { border-color: var(--line); box-shadow: none; } }
   .board .empty { border: 1px dashed var(--line); border-radius: 12px; }
 
+  .ticket { cursor: pointer; }
+  .ticket:hover { border-color: #3b5288; }
+  .ticket[aria-current="true"] { border-color: var(--sodium); box-shadow: 0 0 0 1px var(--sodium); }
+  .chip.stage { border-color: #3b5288; color: var(--text); white-space: nowrap; }
+  .chip.demo { border-style: dashed; }
+
+  /* ---------- Demo Mode: the service lifecycle ---------- */
+  .life { margin-top: 28px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; scroll-margin-top: 12px; }
+  .life-banner {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 12px 22px;
+    background: repeating-linear-gradient(135deg, rgba(245,165,36,.16) 0 14px, rgba(245,165,36,.08) 14px 28px);
+    border-bottom: 1px solid rgba(245,165,36,.45);
+  }
+  .life-banner strong { font-family: var(--display); font-size: 20px; letter-spacing: .06em; color: var(--sodium); }
+  .life-banner span { color: var(--muted); font-size: 14px; }
+  .life-body { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 24px; padding: 22px; }
+  @media (max-width: 900px) { .life-body { grid-template-columns: 1fr; } }
+  .life h2 { margin-bottom: 4px; }
+  .life .lead { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
+  .scenarios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .scenarios button {
+    width: 100%; text-align: left; cursor: pointer; display: grid; gap: 2px;
+    background: var(--night); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+    font: 400 14px var(--body);
+  }
+  .scenarios button:hover { border-color: var(--sodium); }
+  .scenarios button:disabled { opacity: .6; cursor: progress; }
+  .scenarios b { font-size: 16px; font-weight: 600; }
+  .scenarios span { color: var(--muted); }
+
+  .event-panel { background: var(--night); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-height: 260px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+  .event-panel .empty { margin: auto; }
+  .ev-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .ev-head .id { font-family: var(--display); font-weight: 700; font-size: 28px; }
+  .ev-issue { margin: 0; }
+  .ev-meta { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+
+  .stages { list-style: none; margin: 0; padding: 0 0 4px; display: flex; gap: 4px; overflow-x: auto; }
+  .stages li {
+    flex: 1 0 auto; min-width: 74px; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted);
+    padding: 8px 6px 0; border-top: 4px solid var(--line);
+  }
+  .stages li.done { border-top-color: var(--clear); color: var(--text); }
+  .stages li.now { border-top-color: var(--sodium); color: var(--sodium); }
+
+  .ev-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .advance {
+    border: 0; cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em;
+    padding: 10px 18px; border-radius: 12px; background: var(--sodium); color: #1a1205; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18);
+  }
+  .advance:disabled { opacity: .55; cursor: not-allowed; }
+  .reset { font: 500 14px var(--body); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+  .reset:hover { color: var(--text); }
+  .ev-note { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; }
+  .timeline li { display: grid; grid-template-columns: 74px 18px 1fr; gap: 0 10px; }
+  .timeline time { color: var(--muted); font-size: 13px; text-align: right; padding-top: 1px; white-space: nowrap; }
+  .timeline .dot { position: relative; }
+  .timeline .dot::before { content: ""; position: absolute; left: 4px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--clear); }
+  .timeline .dot::after { content: ""; position: absolute; left: 8px; top: 17px; bottom: -3px; width: 2px; background: var(--line); }
+  .timeline li:last-child .dot::after { display: none; }
+  .timeline li.sim .dot::before { background: transparent; border: 2px solid var(--sodium); }
+  .timeline li.latest .dot::before { box-shadow: 0 0 0 4px var(--sodium-soft); }
+  .timeline .what { padding-bottom: 14px; min-width: 0; }
+  .timeline .what b { font-weight: 600; }
+  .timeline .what p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .tag-sim { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--sodium); border: 1px solid rgba(245,165,36,.5); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; }
+  @media (max-width: 560px) { .timeline li { grid-template-columns: 60px 16px 1fr; gap: 0 8px; } }
+
   .how { padding: 48px 0 24px; }
   .how ol { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
   @media (max-width: 900px) { .how ol { grid-template-columns: 1fr 1fr; } }
@@ -213,6 +285,7 @@ DEMO_HTML = r"""<!doctype html>
 
   @media (prefers-reduced-motion: reduce) {
     .lamp[data-state="speaking"], .ticket.fresh { animation: none; }
+    .timeline li.latest .dot::before { box-shadow: none; }
     * { transition: none !important; }
   }
 </style>
@@ -220,13 +293,13 @@ DEMO_HTML = r"""<!doctype html>
 <body>
 <div class="wrap">
   <header class="top">
-    <a class="brand" href="/demo">NightShift Dispatch</a>
+    <a class="brand" href="/demo">NightAgent</a>
     <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
   </header>
 
   <section class="intro">
     <h1>Call the <span class="nowrap">after-hours</span> line.</h1>
-    <p>Sam answers the night desk for a security integrator. Report a problem as one of the demo customers, and watch the dispatch board fill in while you're still on the call.</p>
+    <p>Sam, the NightAgent voice, answers the night desk for a security integrator. Report a problem as one of the demo customers and watch the dispatch board fill in while you're still on the call. Then follow the ticket through dispatch, repair, and follow-up in <a href="#lifecycle">Demo Mode</a>.</p>
   </section>
 
   <div class="grid">
@@ -296,18 +369,35 @@ DEMO_HTML = r"""<!doctype html>
     </section>
   </div>
 
+  <section class="life" id="lifecycle" aria-labelledby="life-title">
+    <div class="life-banner">
+      <strong>DEMO MODE — Accelerated Service Lifecycle</strong>
+      <span>Steps after the call are simulated so you can see hours of field work in a minute. Technicians and times are made up.</span>
+    </div>
+    <div class="life-body">
+      <div>
+        <h2 id="life-title">Follow a ticket</h2>
+        <p class="lead">Pick a scenario to skip the call, or make a call above. Your call's ticket opens here automatically. You can also click any ticket on the board to see its history.</p>
+        <ul class="scenarios" id="scenarios"></ul>
+      </div>
+      <div class="event-panel" id="event-panel" aria-live="polite">
+        <p class="empty">Pick a scenario or make a call to follow a ticket from the first call to the follow-up.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="how" aria-labelledby="how-title">
     <h2 id="how-title">What happens on a call</h2>
     <ol>
       <li><h3>Sam answers</h3><p>ElevenLabs handles speech recognition, the conversation, and Sam's voice in real time.</p></li>
       <li><h3>Account lookup</h3><p>Sam calls a Python tool on this server to find the customer by phone number or business name.</p></li>
       <li><h3>Triage and ticket</h3><p>Sam suggests a priority, but server-side rules make the final call. An emergency can't be downgraded.</p></li>
-      <li><h3>Dispatch</h3><p>Emergencies page the on-call technician. Other tickets wait for the morning crew.</p></li>
+      <li><h3>Dispatch and follow-up</h3><p>Emergencies page the on-call technician. Every step after that is written to the ticket's history, through repair and NightAgent's follow-up.</p></li>
     </ol>
   </section>
 
   <footer>
-    <span>Built by Ky Gray with ElevenLabs Agents, Python and FastAPI, Supabase, and Vercel.</span>
+    <span>NightAgent, built by Ky Gray with ElevenLabs Agents, Python and FastAPI, Supabase, and Vercel.</span>
     <a href="/">Open the full ticket log</a>
   </footer>
 </div>
@@ -321,6 +411,7 @@ const els = {
   composer: $("composer"), input: $("message"), tickets: $("tickets"), boardStatus: $("board-status"),
   modeButtons: document.querySelectorAll(".mode button"),
   micRow: $("mic-row"), mic: $("mic"), micNames: $("mic-names"), sound: $("sound"),
+  scenarios: $("scenarios"), panel: $("event-panel"),
 };
 
 let Conversation = null;
@@ -593,6 +684,7 @@ async function startSession(nextMode) {
     const C = await loadSdk();
     clearTranscript();
     conversationId = null;
+    myCallRef = null;
     let inputDeviceId = "";
     if (mode === "voice") {
       try {
@@ -697,6 +789,10 @@ function renderTickets(list) {
   for (const t of list) {
     const li = el("li", "ticket");
     li.dataset.priority = t.priority || "";
+    li.dataset.id = t.ticket_id;
+    li.tabIndex = 0;
+    li.setAttribute("aria-label", `${t.ticket_id}: open its history`);
+    if (t.ticket_id === selectedId) li.setAttribute("aria-current", "true");
     if (!firstLoad && !seen.has(t.ticket_id)) li.classList.add("fresh");
     seen.add(t.ticket_id);
 
@@ -706,7 +802,8 @@ function renderTickets(list) {
     const row1 = el("div", "row1");
     row1.appendChild(el("span", "id", t.ticket_id));
     row1.appendChild(el("span", `chip ${t.priority}`, t.priority));
-    if (conversationId && t.conversation_id === conversationId) row1.appendChild(el("span", "chip mine", "Your call"));
+    if (myCallRef && t.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
+    if (t.scenario) row1.appendChild(el("span", "chip demo", "Demo scenario"));
     row1.appendChild(el("span", "when", timeAgo(t.created_at)));
     body.appendChild(row1);
 
@@ -714,7 +811,7 @@ function renderTickets(list) {
 
     const meta = el("div", "meta");
     meta.appendChild(el("span", "", `Caller: ${t.caller_name || "Unknown"} ${t.callback_number || ""}`));
-    meta.appendChild(el("span", "", `Status: ${t.status || "open"}`));
+    meta.appendChild(el("span", "", `Status: ${t.status_label || t.status || "Open"}`));
     if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
     body.appendChild(meta);
 
@@ -730,8 +827,11 @@ async function refreshTickets() {
   try {
     const res = await fetch("/api/tickets", { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
-    renderTickets(await res.json());
+    const list = await res.json();
+    renderTickets(list);
     els.boardStatus.textContent = "Updates live";
+    await claimMyCallTicket(list);
+    if (selectedId && !busy) loadTicket(selectedId, { quiet: true });
   } catch (err) {
     els.boardStatus.textContent = "Reconnecting…";
   }
@@ -746,8 +846,249 @@ function schedulePoll(delay) {
   }, delay);
 }
 
+/* ---------- Demo Mode: follow one ticket through its lifecycle ---------- */
+
+const KEYS_KEY = "nightagent-demo-keys";
+let selectedId = null;
+let selectedDetail = null;
+let myCallRef = null;
+let busy = false;
+const STAGES = [
+  ["awaiting_dispatch", "Ticket"], ["dispatched", "Dispatched"], ["technician_assigned", "Assigned"],
+  ["en_route", "En route"], ["onsite", "Onsite"], ["work_completed", "Completed"], ["follow_up_pending", "Follow-up"],
+];
+
+// Demo keys prove this browser started a ticket. Kept in memory too, for when storage is blocked.
+const memoryKeys = {};
+function demoKeys() {
+  try { return JSON.parse(localStorage.getItem(KEYS_KEY)) || {}; } catch { return {}; }
+}
+function saveDemoKey(ticketId, key) {
+  memoryKeys[ticketId] = key;
+  const all = { ...demoKeys(), [ticketId]: key };
+  const newest = Object.fromEntries(Object.entries(all).slice(-30)); // so the list can't grow forever
+  try { localStorage.setItem(KEYS_KEY, JSON.stringify(newest)); } catch {}
+}
+function keyFor(ticketId) { return memoryKeys[ticketId] || demoKeys()[ticketId] || null; }
+
+async function sha16(text) {
+  try {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+  } catch { return null; }
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  } : { cache: "no-store" });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) throw new Error((data && typeof data.detail === "string" && data.detail) || "Something went wrong. Please try again.");
+  return data;
+}
+
+function clock(iso) {
+  const t = new Date(iso);
+  return isNaN(t) ? "" : t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function button(cls, text, onClick, disabled) {
+  const b = el("button", cls, text);
+  b.type = "button";
+  b.disabled = Boolean(disabled);
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function renderPanel(detail, message) {
+  selectedDetail = detail;
+  const p = els.panel;
+  p.replaceChildren();
+  if (!detail) {
+    p.appendChild(el("p", "empty", "Pick a scenario or make a call to follow a ticket from the first call to the follow-up."));
+    if (message) p.appendChild(el("p", "error", message));
+    return;
+  }
+  const t = detail.ticket;
+  const head = el("div", "ev-head");
+  head.appendChild(el("span", "id", t.ticket_id));
+  head.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
+  head.appendChild(el("span", "chip stage", t.status_label));
+  if (myCallRef && t.call_ref === myCallRef) head.appendChild(el("span", "chip mine", "Your call"));
+  p.appendChild(head);
+  p.appendChild(el("p", "ev-issue", t.issue_summary || ""));
+  const meta = el("div", "ev-meta");
+  meta.appendChild(el("span", "", `Caller: ${t.caller_name || "Unknown"}`));
+  if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
+  if (t.technician_name) meta.appendChild(el("span", "", `Technician: ${t.technician_name} (demo)`));
+  p.appendChild(meta);
+
+  // Where the ticket is now
+  const at = STAGES.findIndex(([s]) => s === t.status);
+  const strip = el("ol", "stages");
+  strip.setAttribute("aria-label", "Service stages");
+  STAGES.forEach(([, label], i) => {
+    const li = el("li", at < 0 ? "" : i < at ? "done" : i === at ? "now" : "", label);
+    if (i === at) li.setAttribute("aria-current", "step");
+    strip.appendChild(li);
+  });
+  p.appendChild(strip);
+  // On narrow screens the strip scrolls sideways; keep the current stage in view
+  const now = strip.querySelector(".now");
+  if (now) strip.scrollLeft = Math.max(0, now.offsetLeft - strip.offsetLeft - (strip.clientWidth - now.offsetWidth) / 2);
+
+  // Controls only for the browser holding this ticket's demo key
+  const key = keyFor(t.ticket_id);
+  const actions = el("div", "ev-actions");
+  if (key) {
+    actions.appendChild(button("advance",
+      detail.next_step ? `Advance Demo → ${detail.next_step}` : "Service complete",
+      () => demoAction("advance"), busy || !detail.next_step));
+    actions.appendChild(button("reset", "Reset", () => demoAction("reset"), busy));
+  } else if (t.demo) {
+    actions.appendChild(el("p", "ev-note", "Viewing only. This demo ticket can be advanced from the browser that started it."));
+  } else {
+    actions.appendChild(el("p", "ev-note", "Viewing only. Start a scenario, or make a call, to step through a ticket yourself."));
+  }
+  p.appendChild(actions);
+  if (key && !detail.next_step) {
+    p.appendChild(el("p", "ev-note", "Next, NightAgent calls the customer to confirm the fix. That follow-up call is coming soon."));
+  }
+  if (message) p.appendChild(el("p", "error", message));
+
+  // Customer journey, oldest first
+  const tl = el("ol", "timeline");
+  tl.setAttribute("aria-label", "Customer journey");
+  detail.events.forEach((e, i) => {
+    const li = el("li", e.simulated ? "sim" : "");
+    if (i === detail.events.length - 1) li.classList.add("latest");
+    const time = el("time", "", clock(e.occurred_at));
+    time.dateTime = e.occurred_at || "";
+    li.appendChild(time);
+    li.appendChild(el("span", "dot"));
+    const what = el("div", "what");
+    what.appendChild(el("b", "", e.label));
+    if (e.simulated) what.appendChild(el("span", "tag-sim", "Simulated"));
+    if (e.description) what.appendChild(el("p", "", e.description));
+    li.appendChild(what);
+    tl.appendChild(li);
+  });
+  if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
+  p.appendChild(tl);
+}
+
+function markSelected() {
+  els.tickets.querySelectorAll(".ticket").forEach((n) => {
+    if (n.dataset.id === selectedId) n.setAttribute("aria-current", "true");
+    else n.removeAttribute("aria-current");
+  });
+}
+
+async function loadTicket(id, { quiet = false, scroll = false } = {}) {
+  selectedId = id;
+  markSelected();
+  try {
+    const detail = await api(`/api/tickets/${encodeURIComponent(id)}`);
+    if (selectedId !== id || busy) return;
+    // Background refreshes only redraw when something changed, so a click is never lost mid-redraw
+    if (quiet && JSON.stringify(detail) === JSON.stringify(selectedDetail)) return;
+    renderPanel(detail);
+    if (scroll) document.getElementById("lifecycle").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    if (!quiet) renderPanel(selectedDetail, err.message);
+  }
+}
+
+async function demoAction(kind) {
+  const t = selectedDetail && selectedDetail.ticket;
+  if (!t || busy) return;
+  busy = true;
+  renderPanel(selectedDetail);
+  try {
+    const detail = await api(`/api/demo/${kind}`, { ticket_id: t.ticket_id, demo_key: keyFor(t.ticket_id) });
+    busy = false;
+    renderPanel(detail);
+    refreshTickets();
+  } catch (err) {
+    busy = false;
+    renderPanel(selectedDetail, err.message);
+  }
+}
+
+async function startScenario(id, btn) {
+  if (busy) return;
+  busy = true;
+  els.scenarios.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+  btn.querySelector("b").textContent += " · starting…";
+  try {
+    const { demo_key: key, ...detail } = await api("/api/demo/scenario", { scenario: id });
+    saveDemoKey(detail.ticket.ticket_id, key);
+    selectedId = detail.ticket.ticket_id;
+    busy = false;
+    renderPanel(detail);
+    refreshTickets();
+  } catch (err) {
+    busy = false;
+    renderPanel(selectedDetail, err.message);
+  } finally {
+    loadScenarios();
+  }
+}
+
+async function loadScenarios() {
+  try {
+    const list = await api("/api/demo/scenarios");
+    els.scenarios.replaceChildren();
+    for (const s of list) {
+      const li = el("li");
+      const b = el("button");
+      b.type = "button";
+      b.appendChild(el("b", "", s.title));
+      b.appendChild(el("span", "", s.story));
+      b.addEventListener("click", () => startScenario(s.id, b));
+      li.appendChild(b);
+      els.scenarios.appendChild(li);
+    }
+  } catch {
+    els.scenarios.replaceChildren(el("li", "ev-note", "Scenarios didn't load. Reload the page to try again."));
+  }
+}
+
+// When your own call creates a ticket, take it into Demo Mode once. Proof: the conversation id,
+// which only this browser knows.
+const claimed = new Set();
+async function claimMyCallTicket(list) {
+  if (!conversationId) return;
+  myCallRef = myCallRef || await sha16(conversationId);
+  const mine = myCallRef && list.find((t) => t.call_ref === myCallRef);
+  if (!mine || claimed.has(mine.ticket_id)) return;
+  claimed.add(mine.ticket_id);
+  if (!keyFor(mine.ticket_id)) {
+    try {
+      const data = await api("/api/demo/claim", { ticket_id: mine.ticket_id, conversation_id: conversationId });
+      saveDemoKey(mine.ticket_id, data.demo_key);
+    } catch (err) { console.warn(err); }
+  }
+  addMessage("note", `Your ticket ${mine.ticket_id} is ready in Demo Mode below.`);
+  loadTicket(mine.ticket_id);
+}
+
+function pickFromBoard(e) {
+  const li = e.target.closest(".ticket");
+  if (!li || !li.dataset.id) return;
+  if (e.type === "keydown") {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+  }
+  loadTicket(li.dataset.id, { scroll: true });
+}
+els.tickets.addEventListener("click", pickFromBoard);
+els.tickets.addEventListener("keydown", pickFromBoard);
+
 render();
 refreshMics();
+loadScenarios();
 schedulePoll(0);
 </script>
 </body>
