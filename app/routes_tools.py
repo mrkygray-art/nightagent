@@ -81,10 +81,11 @@ ROLE_PHRASE = {"account_executive": ", your account executive,", "billing": " fr
 
 # Said back to the agent after every lookup, because the model tends to skip the read-back once
 # it knows the problem. Tool results steer it more reliably than the prompt alone.
-CONFIRM_FIRST = ("Ask what is happening and when it started, if you don't know yet. Then, before calling "
-                 "create_ticket, ask for the caller's full name if you don't have it, read their name and "
-                 "callback number back (number in groups of three, three, four), and wait for them to say "
-                 "it's right. Do not call create_ticket until they confirm.")
+CONFIRM_FIRST = ("Find out what the caller needs, if you don't know yet: a problem with their system "
+                 "(what is happening and when it started), or a message for a department or person. Then, "
+                 "before calling create_ticket or take_message, ask for the caller's full name if you don't "
+                 "have it, read their name and callback number back (number in groups of three, three, four), "
+                 "and wait for them to say it's right. Do not call either tool until they confirm.")
 
 
 def _public_customer(c: dict) -> dict:
