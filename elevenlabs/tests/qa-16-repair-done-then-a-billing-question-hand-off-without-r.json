@@ -33,7 +33,7 @@
     {
       "role": "user",
       "agent_metadata": null,
-      "message": "This is James at Westside Self Storage, 310-555-0178. We want to add more cameras around the lot.",
+      "message": "This is Priya at Harbor Logistics, 424-555-0119. The main entrance won't unlock and nobody can get in.",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
@@ -61,7 +61,7 @@
     {
       "role": "agent",
       "agent_metadata": null,
-      "message": "Just to confirm, I have you as James Carter at 310-555-0178. Is that right?",
+      "message": "Just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
@@ -89,7 +89,7 @@
     {
       "role": "user",
       "agent_metadata": null,
-      "message": "Yes.",
+      "message": "Yes, correct.",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
@@ -117,9 +117,18 @@
     {
       "role": "agent",
       "agent_metadata": null,
-      "message": "Thanks, James. I'll bring in Riley, our sales assistant, who can help with that.",
+      "message": null,
       "multivoice_message": null,
-      "tool_calls": [],
+      "tool_calls": [
+        {
+          "type": "webhook",
+          "request_id": "req_ticket_16",
+          "tool_name": "create_ticket",
+          "params_as_json": "{\"customer_id\": \"C-1003\", \"caller_name\": \"Priya Shah\", \"callback_number\": \"4245550119\", \"issue_summary\": \"Main entrance won't unlock; staff can't get in.\", \"category\": \"entry_blocked\", \"suggested_priority\": \"emergency\"}",
+          "tool_has_been_called": true,
+          "tool_details": null
+        }
+      ],
       "tool_results": [],
       "feedback": null,
       "llm_override": null,
@@ -145,9 +154,60 @@
     {
       "role": "agent",
       "agent_metadata": null,
-      "message": "Hi James, I'm Riley, the sales assistant. I'm an AI assistant, and Sam mentioned you're looking at more cameras for the lot. Roughly how many are you thinking, and is there a timeline?",
+      "message": null,
       "multivoice_message": null,
       "tool_calls": [],
+      "tool_results": [
+        {
+          "request_id": "req_ticket_16",
+          "tool_name": "create_ticket",
+          "result_value": "{\"ticket_id\": \"NS-5060\", \"ticket_number_spoken\": \"N S 5 0 6 0\", \"priority\": \"emergency\", \"mention_billing\": false, \"next_step\": \"This is an emergency. Call page_on_call_tech now with this ticket_id.\"}",
+          "is_error": false,
+          "is_blocked": false,
+          "tool_has_been_called": true,
+          "tool_latency_secs": 0.0,
+          "error_type": "",
+          "raw_error_message": "",
+          "dynamic_variable_updates": [],
+          "type": "webhook"
+        }
+      ],
+      "feedback": null,
+      "llm_override": null,
+      "producing_llm": null,
+      "time_in_call_secs": 13,
+      "conversation_turn_metrics": null,
+      "rag_retrieval_info": null,
+      "llm_usage": null,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "platform_event": null,
+      "original_message": null,
+      "reasoning": [],
+      "source_medium": null,
+      "source_event_id": null,
+      "used_static_kb_document_ids": [],
+      "analysis": null,
+      "user_identifier": null,
+      "id": null,
+      "compaction": null,
+      "triggered_guardrails": []
+    },
+    {
+      "role": "agent",
+      "agent_metadata": null,
+      "message": null,
+      "multivoice_message": null,
+      "tool_calls": [
+        {
+          "type": "webhook",
+          "request_id": "req_page_16",
+          "tool_name": "page_on_call_tech",
+          "params_as_json": "{\"ticket_id\": \"NS-5060\"}",
+          "tool_has_been_called": true,
+          "tool_details": null
+        }
+      ],
       "tool_results": [],
       "feedback": null,
       "llm_override": null,
@@ -171,9 +231,51 @@
       "triggered_guardrails": []
     },
     {
-      "role": "user",
+      "role": "agent",
       "agent_metadata": null,
-      "message": "Four cameras, covering the back fence. Sometime next month.",
+      "message": null,
+      "multivoice_message": null,
+      "tool_calls": [],
+      "tool_results": [
+        {
+          "request_id": "req_page_16",
+          "tool_name": "page_on_call_tech",
+          "result_value": "{\"paged\": true, \"callback_within_minutes\": 15, \"mention_billing\": false, \"tell_the_caller\": \"Our on-call technician has been alerted and will call you back within 15 minutes.\", \"message\": \"Tell the caller everything in tell_the_caller, in your own words, along with the ticket number. Do not mention billing or extra charges.\"}",
+          "is_error": false,
+          "is_blocked": false,
+          "tool_has_been_called": true,
+          "tool_latency_secs": 0.0,
+          "error_type": "",
+          "raw_error_message": "",
+          "dynamic_variable_updates": [],
+          "type": "webhook"
+        }
+      ],
+      "feedback": null,
+      "llm_override": null,
+      "producing_llm": null,
+      "time_in_call_secs": 15,
+      "conversation_turn_metrics": null,
+      "rag_retrieval_info": null,
+      "llm_usage": null,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "platform_event": null,
+      "original_message": null,
+      "reasoning": [],
+      "source_medium": null,
+      "source_event_id": null,
+      "used_static_kb_document_ids": [],
+      "analysis": null,
+      "user_identifier": null,
+      "id": null,
+      "compaction": null,
+      "triggered_guardrails": []
+    },
+    {
+      "role": "agent",
+      "agent_metadata": null,
+      "message": "Your ticket is N S 5 0 6 0. Our on-call technician has been alerted and will call you back within 15 minutes. Is there anything else I can help with?",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
@@ -199,44 +301,16 @@
       "triggered_guardrails": []
     },
     {
-      "role": "agent",
-      "agent_metadata": null,
-      "message": "Got it. Is there a good time for Sarah Johnson, your account executive, to call you?",
-      "multivoice_message": null,
-      "tool_calls": [],
-      "tool_results": [],
-      "feedback": null,
-      "llm_override": null,
-      "producing_llm": null,
-      "time_in_call_secs": 21,
-      "conversation_turn_metrics": null,
-      "rag_retrieval_info": null,
-      "llm_usage": null,
-      "interrupted": false,
-      "ignored_as_backchannel": false,
-      "platform_event": null,
-      "original_message": null,
-      "reasoning": [],
-      "source_medium": null,
-      "source_event_id": null,
-      "used_static_kb_document_ids": [],
-      "analysis": null,
-      "user_identifier": null,
-      "id": null,
-      "compaction": null,
-      "triggered_guardrails": []
-    },
-    {
       "role": "user",
       "agent_metadata": null,
-      "message": "Weekday mornings are best.",
+      "message": "Yes, actually. I think we got charged twice on our last invoice.",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
       "feedback": null,
       "llm_override": null,
       "producing_llm": null,
-      "time_in_call_secs": 24,
+      "time_in_call_secs": 23,
       "conversation_turn_metrics": null,
       "rag_retrieval_info": null,
       "llm_usage": null,
@@ -257,46 +331,24 @@
   ],
   "conversation_initiation_source": null,
   "environment": null,
-  "type": "tool",
-  "tool_call_parameters": {
-    "parameters": [
-      {
-        "eval": {
-          "type": "llm",
-          "description": "States four (4) cameras or devices."
-        },
-        "path": "body.device_count"
-      },
-      {
-        "eval": {
-          "type": "llm",
-          "description": "Says next month, as the caller said. Not a made-up date."
-        },
-        "path": "body.timeline"
-      },
-      {
-        "eval": {
-          "type": "llm",
-          "description": "Says weekday mornings, as the caller said."
-        },
-        "path": "body.best_time"
-      },
-      {
-        "eval": {
-          "type": "regex",
-          "pattern": "3105550178"
-        },
-        "path": "body.callback_number"
-      }
-    ],
-    "referenced_tool": {
-      "id": "tool_2201m3zg0zy7ew4t6pdpjaq5jmad",
-      "type": "webhook"
+  "type": "llm",
+  "success_condition": "The agent says, in one or two short sentences, that it's bringing in Jordan, the billing assistant, to look at the invoice (it may also call transfer_to_agent). It must NOT ask the caller to confirm their name or number again (they already confirmed earlier in this call), must NOT try to answer the billing question itself, and must NOT promise a refund or credit.",
+  "success_examples": [
+    {
+      "response": "Sure, Priya. I'll bring in Jordan, our billing assistant, who can look at that invoice with you.",
+      "type": "success"
+    }
+  ],
+  "failure_examples": [
+    {
+      "response": "Before I do that, just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?",
+      "type": "failure"
     },
-    "verify_absence": false,
-    "workflow_node_transition": null
-  },
-  "check_any_tool_matches": null,
-  "id": "test_5001m3zwjqnzea5b9kv5603yxkwq",
-  "name": "QA-12 Riley records the lead with what the caller said"
+    {
+      "response": "I see a duplicate charge of $189, so I'll get that refunded for you.",
+      "type": "failure"
+    }
+  ],
+  "id": "test_3701m41mfgw7ejvv05vmk9en37q3",
+  "name": "QA-16 Repair done, then a billing question: hand off without re-asking"
 }

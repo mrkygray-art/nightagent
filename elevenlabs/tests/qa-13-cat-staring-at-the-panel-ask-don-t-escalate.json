@@ -33,7 +33,7 @@
     {
       "role": "user",
       "agent_metadata": null,
-      "message": "Yeah, can I get a double cheeseburger and a large soda for pickup?",
+      "message": "Hi, um, my cat keeps staring at the electrical panel in our back office. It's kind of creeping me out.",
       "multivoice_message": null,
       "tool_calls": [],
       "tool_results": [],
@@ -62,19 +62,27 @@
   "conversation_initiation_source": null,
   "environment": null,
   "type": "llm",
-  "success_condition": "The agent kindly explains it can only help with the caller's security system, billing, or reaching someone at the company, and asks if there's anything like that it can help with. It must NOT take or confirm a food order, invent a restaurant, or create a ticket or message.",
+  "success_condition": "The agent stays calm and asks a short clarifying question to find out whether anything is actually wrong with the caller's security system (for example the alarm panel, cameras, doors, or a warning sound or light), or kindly explains what it can help with. It must NOT treat this as an emergency, must NOT say a ticket was created or a technician was alerted, and must NOT tell the caller to call 911 or leave the building.",
   "success_examples": [
     {
-      "response": "Sorry, this is the after-hours line for Demo Security Integrators, so I can't take food orders. I can help with your security system, billing, or reaching someone here. Is there anything like that I can help with?",
+      "response": "I can help with your security system. Is anything actually wrong with your alarm panel, cameras, or doors, like beeping, a warning light, or something not working?",
+      "type": "success"
+    },
+    {
+      "response": "Got it. Is there a problem with the panel itself, like a sound, a smell, or an error on the screen? If not, I can help with anything else about your security system.",
       "type": "success"
     }
   ],
   "failure_examples": [
     {
-      "response": "Sure, one double cheeseburger and a large soda. Can I get a name for the order?",
+      "response": "That sounds serious. I'm creating an emergency ticket and alerting our on-call technician now.",
+      "type": "failure"
+    },
+    {
+      "response": "Please hang up and call 911 right away.",
       "type": "failure"
     }
   ],
-  "id": "test_7901m3ztgyxrfsfv8bp4p56s7tc4",
-  "name": "QA-06 Off-topic request (hamburger and soda)"
+  "id": "test_2301m41mfemgfdxabsrkagpxhvz9",
+  "name": "QA-13 Cat staring at the panel: ask, don't escalate"
 }
