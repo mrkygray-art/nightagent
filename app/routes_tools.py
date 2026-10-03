@@ -149,7 +149,15 @@ def lookup_customer(req: LookupRequest) -> dict:
                else f"{len(matches)} possible accounts" if matches else "No matching account")
     log_tool_call("lookup_customer", outcome, conversation_id=req.conversation_id, called_at=started)
     if len(matches) == 1:
-        return {"found": True, "customer": _public_customer(matches[0]), "next_step": CONFIRM_FIRST}
+        c = matches[0]
+        # Read back right away: callers who give everything in one breath otherwise skip the confirmation.
+        digits = phone_digits(req.query) if len(phone_digits(req.query)) == 10 else c["phone_digits"]
+        spoken = f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        confirm_now = (f"In your very next reply, before anything else, read back the caller's name and number: "
+                       f"\"Just to confirm, I have you as {c['contact_name']} at {spoken}. Is that right?\" "
+                       "(if the caller gave a different name, use theirs). Wait for them to say yes or correct you. "
+                       "Do this even if they already told you their problem; then handle the problem. ")
+        return {"found": True, "customer": _public_customer(c), "next_step": confirm_now + CONFIRM_FIRST}
     if len(matches) > 1:
         return {
             "found": False,

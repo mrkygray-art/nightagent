@@ -120,3 +120,11 @@ def test_billing_note_only_when_the_plan_lacks_after_hours(tool):
     routine = tool("create-ticket", {"customer_id": "C-1002", "caller_name": "T", "callback_number": "3105550178",
                                      "issue_summary": "Badge not working", "category": "access_issue"})
     assert routine["mention_billing"] is False
+
+
+def test_lookup_asks_for_the_read_back_right_away(tool):
+    out = tool("lookup-customer", {"query": "(310) 555-0178", "conversation_id": "conv_rb"})
+    assert out["next_step"].startswith("In your very next reply")
+    assert "I have you as James Carter at 310-555-0178" in out["next_step"]
+    by_name = tool("lookup-customer", {"query": "Westside", "conversation_id": "conv_rb2"})
+    assert "at 310-555-0178" in by_name["next_step"]  # falls back to the number on the account
