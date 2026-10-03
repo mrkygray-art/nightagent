@@ -1,8 +1,11 @@
 # NightAgent
 
-**AI-powered after-hours service intake, triage, ticket lifecycle, customer follow-up, and opportunity handoff.**
+**AI-powered after-hours service intake, triage, ticket lifecycle, customer follow-up, opportunity handoff, and agent QA.**
 
-NightAgent is a portfolio demonstration of how an AI voice agent can support the complete after-hours service lifecycle for a physical-security integrator. Instead of stopping at a chatbot or voice demo, NightAgent connects the customer conversation to operational workflow: capture the problem, create and prioritize a service ticket, simulate dispatch and repair progression, call the customer back, verify the outcome, and identify follow-up sales or service needs.
+NightAgent is a portfolio demonstration of how an AI voice agent can support the complete after-hours service lifecycle for a physical-security integrator. Instead of stopping at a chatbot or voice demo, NightAgent connects the customer conversation to operational workflow: capture the problem, create and prioritize a service ticket, simulate dispatch and repair progression, call the customer back, verify the outcome, identify follow-up sales or service needs, and regression-test agent behavior against problems found during real demo calls.
+
+**Live demo:** https://nightshift-dispatch.vercel.app/demo  
+**Agent QA Lab:** https://nightshift-dispatch.vercel.app/lab
 
 > **Demo note:** The customer/AI interaction demonstrates the conversational experience. Dispatch, technician assignment, repair timing, and lifecycle progression are intentionally accelerated/simulated so a recruiter or reviewer can experience an hours-long service workflow in minutes. The UI labels simulated events accordingly.
 
@@ -10,7 +13,88 @@ NightAgent is a portfolio demonstration of how an AI voice agent can support the
 
 After-hours service is more than answering a phone call. A useful system has to understand what happened, determine urgency, capture enough information for service, keep the customer informed, and make sure the issue is actually resolved.
 
-NightAgent demonstrates how AI can sit inside that workflow rather than exist as a standalone assistant.
+NightAgent demonstrates how AI can sit inside that workflow rather than exist as a standalone assistant. The QA Lab extends that idea by showing that a production-style agent also needs repeatable evaluation: when a problem is discovered in a live conversation, it can become a regression test that protects the behavior going forward.
+
+## Two Ways to Explore the Demo
+
+### Simple Mode
+
+Simple Mode is designed for a recruiter, hiring manager, customer, or business stakeholder. It keeps the experience focused on the customer journey: talk to Sam, create a ticket, follow the service lifecycle, and see the post-service callback and downstream actions.
+
+### Engineering Mode
+
+Engineering Mode exposes what is happening behind each conversational turn. It shows the path from caller audio through speech-to-text, agent reasoning, tool calls, deterministic business rules, persistence, voice response, and grading.
+
+The goal is to make the implementation inspectable rather than presenting the voice agent as a black box.
+
+```text
+Caller audio
+   |
+   v
+Speech to text
+   |
+   v
+Agent decision
+   |
+   v
+Tool call
+   |
+   v
+Rules in Python/FastAPI
+   |
+   v
+Record saved in Supabase
+   |
+   v
+Voice response
+   |
+   v
+Evaluation / grading
+```
+
+## Agent QA Lab
+
+The **Agent QA Lab** turns problems discovered during live conversations into repeatable regression tests. The tests run against the live ElevenLabs agents using ElevenLabs Agent Testing, and NightAgent reads the latest results back into a recruiter-friendly QA dashboard.
+
+This is intentionally different from a static scripted demo. The project demonstrates an engineering feedback loop:
+
+```text
+Live conversation
+   |
+   v
+Unexpected or incorrect behavior found
+   |
+   v
+Create a regression test
+   |
+   v
+Run test against the live agent
+   |
+   v
+Inspect reply + tool behavior
+   |
+   v
+Pass / fail result
+   |
+   +----> Fix agent or workflow ----> Re-test
+```
+
+### Current regression coverage
+
+| Test | What it protects |
+| --- | --- |
+| **QA-01 — Confirm identity after lookup** | Sam reads the caller's name and phone number back after account lookup and asks for confirmation. |
+| **QA-02 — No ticket before confirmation** | Prevents `create_ticket` from running before the caller confirms identity details. |
+| **QA-03 — Gate stuck open = emergency** | Verifies that a site that cannot be secured is classified as `cannot_secure_site` with emergency priority. |
+| **QA-04 — Explain after-hours billing when applicable** | Confirms Sam gives the callback window, ticket number, and billing notice for a plan without after-hours coverage. |
+| **QA-05 — Do not invent an extra charge** | Ensures a customer with 24/7 coverage is not incorrectly told that after-hours service costs extra. |
+| **QA-06 — Handle an off-topic request safely** | Tests an unexpected hamburger-and-soda request and verifies Sam stays within the supported security/service scope. |
+| **QA-07 — Repair first when a caller asks for a supervisor** | Ensures an active broken-gate emergency creates the repair ticket before the complaint/escalation workflow. |
+| **QA-08 — Agent identity after handoff** | Verifies Jordan speaks as Jordan in the first person and does not promise a refund or credit. |
+
+The lab evaluates both **reply behavior** and **tool behavior**. That distinction matters: an agent can sound correct while still calling the wrong tool, using the wrong parameters, or taking an action too early.
+
+The public QA view intentionally exposes only safe evaluation data such as agent replies, tool names, tool parameters, test rationale, and pass/fail status. Sensitive request headers and tool secrets returned by upstream APIs are not passed to the page.
 
 ## End-to-End Workflow
 
@@ -23,6 +107,7 @@ NightAgent demonstrates how AI can sit inside that workflow rather than exist as
 7. **Additional needs are captured.** For example, a customer can request additional access-control doors and a quote.
 8. **NightAgent creates downstream work** such as an opportunity and account-executive callback task.
 9. **The lifecycle closes with an auditable history** showing the original call, service activity, check-in, outcome, and next actions.
+10. **Agent behavior is regression-tested** so issues discovered during calls can become repeatable QA cases.
 
 ## Screenshots
 
@@ -74,10 +159,13 @@ The final ticket view connects the service outcome with next actions, including 
 ## What the Project Demonstrates
 
 - Conversational AI applied to a real business workflow
+- ElevenLabs voice-agent integration
+- Simple stakeholder view plus inspectable Engineering Mode
 - After-hours customer intake
 - Physical-security service triage
 - Structured ticket creation from natural-language conversations
 - Rules-based service prioritization
+- Tool calling with deterministic business logic
 - Human/service-team handoff
 - Stateful ticket lifecycle tracking
 - Customer follow-up after service
@@ -85,6 +173,10 @@ The final ticket view connects the service outcome with next actions, including 
 - Identification of additional customer needs
 - Service-to-sales opportunity creation
 - Account Executive follow-up tasks
+- Regression testing based on failures found in live calls
+- Reply-level and tool-level agent evaluation
+- Multi-agent QA coverage for Sam and Jordan
+- Safe public presentation of test results without exposing tool secrets
 - Clear separation between AI behavior and simulated demo events
 - Recruiter-friendly visualization of an end-to-end AI workflow
 
@@ -107,20 +199,24 @@ This is intentional: NightAgent combines my physical-security / Sales Engineerin
 Customer
    |
    v
-AI Voice / Conversation Layer
+ElevenLabs Voice Agent
    |
    +--> Customer & account identification
    +--> Problem discovery
    +--> Safety / urgency questions
+   +--> Tool calls
    |
    v
-Service Workflow
+Python / FastAPI Service Workflow
    |
    +--> Ticket creation
    +--> Classification
    +--> Rules-based priority
    +--> Dispatch / assignment lifecycle
    +--> Status timeline
+   |
+   v
+Supabase Persistence
    |
    v
 Post-Service AI Check-In
@@ -130,7 +226,24 @@ Post-Service AI Check-In
    +--> Still broken ---------------------> Continue service workflow
    |
    +--> Additional need -----------------> Opportunity + AE task
+
+Engineering feedback loop
+   |
+   +--> Live-call problem
+   +--> ElevenLabs Agent Testing regression case
+   +--> Reply/tool evaluation
+   +--> Pass/fail result in Agent QA Lab
 ```
+
+## Technology Stack
+
+- **ElevenLabs Agents** — real-time conversational voice experience and agent testing
+- **Python** — service orchestration and business logic
+- **FastAPI** — API/tool endpoints used by the agents and demo
+- **Supabase** — persisted ticket, lifecycle, and demo records
+- **Vercel** — public demo hosting
+- **ElevenLabs Agent Testing** — regression suites against live agents
+- **Rules-based decision logic** — deterministic priority and workflow behavior where business rules should control the outcome
 
 ## Product Design Decisions
 
@@ -142,11 +255,17 @@ Post-Service AI Check-In
 
 **Service conversations can contain revenue signals.** A customer mentioning additional doors, upgrades, or another need can become structured follow-up instead of an untracked comment.
 
-**The lifecycle matters more than the chatbot.** The goal is to demonstrate orchestration across intake, operations, customer experience, and sales—not simply an AI conversation window.
+**Agent failures become tests.** Problems found while exercising the live agent are converted into regression cases instead of being treated as one-off prompt fixes.
+
+**Words and actions are tested separately.** The QA Lab checks both what an agent says and what tools it calls, including important parameters and action order.
+
+**The lifecycle matters more than the chatbot.** The goal is to demonstrate orchestration across intake, operations, customer experience, sales, and AI quality—not simply an AI conversation window.
 
 ## Business Value
 
 NightAgent explores how an integrator could reduce after-hours response friction while improving the quality of information handed to technicians. The same workflow can also improve customer communication and preserve sales opportunities discovered during service interactions.
+
+The QA layer addresses a second business problem: conversational agents change as prompts, tools, and workflows evolve. Regression testing provides a way to verify that important behaviors—identity confirmation, emergency handling, billing language, escalation order, and agent identity—continue to work after those changes.
 
 The concept is particularly relevant to security integrators, managed service providers, field-service organizations, and other businesses where an incoming customer problem must move through multiple people and systems before it is truly resolved.
 
@@ -154,6 +273,6 @@ The concept is particularly relevant to security integrators, managed service pr
 
 NightAgent was built as an applied AI workflow project demonstrating the intersection of:
 
-**AI + Physical Security + Customer Experience + Service Operations + Sales Engineering**
+**AI + Voice Agents + Agent Evaluation + Physical Security + Customer Experience + Service Operations + Sales Engineering**
 
-The project is designed to show how I approach a business problem from the initial customer interaction through operational execution and measurable next actions—not just how to connect an LLM to a user interface.
+The project is designed to show how I approach a business problem from the initial customer interaction through operational execution, measurable next actions, and repeatable QA—not just how to connect an LLM to a user interface.
