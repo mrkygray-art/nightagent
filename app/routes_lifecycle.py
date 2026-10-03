@@ -191,6 +191,24 @@ def call_detail(call_id: str) -> dict:
     }
 
 
+@router.get("/trace/{ref}")
+def trace(ref: str) -> dict:
+    """Engineering Mode: what happened on one call. Our server's tool calls (with timings) right away;
+    ElevenLabs' turn-by-turn timings and grades once its post-call analysis is done."""
+    ref = ref.strip().lower()
+    conv = find_conversation(ref)
+    if not conv:
+        raise HTTPException(status_code=404, detail="No tool calls recorded for that call yet.")
+    rows = next(rows for c, rows in _recent_conversations() if c == conv)
+    grade = evaluation.fetch_grade(conv, want_trace=True)
+    return {
+        "call_ref": ref,
+        "tools": [{**report.public_tool_call(r), "duration_ms": r.get("duration_ms")} for r in rows],
+        "grade": {"status": grade.get("status"), "results": grade.get("results") or {}},
+        "turns": grade.get("trace") or [],
+    }
+
+
 @router.get("/demo/scenarios")
 def scenarios() -> list[dict]:
     return demo.public_scenarios()

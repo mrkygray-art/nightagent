@@ -22,8 +22,54 @@ CRITERIA = (CRITERION, CONFIRMED)
 RECHECK_SECONDS = 20  # while ElevenLabs is still analyzing, ask at most this often per call
 SPECIALIST_TOOLS = {"billing_lookup", "request_billing_review", "record_sales_interest"}
 
+# Who an ElevenLabs agent id is, for the turn-by-turn trace
+AGENT_NAMES = {
+    config.ELEVENLABS_AGENT_ID: "Sam",
+    config.FOLLOWUP_AGENT_ID: "Sam (check-in call)",
+    "agent_4001m3zfgp9efne9gm350187zpfb": "Jordan",
+    "agent_3001m3zg26pted8trz8p4pxt4qfc": "Riley",
+}
 
-def fetch_grade(conversation_id: str | None) -> dict:
+
+def _ms(metrics: dict, key: str) -> int | None:
+    value = (metrics.get(key) or {}).get("elapsed_time")
+    return round(value * 1000) if isinstance(value, (int, float)) else None
+
+
+def turn_trace(transcript: list[dict]) -> list[dict]:
+    """ElevenLabs' own measurements, turn by turn. The caller's words are left out on purpose:
+    this is a public page, so a caller turn shows only how long speech-to-text took."""
+    rows = []
+    for e in transcript[:80]:
+        metrics = (e.get("conversation_turn_metrics") or {}).get("metrics") or {}
+        at = e.get("time_in_call_secs")
+        if e.get("role") == "user":
+            words = len((e.get("message") or "").split())
+            if not words:
+                continue
+            typed = e.get("source_medium") == "text"
+            rows.append({"t": at, "who": "Caller", "kind": "typed" if typed else "spoke",
+                         "text": f"{'Typed' if typed else 'Spoke'} ({words} word{'s' if words != 1 else ''})",
+                         "stt_ms": None if typed else _ms(metrics, "convai_asr_trailing_service_latency")})
+            continue
+        who = AGENT_NAMES.get((e.get("agent_metadata") or {}).get("agent_id"), "Agent")
+        for call in e.get("tool_calls") or []:
+            rows.append({"t": at, "who": who, "kind": "tool", "text": f"Tool: {call.get('tool_name')}()",
+                         "decide_ms": _ms(metrics, "convai_llm_tool_request_generation_latency")})
+        for result in e.get("tool_results") or []:
+            secs = result.get("tool_latency_secs")
+            rows.append({"t": at, "who": who, "kind": "tool_result",
+                         "text": f"Result: {result.get('tool_name')}" + (" (error)" if result.get("is_error") else ""),
+                         "tool_ms": round(secs * 1000) if isinstance(secs, (int, float)) else None})
+        if e.get("message"):
+            rows.append({"t": at, "who": who, "kind": "reply", "text": e["message"][:180],
+                         "first_word_ms": _ms(metrics, "convai_llm_service_ttfb"),
+                         "voice_ms": _ms(metrics, "convai_tts_service_ttfb"),
+                         "audio_after_silence_ms": _ms(metrics, "convai_ttf_audio_since_silence")})
+    return rows
+
+
+def fetch_grade(conversation_id: str | None, want_trace: bool = False) -> dict:
     """ElevenLabs' post-call grades for this conversation, cached once final.
     Returns {"status": "done" | "pending" | "unavailable", "results": {criterion: {result, rationale}}, "summary"}."""
     if not conversation_id:
@@ -35,13 +81,19 @@ def fetch_grade(conversation_id: str | None) -> dict:
         cached = {}
     if cached.get("eval_status") == "done":
         saved = cached.get("evaluation") or {}
-        if "result" in saved:  # cached before there was more than one criterion
-            saved = {CRITERION: saved}
-        return {"status": "done", "results": saved, "summary": cached.get("summary")}
+        if "results" in saved:
+            if "trace" in saved:
+                return {"status": "done", "results": saved["results"], "trace": saved["trace"],
+                        "summary": cached.get("summary")}
+        else:  # saved before the trace was kept
+            results = {CRITERION: saved} if "result" in saved else saved
+            if not want_trace:
+                return {"status": "done", "results": results, "summary": cached.get("summary")}
     if not config.ELEVENLABS_API_KEY:
         return {"status": "unavailable"}
     last = cached.get("evaluated_at")
-    if last and datetime.now(timezone.utc) - datetime.fromisoformat(last) < timedelta(seconds=RECHECK_SECONDS):
+    if cached.get("eval_status") != "done" and last and \
+            datetime.now(timezone.utc) - datetime.fromisoformat(last) < timedelta(seconds=RECHECK_SECONDS):
         return {"status": "pending"}
     try:
         res = requests.get(f"https://api.elevenlabs.io/v1/convai/conversations/{conversation_id}",
@@ -62,9 +114,10 @@ def fetch_grade(conversation_id: str | None) -> dict:
                    "rationale": ((graded.get(c) or {}).get("rationale") or "")[:400]}
                for c in CRITERIA if c in graded}
     summary = (analysis.get("transcript_summary") or "")[:500] or None
-    _remember(conversation_id, {"eval_status": "done", "evaluation": results, "summary": summary,
-                                "evaluated_at": now_iso()})
-    return {"status": "done", "results": results, "summary": summary}
+    trace = turn_trace(data.get("transcript") or [])
+    _remember(conversation_id, {"eval_status": "done", "evaluation": {"results": results, "trace": trace},
+                                "summary": summary, "evaluated_at": now_iso()})
+    return {"status": "done", "results": results, "trace": trace, "summary": summary}
 
 
 def _remember(conversation_id: str, fields: dict) -> None:

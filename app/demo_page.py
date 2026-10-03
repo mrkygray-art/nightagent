@@ -60,6 +60,15 @@ DEMO_HTML = r"""<!doctype html>
   .top nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 18px; }
   .top nav a { font-weight: 500; text-decoration: none; }
   .top nav a:hover { text-decoration: underline; }
+  .top { flex-wrap: wrap; }
+  .top-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 18px; }
+  .view-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--night); }
+  .view-switch button {
+    font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; border-radius: 999px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .view-switch button[aria-pressed="true"] { background: var(--sodium); color: #1a1200; font-weight: 600; }
+  .view-switch button:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
 
   .intro { padding: 40px 0 28px; max-width: 64ch; }
   h1 {
@@ -392,6 +401,19 @@ DEMO_HTML = r"""<!doctype html>
   .tech li b { color: var(--text); font-weight: 600; }
   .tech-line { display: block; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; color: #8e9ab5; margin-top: 2px; }
   body:not(.tech-on) .tech-line { display: none; }
+  .tech .pipe { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .tech .pipe li {
+    font: 12px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; color: #8e9ab5;
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px;
+  }
+  .tech .pipe li.on { color: #1a1200; background: var(--sodium); border-color: var(--sodium); }
+  .tech h4 { margin: 6px 0 0; font-size: 14px; }
+  .tech .trace { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow-y: auto;
+    font: 12.5px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted); }
+  .trace li { display: grid; grid-template-columns: 44px 1fr; gap: 0 8px; border-top: 1px solid var(--line); padding-top: 4px; }
+  .trace li b { color: var(--text); font-weight: 600; }
+  .trace .ms { display: block; color: #8e9ab5; }
+  .trace .grade-ok { color: #7fd68f; } .trace .grade-bad { color: #ff8a7a; }
 
   /* Bigger text option */
   body.big .msg, body.big .composer input, body.big .ev-issue, body.big .ticket .issue, body.big .timeline .what b { font-size: 19px; }
@@ -446,7 +468,13 @@ DEMO_HTML = r"""<!doctype html>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="/demo">NightAgent</a>
-    <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
+    <div class="top-right">
+      <div class="view-switch" role="group" aria-label="View">
+        <button type="button" data-view="simple" aria-pressed="true">Simple</button>
+        <button type="button" data-view="eng" aria-pressed="false">Engineering</button>
+      </div>
+      <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
+    </div>
   </header>
 
   <section class="intro">
@@ -524,15 +552,26 @@ DEMO_HTML = r"""<!doctype html>
           <div class="prefs" role="group" aria-label="Call options">
             <label><input type="checkbox" id="pref-slow"> Sam speaks slower</label>
             <label><input type="checkbox" id="pref-big"> Bigger text</label>
-            <label><input type="checkbox" id="pref-tech"> Show what's happening behind the scenes</label>
+            <input type="checkbox" id="pref-tech" hidden>
           </div>
         </div>
       </details>
 
-      <section class="tech" id="tech" hidden aria-label="Behind the scenes">
-        <h3>Behind the scenes</h3>
-        <p class="fine">What Sam and NightAgent's server are doing, live. ElevenLabs Agents runs the voice. Sam calls tools on a Python FastAPI server, rules in code decide priority and what happens next, and tickets and their history are saved in Supabase.</p>
-        <ol id="tech-log"><li>Start a call to watch Sam's tool calls appear here.</li></ol>
+      <section class="tech" id="tech" hidden aria-label="Engineering Mode">
+        <h3>Engineering Mode</h3>
+        <p class="fine">What happens on each turn of the call, with real timings. ElevenLabs Agents runs speech-to-text, the model, and the voice. Sam calls tools on a Python FastAPI server, rules in code decide priority and what happens next, and records are saved in Supabase.</p>
+        <ol class="pipe" id="pipe" aria-label="Where the call is right now">
+          <li data-stage="audio">Caller audio</li><li data-stage="stt">Speech to text</li><li data-stage="decide">Sam decides</li>
+          <li data-stage="tool">Tool call</li><li data-stage="rules">Rules in code</li><li data-stage="record">Record saved</li>
+          <li data-stage="voice">Voice reply</li><li data-stage="grade">Grading</li>
+        </ol>
+        <h4>Live</h4>
+        <ol id="tech-log"><li>Start a call to watch each step appear here.</li></ol>
+        <div id="eng-trace" hidden>
+          <h4>After the call: turn by turn</h4>
+          <p class="fine" id="eng-trace-status"></p>
+          <ol class="trace" id="eng-trace-list"></ol>
+        </div>
       </section>
 
       <p class="fine">Made-up demo data. Please don't share real names, numbers, or alarm codes. Conversations are processed and recorded by ElevenLabs.</p>
@@ -604,6 +643,8 @@ const els = {
   orb: $("orb"), orbLabel: $("orb-label"), incall: $("incall"), restart: $("restart"), repeat: $("repeat"),
   hint: $("hint"), calm: $("calm"), options: $("options"),
   prefSlow: $("pref-slow"), prefBig: $("pref-big"), prefTech: $("pref-tech"), tech: $("tech"), techLog: $("tech-log"),
+  viewButtons: document.querySelectorAll(".view-switch button"), pipe: $("pipe"),
+  engTrace: $("eng-trace"), engTraceStatus: $("eng-trace-status"), engTraceList: $("eng-trace-list"),
 };
 
 let Conversation = null;
@@ -696,7 +737,12 @@ function startLevelLoop() {
       if (lvl > 0.12) heardAt = performance.now();
       const hearing = performance.now() - heardAt < 900;
       const words = hearing ? "Hearing you…" : "Listening…";
-      if (els.orbLabel.textContent !== words) els.orbLabel.textContent = words;
+      if (els.orbLabel.textContent !== words) {
+        // Engineering Mode strip: the caller talking, then speech-to-text finishing once they pause
+        if (hearing) setStage("audio");
+        else if (els.orbLabel.textContent === "Hearing you…") setStage("stt");
+        els.orbLabel.textContent = words;
+      }
     }
     levelRaf = requestAnimationFrame(tick);
   };
@@ -755,7 +801,96 @@ function logTech(what, detail) {
   els.techLog.scrollTop = els.techLog.scrollHeight;
 }
 
-/* ---------- Options: slower speech, bigger text, behind the scenes ---------- */
+/* ---------- Engineering Mode: pipeline strip, timings, server steps, turn trace ---------- */
+function setStage(key) {
+  els.pipe.querySelectorAll("li").forEach((li) => li.classList.toggle("on", li.dataset.stage === key));
+}
+let turnAt = null;          // when the caller's words came back from speech-to-text (or a tool answered)
+let turnFrom = "";
+const toolStarted = {};      // tool_call_id (or name) -> start time
+let serverShown = 0;         // server tool calls already in the live feed
+let traceTimer = null;
+async function callRef() {
+  if (!myCallRef && conversationId) myCallRef = await sha16(conversationId);
+  return myCallRef;
+}
+// Our server's view: each tool call's outcome and how long the server took
+async function showServerSteps() {
+  const ref = await callRef();
+  if (!ref) return;
+  let data;
+  try { data = await api(`/api/trace/${ref}`); } catch { return; }
+  (data.tools || []).slice(serverShown).forEach((r) => {
+    const took = Number.isFinite(r.duration_ms) ? `${r.duration_ms || "<1"} ms on the server · ` : "";
+    logTech(`Server: ${r.tool}`, `${took}${r.outcome}`);
+  });
+  serverShown = Math.max(serverShown, (data.tools || []).length);
+  setStage("record");
+}
+const MS_WORDS = {
+  stt_ms: "speech to text", decide_ms: "model chose the tool", tool_ms: "tool round trip",
+  first_word_ms: "model's first words", voice_ms: "voice started", audio_after_silence_ms: "audio after the caller stopped",
+};
+const CRITERIA_WORDS = { no_unsupported_promises: "No unsupported promises", confirmed_details_first: "Confirmed name and number first" };
+function renderTrace(data) {
+  els.engTraceList.replaceChildren();
+  Object.entries((data.grade && data.grade.results) || {}).forEach(([k, v]) => {
+    const li = el("li");
+    li.appendChild(el("span", "", ""));
+    const ok = v.result === "success";
+    li.appendChild(el("span", ok ? "grade-ok" : "grade-bad", `Graded: ${CRITERIA_WORDS[k] || k} · ${ok ? "pass" : v.result || "?"}`));
+    els.engTraceList.appendChild(li);
+  });
+  (data.turns || []).forEach((r) => {
+    const li = el("li");
+    li.appendChild(el("span", "", Number.isFinite(r.t) ? `${r.t}s` : ""));
+    const body = el("span");
+    body.appendChild(el("b", "", r.who));
+    body.appendChild(document.createTextNode(`  ${r.text}`));
+    const times = Object.keys(MS_WORDS).filter((k) => Number.isFinite(r[k])).map((k) => `${MS_WORDS[k]} ${r[k]} ms`);
+    if (times.length) body.appendChild(el("span", "ms", times.join(" · ")));
+    li.appendChild(body);
+    els.engTraceList.appendChild(li);
+  });
+}
+// After the call, ElevenLabs finishes its analysis in a minute or so; poll until it's there
+async function loadTrace(triesLeft = 20) {
+  clearTimeout(traceTimer);
+  const ref = await callRef();
+  els.engTrace.hidden = false;
+  if (!ref) { els.engTraceStatus.textContent = "No call to trace yet."; return; }
+  let data;
+  try { data = await api(`/api/trace/${ref}`); } catch {
+    els.engTraceStatus.textContent = "Sam didn't call any tools on this call, so there's no server trace.";
+    setStage("");
+    return;
+  }
+  const state = data.grade && data.grade.status;
+  if (state === "done") {
+    els.engTraceStatus.textContent = "From ElevenLabs' post-call data. The caller's words are left out; only timings show.";
+    setStage("");
+  } else if (state === "unavailable") {
+    els.engTraceStatus.textContent = "Turn timings aren't available for this call.";
+    setStage("");
+  } else if (triesLeft > 0) {
+    els.engTraceStatus.textContent = "Waiting for ElevenLabs to finish grading the call…";
+    traceTimer = setTimeout(() => loadTrace(triesLeft - 1), 8000);
+  } else {
+    els.engTraceStatus.textContent = "ElevenLabs is taking a while. Check this call's report on the board later.";
+  }
+  renderTrace(data);
+}
+function resetEngineering() {
+  turnAt = null;
+  serverShown = 0;
+  clearTimeout(traceTimer);
+  Object.keys(toolStarted).forEach((k) => delete toolStarted[k]);
+  els.engTrace.hidden = true;
+  els.engTraceList.replaceChildren();
+  setStage("");
+}
+
+/* ---------- Options: slower speech, bigger text, Engineering Mode ---------- */
 const PREFS_KEY = "nightagent-prefs";
 function loadPrefs() {
   try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
@@ -764,7 +899,15 @@ function applyPrefs() {
   document.body.classList.toggle("big", els.prefBig.checked);
   document.body.classList.toggle("tech-on", els.prefTech.checked);
   els.tech.hidden = !els.prefTech.checked;
+  els.viewButtons.forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.view === "eng") === els.prefTech.checked)));
 }
+els.viewButtons.forEach((b) => b.addEventListener("click", () => {
+  const on = b.dataset.view === "eng";
+  if (els.prefTech.checked === on) return;
+  els.prefTech.checked = on;
+  els.prefTech.dispatchEvent(new Event("change"));
+  if (on) els.tech.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}));
 function savePrefs() {
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify({
@@ -982,6 +1125,7 @@ const handlers = {
     stopRingback();
     if (info && info.conversationId) conversationId = info.conversationId;
     logTech("Connected", `ElevenLabs agent over a WebSocket${conversationId ? ` · conversation ${conversationId.slice(0, 14)}…` : ""}`);
+    setStage("audio");
     startLevelLoop();
     const who = followUpTicket ? `Sam is following up on ${followUpTicket}` : (mode === "voice" ? "Connected to Sam" : "Chatting with Sam");
     setStatus("listening", who,
@@ -996,6 +1140,8 @@ const handlers = {
     els.orb.style.setProperty("--lvl", "0");
     if (soundCleanup) { soundCleanup(); soundCleanup = null; }
     logTech("Call ended");
+    setStage("grade");
+    traceTimer = setTimeout(() => loadTrace(), 4000);
     if (restarting) { render(); return; } // Start over: the next call starts right away
     const why = details && details.reason === "error" ? (details.message || "The connection to Sam failed.") : "";
     if (why) showError(`The call couldn't continue: ${why}`);
@@ -1017,6 +1163,11 @@ const handlers = {
   onMessage: ({ message, source }) => {
     if (source === "user") {
       if (session && els.orb.dataset.state !== "speaking") setStatus("thinking", "Sam is thinking", "One moment…");
+      turnAt = performance.now();
+      turnFrom = mode === "voice" ? "your words were transcribed" : "your message arrived";
+      const words = (message || "").trim().split(/ +/).filter(Boolean).length;
+      logTech(mode === "voice" ? "Speech to text" : "Typed", `${words} word${words === 1 ? "" : "s"} sent to Sam · Sam decides what to do`);
+      setStage("decide");
       if (lastTyped && message && message.trim() === lastTyped) { lastTyped = null; return; }
       addMessage("you", message);
     } else {
@@ -1025,19 +1176,33 @@ const handlers = {
       if (speaker === "Sam") lastSamText = text;
       addMessage("sam", text, SPECIALISTS[speaker] || (speaker === "pending" ? "Specialist assistant" : "Sam"));
       if (speaker === "pending") { const b = els.transcript.querySelector(".msg.sam:last-child b"); if (b) b.dataset.pending = "1"; }
-      if (mode === "text" && session) setStatus("listening", "Your turn", "Type your reply below.");
+      if (mode === "text" && session) {
+        if (turnAt) logTech("Reply", `${Math.round(performance.now() - turnAt)} ms after ${turnFrom}`);
+        turnAt = null;
+        setStage("audio");
+        setStatus("listening", "Your turn", "Type your reply below.");
+      }
       schedulePoll(800);
     }
   },
   onModeChange: ({ mode: m }) => {
     if (!session) return;
-    if (m === "speaking") setStatus("speaking", `${speakerName()} is speaking`, "You can jump in anytime.");
-    else if (els.orb.dataset.state !== "thinking") setStatus("listening", "Your turn", mode === "voice" ? "Go ahead and speak." : "Type your reply below.");
+    if (m === "speaking") {
+      if (turnAt) logTech("Voice reply", `audio started ${Math.round(performance.now() - turnAt)} ms after ${turnFrom}`);
+      turnAt = null;
+      setStage("voice");
+      setStatus("speaking", `${speakerName()} is speaking`, "You can jump in anytime.");
+      return;
+    }
+    setStage("audio");
+    if (els.orb.dataset.state !== "thinking") setStatus("listening", "Your turn", mode === "voice" ? "Go ahead and speak." : "Type your reply below.");
   },
   onAgentToolRequest: (e) => {
     const name = (e && e.tool_name) || "tool";
     if (TOOL_OWNER[name]) setSpeaker(TOOL_OWNER[name]);
     setOrb("thinking", name === "transfer_to_agent" ? "Bringing in a specialist…" : `${speakerName()} is looking that up…`);
+    toolStarted[(e && e.tool_call_id) || name] = performance.now();
+    setStage("tool");
     logTech(`→ ${name}`, (TOOL_WORDS[name] || [])[0] || "");
   },
   onAgentToolResponse: (e) => {
@@ -1047,7 +1212,13 @@ const handlers = {
       const named = nameFrom(lastSamText);  // "I'll bring in Jordan, our billing assistant"
       if (named) setSpeaker(named);
     }
-    logTech(`← ${name}`, e && e.is_error ? "the tool reported an error" : (TOOL_WORDS[name] || [])[1] || "done");
+    const key = e && e.tool_call_id && e.tool_call_id in toolStarted ? e.tool_call_id : name;
+    const took = toolStarted[key] ? ` · ${Math.round(performance.now() - toolStarted[key])} ms round trip` : "";
+    delete toolStarted[key];
+    logTech(`← ${name}`, (e && e.is_error ? "the tool reported an error" : (TOOL_WORDS[name] || [])[1] || "done") + took);
+    if (name !== "transfer_to_agent" && name !== "end_call") { setStage("rules"); showServerSteps(); }
+    turnAt = performance.now();  // the next reply is timed from here
+    turnFrom = "the tool result came back";
   },
   onError: (message) => {
     console.error(message);
@@ -1073,6 +1244,7 @@ async function startSession(nextMode, opts = {}) {
     if (pendingNote) { addMessage("note", pendingNote); pendingNote = null; }
     conversationId = null;
     myCallRef = null;
+    resetEngineering();
     let inputDeviceId = "";
     if (mode === "voice") {
       try {
