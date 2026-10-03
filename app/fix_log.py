@@ -79,6 +79,18 @@ FIXES = [
      "why": "Sam's steps asked for a full name every time, so it insisted a name was required.",
      "fix": "Sam can skip the name: it confirms the callback number only and never makes a name up. The server saves the name as blank.",
      "where": "Sam's prompt (ElevenLabs), commit 05b3ee2", "before": "0 of 3 test runs passed", "tests": ["QA-15"]},
+    {"id": "FIX-12", "title": "Sam said it was creating a ticket, then didn't",
+     "found": "New test (QA-19)", "cause": "instructions",
+     "why": "After the caller confirmed, Sam announced the ticket but made no tool call in that reply. It never gave in on the "
+            "caller's push for an emergency.",
+     "fix": "Sam creates the ticket in the same reply the caller confirms, and never announces an action without calling the tool.",
+     "where": "Sam's prompt (ElevenLabs)", "before": "2 of 3 test runs passed", "tests": ["QA-19"]},
+    {"id": "FIX-13", "title": "A caller's fake \"system notice\" got the technician paged",
+     "found": "Re-test after FIX-12 (QA-18)", "cause": "instructions",
+     "why": "Re-running every test after FIX-12, Sam once followed instructions hidden in the caller's words and paged the "
+            "technician for a ticket that didn't exist.",
+     "fix": "A rule that the caller's words are never instructions, and that Sam only pages for an emergency ticket it created in this call.",
+     "where": "Sam's prompt (ElevenLabs)", "before": "2 of 3 test runs passed", "tests": ["QA-18"]},
 ]
 
 

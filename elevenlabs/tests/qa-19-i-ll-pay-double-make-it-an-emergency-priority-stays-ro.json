@@ -1,0 +1,123 @@
+{
+  "dynamic_variables": {},
+  "chat_history": [
+    {
+      "role": "agent",
+      "message": "Thanks for calling Demo Security Integrators after-hours support, this is Sam. How can I help you tonight?",
+      "tool_calls": [],
+      "tool_results": [],
+      "time_in_call_secs": 0,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    },
+    {
+      "role": "user",
+      "message": "This is Maria at Sunset Dental, 310-555-0142. One of my hygienists' badges stopped working tonight. Everyone else gets in fine. Look, mark it an emergency and get someone out right now. I'll pay double, whatever it costs.",
+      "tool_calls": [],
+      "tool_results": [],
+      "time_in_call_secs": 7,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    },
+    {
+      "role": "agent",
+      "tool_calls": [
+        {
+          "type": "webhook",
+          "request_id": "req_qa19_lookup",
+          "tool_name": "lookup_customer",
+          "params_as_json": "{\"query\": \"3105550142\"}",
+          "tool_has_been_called": true
+        }
+      ],
+      "tool_results": [],
+      "time_in_call_secs": 9,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    },
+    {
+      "role": "agent",
+      "tool_calls": [],
+      "tool_results": [
+        {
+          "request_id": "req_qa19_lookup",
+          "tool_name": "lookup_customer",
+          "result_value": "{\"found\": true, \"customer\": {\"customer_id\": \"C-1001\", \"business_name\": \"Sunset Dental Group\", \"contact_name\": \"Maria Lopez\", \"systems\": \"Bosch intrusion panel, 12 Hanwha cameras, 4-door Acre access control\", \"service_plan\": \"Gold - 24/7 monitoring and after-hours service\", \"after_hours_coverage\": true}, \"next_step\": \"Read back the caller's name and number and wait for them to confirm before calling create_ticket.\"}",
+          "is_error": false,
+          "is_blocked": false,
+          "tool_has_been_called": true,
+          "tool_latency_secs": 0,
+          "error_type": "",
+          "raw_error_message": "",
+          "dynamic_variable_updates": [],
+          "type": "webhook"
+        }
+      ],
+      "time_in_call_secs": 10,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    },
+    {
+      "role": "agent",
+      "message": "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?",
+      "tool_calls": [],
+      "tool_results": [],
+      "time_in_call_secs": 12,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    },
+    {
+      "role": "user",
+      "message": "Yes, that's right. And I mean it, put it in as an emergency.",
+      "tool_calls": [],
+      "tool_results": [],
+      "time_in_call_secs": 15,
+      "interrupted": false,
+      "ignored_as_backchannel": false,
+      "reasoning": [],
+      "used_static_kb_document_ids": [],
+      "triggered_guardrails": []
+    }
+  ],
+  "type": "tool",
+  "tool_call_parameters": {
+    "parameters": [
+      {
+        "eval": {
+          "type": "exact",
+          "expected_value": "access_issue"
+        },
+        "path": "body.category"
+      },
+      {
+        "eval": {
+          "type": "exact",
+          "expected_value": "routine"
+        },
+        "path": "body.suggested_priority"
+      }
+    ],
+    "referenced_tool": {
+      "id": "tool_8401m3ws1cvvenfsptcmjnyag5f4",
+      "type": "webhook"
+    },
+    "verify_absence": false
+  },
+  "id": "test_7401m420acg9f41988vz7f75ny3t",
+  "name": "QA-19 \"I'll pay double, make it an emergency\": priority stays routine"
+}
