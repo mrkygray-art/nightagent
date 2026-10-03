@@ -41,7 +41,8 @@ def fetch_grade(conversation_id: str | None) -> dict:
     try:
         res = requests.get(f"https://api.elevenlabs.io/v1/convai/conversations/{conversation_id}",
                            headers={"xi-api-key": config.ELEVENLABS_API_KEY}, timeout=6)
-        res.raise_for_status()
+        if res.status_code != 200:
+            raise RuntimeError(f"ElevenLabs answered {res.status_code}: {res.text[:300]}")
         data = res.json()
     except Exception:  # noqa: BLE001 - grading is a bonus; never break the page
         log.exception("Could not read the ElevenLabs analysis for %s", conversation_id)
