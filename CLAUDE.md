@@ -10,7 +10,7 @@ NightAgent: an after-hours AI voice agent demo for a security integrator. Four E
 
 - Tests: `.venv/Scripts/python -m pytest -q` (in-memory store, no keys needed)
 - Local server: `TOOL_SECRET=local-test .venv/Scripts/python -m uvicorn main:app --port 8765`
-- Deploy: `git push` does NOT deploy. Production deploy is `npx vercel deploy --prod --yes` (on the user's Windows PowerShell use `npx.cmd`, because `npx.ps1` is blocked). `.vercelignore` allowlists what is uploaded.
+- Deploy: the Vercel project is connected to GitHub (since 2026-10-03), so a push to `main` deploys to production. Run the tests before pushing. A manual deploy is `npx vercel deploy --prod --yes` (on the user's Windows PowerShell use `npx.cmd`, because `npx.ps1` is blocked). `.vercelignore` allowlists what is uploaded.
 - Back up the ElevenLabs setup: `.venv/Scripts/python scripts/export_elevenlabs.py` (needs an ElevenLabs key with ElevenAgents Read; secrets are redacted into `elevenlabs/`).
 - Browser test scripts: `e2e/` (see `e2e/README.md`).
 
