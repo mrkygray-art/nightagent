@@ -1,0 +1,149 @@
+{
+  "id": "tool_8401m3ws1cvvenfsptcmjnyag5f4",
+  "tool_config": {
+    "type": "webhook",
+    "name": "create_ticket",
+    "description": "Create a service ticket. Only call this AFTER you have read the caller's name and callback number back to them and they have said it's correct in a separate turn. Never call it in the same turn you learn about the problem. Returns the final priority and the next step to follow.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/create-ticket",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "caller_name",
+          "callback_number",
+          "issue_summary",
+          "category",
+          "suggested_priority"
+        ],
+        "properties": {
+          "callback_number": {
+            "type": "string",
+            "description": "Best callback phone number, digits only, exactly as the caller confirmed it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "caller_name": {
+            "type": "string",
+            "description": "The caller's name, as the caller confirmed it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "category": {
+            "type": "string",
+            "description": "The issue category that best fits the problem.",
+            "enum": [
+              "life_safety",
+              "cannot_secure_site",
+              "entry_blocked",
+              "active_alarm",
+              "system_offline",
+              "panel_trouble",
+              "access_issue",
+              "other"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "The customer_id returned by lookup_customer. Leave empty if the account was not found.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "issue_summary": {
+            "type": "string",
+            "description": "One or two sentences describing the problem and when it started.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "suggested_priority": {
+            "type": "string",
+            "description": "emergency only if the site is unsafe or cannot be secured, or staff can't get in; otherwise urgent or routine.",
+            "enum": [
+              "emergency",
+              "urgent",
+              "routine"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 21,
+    "avg_latency_secs": 0.72
+  },
+  "response_mocks": null
+}

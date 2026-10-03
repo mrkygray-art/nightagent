@@ -1,0 +1,178 @@
+{
+  "id": "tool_2201m3zg0zy7ew4t6pdpjaq5jmad",
+  "tool_config": {
+    "type": "webhook",
+    "name": "record_sales_interest",
+    "description": "Record what the caller wants to buy or upgrade, as a sales opportunity for Sarah Johnson, and book her callback. Only call after you've asked about scope and timeline and the caller's name and callback number are confirmed. Returns tell_the_caller: say it in your own words.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/sales-interest",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "interest",
+          "caller_name",
+          "callback_number"
+        ],
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "The customer_id from the account lookup.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "interest": {
+            "type": "string",
+            "description": "What the caller wants, in one sentence, in their words where possible.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_type": {
+            "type": "string",
+            "description": "Short name, for example Camera expansion or Access control upgrade.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope the caller described, for example around the whole lot.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "device_count": {
+            "type": "string",
+            "description": "Number of cameras, doors, or devices, only if the caller said it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "timeline": {
+            "type": "string",
+            "description": "When they want it, only if the caller said it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "budget": {
+            "type": "string",
+            "description": "Only if the caller stated a budget. Never estimate.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "caller_name": {
+            "type": "string",
+            "description": "The caller's confirmed name.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "callback_number": {
+            "type": "string",
+            "description": "The caller's confirmed callback number, digits only.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "best_time": {
+            "type": "string",
+            "description": "Only if the caller said a good time to call back.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 0,
+    "avg_latency_secs": 0.0
+  },
+  "response_mocks": null
+}

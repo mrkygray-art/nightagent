@@ -1,0 +1,134 @@
+{
+  "id": "tool_9901m3zg0z7de0yrnweycxc6kvfj",
+  "tool_config": {
+    "type": "webhook",
+    "name": "request_billing_review",
+    "description": "Open a billing review for Morgan Lee in billing, for example for a possible duplicate charge. Only call after the caller agrees to a review and their name and callback number are confirmed. Returns tell_the_caller: say it in your own words.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/billing-review",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "caller_name",
+          "callback_number"
+        ],
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "The customer_id from the account lookup.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "invoice_id": {
+            "type": "string",
+            "description": "The invoice_id the question is about, from billing_lookup, for example INV-1003-0926.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "reason": {
+            "type": "string",
+            "description": "One or two sentences: what the caller wants reviewed.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "caller_name": {
+            "type": "string",
+            "description": "The caller's confirmed name.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "callback_number": {
+            "type": "string",
+            "description": "The caller's confirmed callback number, digits only.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "best_time": {
+            "type": "string",
+            "description": "Only if the caller said a good time to call back.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 0,
+    "avg_latency_secs": 0.0
+  },
+  "response_mocks": null
+}

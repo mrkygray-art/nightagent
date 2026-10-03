@@ -1,0 +1,163 @@
+{
+  "id": "tool_2401m3zf05tee2gr0gpxcnrk5cvs",
+  "tool_config": {
+    "type": "webhook",
+    "name": "take_message",
+    "description": "Pass a message to a department or a person when the caller wants to talk to someone (billing, their account executive, support, the service manager) instead of, or in addition to, reporting a repair. Only call this AFTER you have read the caller's name and callback number back and they confirmed. Returns tell_the_caller: say it in your own words.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/take-message",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "department",
+          "reason",
+          "caller_name",
+          "callback_number"
+        ],
+        "properties": {
+          "department": {
+            "type": "string",
+            "description": "Who the message is for. billing: invoices, payments, charges. account_executive: buying, upgrades, quotes, contracts, or the caller asks for Sarah or their account rep. support: how-to questions about using their system. service_manager: complaints about service or a technician. service: anything else about repairs or scheduling.",
+            "enum": [
+              "billing",
+              "account_executive",
+              "support",
+              "service_manager",
+              "service"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "reason": {
+            "type": "string",
+            "description": "One or two sentences: what the caller wants to talk about, in their words where possible.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "caller_name": {
+            "type": "string",
+            "description": "The caller's name, as they confirmed it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "callback_number": {
+            "type": "string",
+            "description": "Best callback number, digits only, as the caller confirmed it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "The customer_id from lookup_customer. Leave empty if not found.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "person_requested": {
+            "type": "string",
+            "description": "Only if the caller asked for a specific person by name or role, for example Sarah or my account rep.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "best_time": {
+            "type": "string",
+            "description": "Only if the caller said when is a good time to call back, for example tomorrow after 10 AM.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "ticket_id": {
+            "type": "string",
+            "description": "Only if you already created a service ticket on this call: its ticket_id.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 10,
+    "avg_latency_secs": 0.49
+  },
+  "response_mocks": null
+}

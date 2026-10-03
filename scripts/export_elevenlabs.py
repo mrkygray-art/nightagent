@@ -1,10 +1,11 @@
 """Back up NightAgent's ElevenLabs setup (agents, tools, QA tests) into elevenlabs/ as JSON.
 
-Run:  ELEVENLABS_API_KEY=... python scripts/export_elevenlabs.py
-A read-only key (ElevenAgents: Read) is enough. Secrets are never written: tool request
+Run:  .venv/Scripts/python.exe scripts/export_elevenlabs.py   (it asks for the key; typing is hidden)
+A read-only key (ElevenAgents: Read) is enough. ELEVENLABS_API_KEY in the environment also works. Secrets are never written: tool request
 headers (which carry the tool secret) and anything named like a secret are replaced with
 "<REDACTED>", and account details (creator email, permissions) are dropped.
 """
+import getpass
 import json
 import os
 import re
@@ -49,7 +50,9 @@ def clean(value, key=""):
 
 def get(session, path, **params):
     res = session.get(f"{API}{path}", params=params, timeout=20)
-    res.raise_for_status()
+    if not res.ok:
+        # ElevenLabs' own explanation (never includes the key)
+        sys.exit(f"ElevenLabs said {res.status_code} for {path}: {res.text[:400]}")
     return res.json()
 
 
@@ -61,9 +64,15 @@ def save(name, data):
 
 
 def main():
-    key = os.environ.get("ELEVENLABS_API_KEY")
+    key = os.environ.get("ELEVENLABS_API_KEY") or getpass.getpass(
+        "Paste your ElevenLabs API key and press Enter (it won't show on screen): ")
+    key = key.strip().strip('"')
     if not key:
-        sys.exit("Set ELEVENLABS_API_KEY (a read-only key is enough).")
+        sys.exit("No key entered.")
+    if not key.startswith("sk_"):
+        sys.exit(f"That doesn't look like an API key: it should start with sk_ (this one is {len(key)} characters "
+                 "and starts differently). Copy the key itself, not the key's ID.")
+    print(f"Using a key of {len(key)} characters (a full ElevenLabs key is usually 51).")
     s = requests.Session()
     s.headers["xi-api-key"] = key
 

@@ -1,0 +1,66 @@
+{
+  "id": "tool_6201m3ws1hapft7t6wg95cv9y76g",
+  "tool_config": {
+    "type": "webhook",
+    "name": "page_on_call_tech",
+    "description": "Page the on-call technician for an EMERGENCY ticket. Only call this when create_ticket returned priority emergency.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/page-on-call",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "ticket_id"
+        ],
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "description": "The ticket_id returned by create_ticket, for example NS-1234.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 18,
+    "avg_latency_secs": 0.64
+  },
+  "response_mocks": null
+}

@@ -1,0 +1,75 @@
+{
+  "id": "tool_1401m3zg0yg3ext9mfmvc5r6qyy9",
+  "tool_config": {
+    "type": "webhook",
+    "name": "billing_lookup",
+    "description": "Look up the caller's recent invoices. Call this right away, using the customer_id from the account lookup earlier in the conversation. Returns invoices and any possible duplicate charges that code found.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/billing-lookup",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [],
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "The customer_id returned by lookup_customer earlier in this conversation, for example C-1003.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 0,
+    "avg_latency_secs": 0.0
+  },
+  "response_mocks": null
+}

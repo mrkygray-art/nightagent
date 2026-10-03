@@ -1,0 +1,302 @@
+{
+  "id": "tool_5301m3x8ecrnf2esg62jrnf59mba",
+  "tool_config": {
+    "type": "webhook",
+    "name": "record_follow_up_outcome",
+    "description": "Save the result of this follow-up call. Call it exactly once, after you know whether the original problem is fixed and have asked if anything else is needed. Include every field the customer gave you; leave out anything they did not say.",
+    "response_timeout_secs": 20,
+    "disable_interruptions": false,
+    "interruption_mode": "allow",
+    "force_pre_tool_speech": false,
+    "pre_tool_speech": "auto",
+    "assignments": [],
+    "tool_call_sound": null,
+    "tool_call_sound_behavior": "auto",
+    "tool_error_handling_mode": "auto",
+    "dynamic_variables": {
+      "dynamic_variable_placeholders": {}
+    },
+    "execution_mode": "immediate",
+    "api_schema": {
+      "request_headers": {
+        "x-tool-secret": "<REDACTED>"
+      },
+      "kind": "webhook",
+      "url": "https://nightshift-dispatch.vercel.app/tools/follow-up-outcome",
+      "method": "POST",
+      "path_params_schema": {},
+      "query_params_schema": null,
+      "request_body_schema": {
+        "description": "",
+        "dynamic_variable": "",
+        "is_omitted": false,
+        "type": "object",
+        "required": [
+          "follow_up_token",
+          "conversation_id",
+          "resolution"
+        ],
+        "properties": {
+          "follow_up_token": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "follow_up_token",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "system__conversation_id",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "resolution": {
+            "type": "string",
+            "description": "resolved: the original problem is fixed. problem_returned: it was fixed but has come back. never_fixed: it never really worked after the visit. unclear: you could not tell.",
+            "enum": [
+              "resolved",
+              "problem_returned",
+              "never_fixed",
+              "unclear"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "customer_comments": {
+            "type": "string",
+            "description": "One or two sentences paraphrasing what the customer said about the repair, in their words where possible.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "satisfaction": {
+            "type": "integer",
+            "description": "Only if the customer gave a rating from 1 (very unhappy) to 5 (very happy). Do not guess.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "current_category": {
+            "type": "string",
+            "description": "For problem_returned only: the category that fits the problem as it is right now.",
+            "enum": [
+              "life_safety",
+              "cannot_secure_site",
+              "entry_blocked",
+              "active_alarm",
+              "system_offline",
+              "panel_trouble",
+              "access_issue",
+              "other"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "suggested_priority": {
+            "type": "string",
+            "description": "For problem_returned only: emergency only if the site is unsafe or cannot be secured right now.",
+            "enum": [
+              "emergency",
+              "urgent",
+              "routine"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "current_impact": {
+            "type": "string",
+            "description": "For problem_returned only: who or what is affected right now, in one sentence.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "new_issue_summary": {
+            "type": "string",
+            "description": "Only if the customer reports a different service problem: one sentence describing it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "new_issue_category": {
+            "type": "string",
+            "description": "Category for the new service problem.",
+            "enum": [
+              "life_safety",
+              "cannot_secure_site",
+              "entry_blocked",
+              "active_alarm",
+              "system_offline",
+              "panel_trouble",
+              "access_issue",
+              "other"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "new_issue_priority": {
+            "type": "string",
+            "description": "Suggested priority for the new service problem.",
+            "enum": [
+              "emergency",
+              "urgent",
+              "routine"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_interest": {
+            "type": "string",
+            "description": "Only if the customer mentions wanting new equipment, an upgrade, or expansion: what they want, in one sentence.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_type": {
+            "type": "string",
+            "description": "Short name for the sales interest, for example Access control modernization or Camera expansion.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_scope": {
+            "type": "string",
+            "description": "Approximate scope the customer described, for example about 14 doors.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_device_count": {
+            "type": "string",
+            "description": "Number of doors, cameras, or devices, only if the customer said it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_timeline": {
+            "type": "string",
+            "description": "When they want it, only if the customer said it.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "sales_budget": {
+            "type": "string",
+            "description": "Budget or value, only if the customer stated one. Never estimate.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "callback_department": {
+            "type": "string",
+            "description": "Only if the customer asks for a person to call them: service for repairs, account_executive for buying or contracts, service_manager for complaints, support for how-to questions.",
+            "enum": [
+              "service",
+              "account_executive",
+              "service_manager",
+              "support"
+            ],
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          },
+          "callback_reason": {
+            "type": "string",
+            "description": "Why the customer wants a call back, in one sentence.",
+            "enum": null,
+            "is_system_provided": false,
+            "dynamic_variable": "",
+            "allowed_values": null,
+            "allowed_values_dynamic_variable": "",
+            "constant_value": "",
+            "is_omitted": false
+          }
+        }
+      },
+      "response_body_schema": null,
+      "response_filter": null,
+      "content_type": "application/json",
+      "auth_resolved_params": [],
+      "auth_connection": null,
+      "mtls_auth_connection": null
+    },
+    "follow_redirects": false,
+    "follow_redirects_allowed_domains": []
+  },
+  "usage_stats": {
+    "total_calls": 8,
+    "avg_latency_secs": 1.3
+  },
+  "response_mocks": null
+}
