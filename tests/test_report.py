@@ -108,9 +108,13 @@ def _emergency_for(tool, customer_id, phone):
 
 def test_billing_note_only_when_the_plan_lacks_after_hours(tool):
     covered = _emergency_for(tool, "C-1001", "3105550142")  # Gold: after-hours included
-    assert covered["mention_billing"] is False and "Do not mention billing" in covered["next_step"]
+    assert covered["mention_billing"] is False
+    page = tool("page-on-call", {"ticket_id": covered["ticket_id"]})
+    assert page["mention_billing"] is False and "rate" not in page["tell_the_caller"]
     not_covered = _emergency_for(tool, "C-1002", "3105550178")  # Standard: business hours only
-    assert not_covered["mention_billing"] is True and "after-hours rate" in not_covered["next_step"]
+    assert not_covered["mention_billing"] is True
+    page = tool("page-on-call", {"ticket_id": not_covered["ticket_id"]})
+    assert page["mention_billing"] is True and "after-hours rate" in page["tell_the_caller"]
     unknown = _emergency_for(tool, None, "3105550100")  # no account: plan unknown, so no billing talk
     assert unknown["mention_billing"] is False
     routine = tool("create-ticket", {"customer_id": "C-1002", "caller_name": "T", "callback_number": "3105550178",

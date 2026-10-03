@@ -1229,7 +1229,7 @@ let lastMessages = []; // messages Sam took for a department or a person
 let lastCalls = [];    // calls handled entirely on the phone (no ticket, no message)
 
 function callCard(c) {
-  const li = el("li", "ticket call");
+  const li = el("li", "ticket phone-call");
   li.dataset.priority = "call";
   li.dataset.id = c.call_id;
   li.tabIndex = 0;

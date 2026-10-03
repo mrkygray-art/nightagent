@@ -200,10 +200,8 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     # doesn't include after-hours service gets the after-hours rate note.
     mention_billing = priority == "emergency" and bool(customer) and not customer.get("after_hours_coverage")
     if priority == "emergency":
+        # The billing sentence comes back in page_on_call_tech's tell_the_caller, so it's said at the right moment.
         next_step = "This is an emergency. Call page_on_call_tech now with this ticket_id."
-        next_step += (" Their plan does not include after-hours service: when you give the ticket details, say once "
-                      "that after-hours dispatch is billed at the after-hours rate under their plan."
-                      if mention_billing else " Do not mention billing or rates.")
     elif priority == "urgent":
         next_step = "Tell the caller this is first in the queue for the morning crew, and they'll get a call when the office opens."
     else:
@@ -438,13 +436,21 @@ def page_on_call_tech(req: PageRequest) -> dict:
                  f"{config.ONCALL_TECH_NAME} alerted" + (" (simulated: no real text was sent)" if simulated else ""),
                  simulated=simulated, conversation_id=ticket.get("conversation_id"), actor_type="agent")
 
+    # Billing is decided here, not by the model, and said in the same breath as the dispatch news
+    billed = bool(customer) and not customer.get("after_hours_coverage")
+    say = (f"{config.ONCALL_TECH_NAME}, our on-call technician, has been alerted and will call you back "
+           f"within {config.CALLBACK_WINDOW_MINUTES} minutes.")
+    if billed:
+        say += " Because your plan covers business hours only, this after-hours dispatch is billed at the after-hours rate."
     return {
         "paged": True,
         "technician_name": config.ONCALL_TECH_NAME,
         "callback_within_minutes": config.CALLBACK_WINDOW_MINUTES,
         "simulated": result.get("simulated", False),
-        "message": f"{config.ONCALL_TECH_NAME} has been paged and will call the caller back "
-                   f"within {config.CALLBACK_WINDOW_MINUTES} minutes.",
+        "mention_billing": billed,
+        "tell_the_caller": say,
+        "message": "Tell the caller everything in tell_the_caller, in your own words, along with the ticket number. "
+                   + ("Include the billing sentence once; don't leave it out." if billed else "Don't mention billing or rates."),
     }
 
 
