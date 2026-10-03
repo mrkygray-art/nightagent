@@ -8,7 +8,10 @@ from app import evaluation
 def graded(monkeypatch):
     """Pretend ElevenLabs finished grading every call."""
     state = {"result": "success", "rationale": "No unsupported promises were made."}
-    monkeypatch.setattr(evaluation, "fetch_grade", lambda conv: {"status": "done", **state, "summary": "Caller asked about an invoice."} if conv else {"status": "unavailable"})
+    confirmed = {"result": "success", "rationale": "Name and number were read back and confirmed first."}
+    monkeypatch.setattr(evaluation, "fetch_grade", lambda conv: {
+        "status": "done", "summary": "Caller asked about an invoice.",
+        "results": {evaluation.CRITERION: state, evaluation.CONFIRMED: confirmed}} if conv else {"status": "unavailable"})
     return state
 
 
@@ -36,7 +39,8 @@ def test_emergency_call_scores_every_applicable_check(client, tool, graded):
     assert items["Escalation needed"]["status"] == "info"
     assert items["Escalation performed"]["status"] == "pass"
     assert items["Follow-up completed"]["status"] == "pending"  # check-in call comes later
-    assert check["score"] == 100 and check["passed"] == check["applicable"] == 6 and check["pending"] == 1
+    assert items["Confirmed name and number before acting"]["status"] == "pass"
+    assert check["score"] == 100 and check["passed"] == check["applicable"] == 7 and check["pending"] == 1
 
 
 def test_rules_correcting_the_ai_costs_points(client, tool, graded):
@@ -44,7 +48,7 @@ def test_rules_correcting_the_ai_costs_points(client, tool, graded):
     items = _items(check)
     assert items["Identified emergency conditions"]["status"] == "fail"
     assert "rules corrected it" in items["Set the correct ticket priority"]["detail"]
-    assert check["score"] == round(100 * 4 / 6)
+    assert check["score"] == round(100 * 5 / 7)
 
 
 def test_a_promise_flagged_by_elevenlabs_is_a_failure(client, tool, graded):
@@ -64,7 +68,7 @@ def test_billing_handoff_marks_repair_checks_not_applicable(client, tool, graded
         assert items[label]["status"] == "na"
     assert items["Escalation performed"]["detail"] == "Handed off to Jordan, the billing assistant"
     assert items["Follow-up completed"]["status"] == "pass"
-    assert check["score"] == 100 and check["applicable"] == 4
+    assert check["score"] == 100 and check["applicable"] == 5
 
 
 def test_billing_message_without_handoff_fails_escalation(client, tool, graded):
@@ -110,3 +114,15 @@ def test_examples_have_no_call_check(client):
 def test_without_a_key_the_ai_check_is_not_available(client, tool):
     item = _items(client.get(f"/api/tickets/{_emergency(tool)}").json()["check"])["Avoided unsupported promises"]
     assert item["status"] == "na"
+
+
+def test_old_single_criterion_cache_still_reads(monkeypatch):
+    from app import evaluation as ev
+    from app.store import get_store
+    get_store().merge_call("conv_old_cache", {"eval_status": "done", "evaluation": {"result": "failure", "rationale": "Promised 9 PM."}})
+    grade = ev.fetch_grade("conv_old_cache")
+    assert grade["results"][ev.CRITERION]["result"] == "failure"
+    check = ev.build("call", [{"tool": "lookup_customer", "outcome": "Found X"}], grade)
+    items = {i["label"]: i for i in check["items"]}
+    assert items["Avoided unsupported promises"]["status"] == "fail"
+    assert items["Confirmed name and number before acting"]["status"] == "na"  # not graded back then

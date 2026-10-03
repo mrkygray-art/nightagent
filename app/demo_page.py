@@ -2026,6 +2026,8 @@ async function loadImpact(force) {
       metric(m.calls_handled, "Calls handled", `${m.live_calls} live, ${m.scenario_calls} demo scenario${m.scenario_calls === 1 ? "" : "s"}`, true),
       metric(m.emergencies, "Emergencies handled", "Set by our rules, not the AI"),
       metric(m.tickets, "Tickets created"),
+      metric(m.calls_without_ticket, "Handled without a ticket", "A message taken, or answered right on the call"),
+      metric(m.specialist_calls, "Handed to a specialist", "Jordan (billing) or Riley (sales), mid-call", true),
       metric(m.needed_a_person, "Night calls that woke a technician", `${m.handled_without_waking_anyone} handled without waking anyone`),
       metric(m.follow_ups, "Check-in calls made", "", true),
       metric(m.resolved, "Customers who said it's fixed", "Heard on the check-in call"),

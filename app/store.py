@@ -226,6 +226,12 @@ class MemoryStore:
             "new_from_follow_up": sum(1 for t in tickets if t.get("source_ticket_id")),
             "opportunities": len(self.opportunities),
             "tasks": len(self.tasks),
+            "calls_without_ticket": len({r["conversation_id"] for r in self.tool_calls
+                                         if r.get("conversation_id") and r["tool"] != "record_follow_up_outcome"}
+                                        - {t.get("conversation_id") for t in tickets}
+                                        - {t.get("follow_up_conversation_id") for t in tickets}),
+            "specialist_calls": len({r["conversation_id"] for r in self.tool_calls if r["tool"] in
+                                     ("billing_lookup", "request_billing_review", "record_sales_interest")}),
         }
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:

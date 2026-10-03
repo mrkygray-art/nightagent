@@ -36,3 +36,18 @@ def test_metrics_follow_the_lifecycle(client, tool, monkeypatch):
     assert (m["follow_ups"], m["resolved"], m["opportunities"]) == (1, 1, 1)
     # Time saved counts only the real live call and the follow-up, not the simulated scenario call
     assert m["minutes_saved"] == routes_impact.MINUTES_PER_INTAKE_CALL + routes_impact.MINUTES_PER_FOLLOW_UP
+
+
+def test_calls_without_a_ticket_and_handoffs_are_counted(client, tool):
+    before = client.get("/api/impact").json()
+    tool("lookup-customer", {"query": "4245550119", "conversation_id": "conv_imp_bill"})
+    tool("billing-lookup", {"customer_id": "C-1003", "conversation_id": "conv_imp_bill"})       # handed to Jordan
+    tool("lookup-customer", {"query": "3105550178", "conversation_id": "conv_imp_msg"})
+    tool("take-message", {"department": "support", "reason": "How do I add a user?", "caller_name": "James Carter",
+                          "callback_number": "3105550178", "conversation_id": "conv_imp_msg"})  # a message
+    tool("create-ticket", {"caller_name": "A", "callback_number": "3105550100", "issue_summary": "Keypad beeping",
+                           "category": "panel_trouble", "conversation_id": "conv_imp_ticket"})  # a ticket
+    after = client.get("/api/impact").json()
+    assert after["calls_without_ticket"] - before["calls_without_ticket"] == 2
+    assert after["specialist_calls"] - before["specialist_calls"] == 1
+    assert after["live_calls"] - before["live_calls"] == 3  # every real call, each counted once

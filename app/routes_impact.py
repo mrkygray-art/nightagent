@@ -14,11 +14,16 @@ MINUTES_PER_FOLLOW_UP = 5    # calling back, confirming the fix, logging the out
 
 
 def _metrics(c: dict) -> dict:
-    calls = c["live_calls"] + c["scenario_calls"]
-    minutes = c["live_calls"] * MINUTES_PER_INTAKE_CALL + c["follow_ups"] * MINUTES_PER_FOLLOW_UP
+    # Live calls: ones that created a ticket, plus ones that ended in a message, a handoff, or an answer
+    without_ticket = c.get("calls_without_ticket", 0)
+    live = c["live_calls"] + without_ticket
+    calls = live + c["scenario_calls"]
+    minutes = live * MINUTES_PER_INTAKE_CALL + c["follow_ups"] * MINUTES_PER_FOLLOW_UP
     return {
         "calls_handled": calls,
-        "live_calls": c["live_calls"],
+        "live_calls": live,
+        "calls_without_ticket": without_ticket,
+        "specialist_calls": c.get("specialist_calls", 0),
         "scenario_calls": c["scenario_calls"],
         "tickets": c["tickets"],
         "emergencies": c["emergencies"],

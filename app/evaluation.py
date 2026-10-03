@@ -17,13 +17,15 @@ from app.store import get_store, now_iso
 log = logging.getLogger("nightshift")
 
 CRITERION = "no_unsupported_promises"
+CONFIRMED = "confirmed_details_first"
+CRITERIA = (CRITERION, CONFIRMED)
 RECHECK_SECONDS = 20  # while ElevenLabs is still analyzing, ask at most this often per call
 SPECIALIST_TOOLS = {"billing_lookup", "request_billing_review", "record_sales_interest"}
 
 
 def fetch_grade(conversation_id: str | None) -> dict:
-    """ElevenLabs' post-call grade for this conversation, cached once final.
-    Returns {"status": "done" | "pending" | "unavailable", "result", "rationale", "summary"}."""
+    """ElevenLabs' post-call grades for this conversation, cached once final.
+    Returns {"status": "done" | "pending" | "unavailable", "results": {criterion: {result, rationale}}, "summary"}."""
     if not conversation_id:
         return {"status": "unavailable"}
     store = get_store()
@@ -32,7 +34,10 @@ def fetch_grade(conversation_id: str | None) -> dict:
     except Exception:  # noqa: BLE001
         cached = {}
     if cached.get("eval_status") == "done":
-        return {"status": "done", **(cached.get("evaluation") or {}), "summary": cached.get("summary")}
+        saved = cached.get("evaluation") or {}
+        if "result" in saved:  # cached before there was more than one criterion
+            saved = {CRITERION: saved}
+        return {"status": "done", "results": saved, "summary": cached.get("summary")}
     if not config.ELEVENLABS_API_KEY:
         return {"status": "unavailable"}
     last = cached.get("evaluated_at")
@@ -52,12 +57,14 @@ def fetch_grade(conversation_id: str | None) -> dict:
     if data.get("status") != "done":
         _remember(conversation_id, {"eval_status": "pending", "evaluated_at": now_iso()})
         return {"status": "pending"}
-    graded = (analysis.get("evaluation_criteria_results") or {}).get(CRITERION) or {}
-    grade = {"result": graded.get("result"), "rationale": (graded.get("rationale") or "")[:400]}
+    graded = analysis.get("evaluation_criteria_results") or {}
+    results = {c: {"result": (graded.get(c) or {}).get("result"),
+                   "rationale": ((graded.get(c) or {}).get("rationale") or "")[:400]}
+               for c in CRITERIA if c in graded}
     summary = (analysis.get("transcript_summary") or "")[:500] or None
-    _remember(conversation_id, {"eval_status": "done", "evaluation": grade, "summary": summary,
+    _remember(conversation_id, {"eval_status": "done", "evaluation": results, "summary": summary,
                                 "evaluated_at": now_iso()})
-    return {"status": "done", **grade, "summary": summary}
+    return {"status": "done", "results": results, "summary": summary}
 
 
 def _remember(conversation_id: str, fields: dict) -> None:
@@ -69,6 +76,19 @@ def _remember(conversation_id: str, fields: dict) -> None:
 
 def _item(label: str, status: str, detail: str, how: str = "rules") -> dict:
     return {"label": label, "status": status, "detail": detail, "how": how}
+
+
+def _ai_item(label: str, grade: dict, criterion: str, passed_text: str, failed_text: str) -> dict:
+    state = grade.get("status")
+    found = (grade.get("results") or {}).get(criterion) or {}
+    if state == "done" and found.get("result") in ("success", "failure"):
+        ok = found["result"] == "success"
+        return _item(label, "pass" if ok else "fail", found.get("rationale") or (passed_text if ok else failed_text), "ai")
+    if state == "done":
+        return _item(label, "na", "Not graded: the call was before this check existed, or nothing needed it", "ai")
+    if state == "pending":
+        return _item(label, "pending", "ElevenLabs is still reviewing the call", "ai")
+    return _item(label, "na", "Not available for this call", "ai")
 
 
 def _label(priority: str | None) -> str:
@@ -94,6 +114,9 @@ def build(kind: str, tool_calls: list[dict], grade: dict, ticket: dict | None = 
         items.append(_item("Identified the customer", "fail", "The account lookup found no match"))
     else:
         items.append(_item("Identified the customer", "fail", "The account was never looked up"))
+    items.append(_ai_item("Confirmed name and number before acting", grade, CONFIRMED,
+                          "Read back and confirmed before any ticket, message, or handoff",
+                          "Acted before the caller confirmed their name and number"))
 
     # 2-4. Only service calls need a site, an emergency call, and a priority
     if service:
@@ -117,19 +140,8 @@ def build(kind: str, tool_calls: list[dict], grade: dict, ticket: dict | None = 
             items.append(_item(label, "na", "No repair ticket on this call"))
 
     # 5. Promises: graded by ElevenLabs from the transcript
-    state = grade.get("status")
-    if state == "done" and grade.get("result") in ("success", "failure"):
-        ok = grade["result"] == "success"
-        items.append(_item("Avoided unsupported promises", "pass" if ok else "fail",
-                           grade.get("rationale") or ("No unsupported promises" if ok else "Made a promise the tools didn't support"),
-                           "ai"))
-    elif state == "done":
-        items.append(_item("Avoided unsupported promises", "na",
-                           "Not graded: the call was before this check existed, or ended too early", "ai"))
-    elif state == "pending":
-        items.append(_item("Avoided unsupported promises", "pending", "ElevenLabs is still reviewing the call", "ai"))
-    else:
-        items.append(_item("Avoided unsupported promises", "na", "Not available for this call", "ai"))
+    items.append(_ai_item("Avoided unsupported promises", grade, CRITERION,
+                          "No unsupported promises", "Made a promise the tools didn't support"))
 
     # 6. Escalation: was it needed, and did it happen?
     dest = (task or {}).get("destination")
