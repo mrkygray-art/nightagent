@@ -473,7 +473,7 @@ DEMO_HTML = r"""<!doctype html>
         <button type="button" data-view="simple" aria-pressed="true">Simple</button>
         <button type="button" data-view="eng" aria-pressed="false">Engineering</button>
       </div>
-      <nav><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
+      <nav><a href="/lab">Agent QA Lab</a><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
     </div>
   </header>
 
@@ -567,6 +567,7 @@ DEMO_HTML = r"""<!doctype html>
         </ol>
         <h4>Live</h4>
         <ol id="tech-log"><li>Start a call to watch each step appear here.</li></ol>
+        <p class="fine">Regression tests built from problems found in live calls: <a href="/lab">Agent QA Lab</a>.</p>
         <div id="eng-trace" hidden>
           <h4>After the call: turn by turn</h4>
           <p class="fine" id="eng-trace-status"></p>
