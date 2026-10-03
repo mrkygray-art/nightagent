@@ -838,7 +838,7 @@ function renderTrace(data) {
     const li = el("li");
     li.appendChild(el("span", "", ""));
     const ok = v.result === "success";
-    li.appendChild(el("span", ok ? "grade-ok" : "grade-bad", `Graded: ${CRITERIA_WORDS[k] || k} · ${ok ? "pass" : v.result || "?"}`));
+    li.appendChild(el("span", ok ? "grade-ok" : v.result === "failure" ? "grade-bad" : "", `Graded: ${CRITERIA_WORDS[k] || k} · ${ok ? "pass" : v.result === "failure" ? "fail" : "not judged (nothing to judge yet)"}`));
     els.engTraceList.appendChild(li);
   });
   (data.turns || []).forEach((r) => {
@@ -879,6 +879,14 @@ async function loadTrace(triesLeft = 20) {
     els.engTraceStatus.textContent = "ElevenLabs is taking a while. Check this call's report on the board later.";
   }
   renderTrace(data);
+}
+// A caller turn reached Sam: log its size (never the words) and time Sam's reply from here
+function callerTurn(text, typed) {
+  turnAt = performance.now();
+  turnFrom = typed ? "your message arrived" : "your words were transcribed";
+  const words = (text || "").trim().split(/ +/).filter(Boolean).length;
+  logTech(typed ? "Typed" : "Speech to text", `${words} word${words === 1 ? "" : "s"} sent to Sam · Sam decides what to do`);
+  setStage("decide");
 }
 function resetEngineering() {
   turnAt = null;
@@ -1163,12 +1171,8 @@ const handlers = {
   onMessage: ({ message, source }) => {
     if (source === "user") {
       if (session && els.orb.dataset.state !== "speaking") setStatus("thinking", "Sam is thinking", "One moment…");
-      turnAt = performance.now();
-      turnFrom = mode === "voice" ? "your words were transcribed" : "your message arrived";
-      const words = (message || "").trim().split(/ +/).filter(Boolean).length;
-      logTech(mode === "voice" ? "Speech to text" : "Typed", `${words} word${words === 1 ? "" : "s"} sent to Sam · Sam decides what to do`);
-      setStage("decide");
       if (lastTyped && message && message.trim() === lastTyped) { lastTyped = null; return; }
+      callerTurn(message, mode !== "voice");
       addMessage("you", message);
     } else {
       const text = cleanSpeech(message);
@@ -1336,6 +1340,7 @@ function repeatThat() {
   if (!session) return;
   const text = "Sorry, could you repeat that?";
   lastTyped = text;
+  callerTurn(text, true);
   addMessage("you", text);
   setStatus("thinking", "Sam is thinking", "One moment…");
   try { session.sendUserMessage(text); } catch (err) { showError("That didn't send. Try again."); }
@@ -1371,6 +1376,7 @@ els.composer.addEventListener("submit", async (e) => {
   }
   els.input.value = "";
   lastTyped = text;
+  callerTurn(text, true);
   addMessage("you", text);
   setStatus("thinking", "Sam is thinking", "One moment…");
   try { session.sendUserMessage(text); } catch (err) { showError("That message didn't send. Try again."); }
