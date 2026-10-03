@@ -9,6 +9,8 @@ Both expose the same methods, so the rest of the app doesn't care which one it g
 import re
 import secrets
 from datetime import datetime, timezone
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 
 from app import config
@@ -45,6 +47,9 @@ SEED_CUSTOMERS = [
         "after_hours_coverage": True,
     },
 ]
+
+
+CLOSED_STATES = ("resolved", "closed")
 
 
 def now_iso() -> str:
@@ -113,6 +118,11 @@ class MemoryStore:
     def update_ticket(self, ticket_id: str, fields: dict) -> None:
         if ticket_id in self.tickets:
             self.tickets[ticket_id].update(fields)
+
+    def open_tickets_since(self, since_iso: str) -> list[dict]:
+        return sorted((t for t in self.tickets.values() if t["created_at"] >= since_iso
+                       and t.get("status") not in CLOSED_STATES and not t.get("demo")),
+                      key=lambda t: t["created_at"], reverse=True)
 
     def upsert_call(self, call: dict) -> None:
         self.calls[call["conversation_id"]] = {**call, "received_at": now_iso()}
@@ -217,7 +227,7 @@ class MemoryStore:
             "tickets": len(tickets),
             "emergencies": sum(1 for t in tickets if t.get("priority") == "emergency"),
             "paged": sum(1 for t in tickets if t.get("paged_at")),
-            "live_calls": events("call_received", "call"),
+            "live_calls": events("call_received", "call") + events("caller_called_again", "call"),
             "scenario_calls": events("call_received", "scenario"),
             "follow_ups": events("follow_up_completed"),
             "resolved": events("resolution_confirmed"),
@@ -229,7 +239,8 @@ class MemoryStore:
             "calls_without_ticket": len({r["conversation_id"] for r in self.tool_calls
                                          if r.get("conversation_id") and r["tool"] != "record_follow_up_outcome"}
                                         - {t.get("conversation_id") for t in tickets}
-                                        - {t.get("follow_up_conversation_id") for t in tickets}),
+                                        - {t.get("follow_up_conversation_id") for t in tickets}
+                                        - {r["conversation_id"] for r in self.tool_calls if r.get("ticket_id")}),
             "specialist_calls": len({r["conversation_id"] for r in self.tool_calls if r["tool"] in
                                      ("billing_lookup", "request_billing_review", "record_sales_interest")}),
         }
@@ -287,6 +298,11 @@ class SupabaseStore:
 
     def update_ticket(self, ticket_id: str, fields: dict) -> None:
         self.db.table(self.tickets_table).update(fields).eq("ticket_id", ticket_id).execute()
+
+    def open_tickets_since(self, since_iso: str) -> list[dict]:
+        rows = (self.db.table(self.tickets_table).select("*").gte("created_at", since_iso)
+                .not_.in_("status", list(CLOSED_STATES)).order("created_at", desc=True).limit(50).execute().data)
+        return [r for r in rows if not r.get("demo")]
 
     def upsert_call(self, call: dict) -> None:
         # Upsert on conversation_id so webhook retries never create duplicates.
@@ -444,7 +460,32 @@ class SupabaseStore:
 
 
 @lru_cache
-def get_store() -> MemoryStore | SupabaseStore:
+def _shared_store() -> MemoryStore | SupabaseStore:
     if config.SUPABASE_URL and config.SUPABASE_SERVICE_KEY:
         return SupabaseStore(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY, config.TABLE_PREFIX)
     return MemoryStore()
+
+
+# A sandbox swaps in a throwaway in-memory store for one request, so the QA Lab can replay
+# failures with the real code without touching the live board.
+_sandbox: ContextVar[MemoryStore | None] = ContextVar("nightagent_sandbox", default=None)
+
+
+def get_store() -> MemoryStore | SupabaseStore:
+    return _sandbox.get() or _shared_store()
+
+
+get_store.cache_clear = _shared_store.cache_clear  # type: ignore[attr-defined]
+
+
+def in_sandbox() -> bool:
+    return _sandbox.get() is not None
+
+
+@contextmanager
+def sandbox():
+    token = _sandbox.set(MemoryStore())
+    try:
+        yield _sandbox.get()
+    finally:
+        _sandbox.reset(token)

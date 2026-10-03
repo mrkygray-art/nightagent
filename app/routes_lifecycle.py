@@ -168,6 +168,7 @@ def calls() -> list[dict]:
     recent = _recent_conversations()[:40]
     with_records = store.records_for_conversations([c for c, _ in recent])
     left = [(c, rows) for c, rows in recent if c not in with_records
+            and not any(r.get("ticket_id") for r in rows)  # e.g. a repeat call added to an open ticket
             and not {r["tool"] for r in rows} <= {"record_follow_up_outcome"}][:15]
     cached = store.calls_by_ids([c for c, _ in left])
     return [_call_view(c, rows, cached.get(c) or {}) for c, rows in left]

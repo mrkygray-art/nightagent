@@ -91,6 +91,7 @@ EVENT_LABELS = {
     "new_ticket_created": "New problem saved",
     "opportunity_identified": "Upgrade interest passed to sales",
     "task_created": "Someone will follow up",
+    "caller_called_again": "Same problem reported again",
 }
 
 PRIORITY_LABELS = {"emergency": "High priority", "urgent": "Medium priority", "routine": "Normal priority"}

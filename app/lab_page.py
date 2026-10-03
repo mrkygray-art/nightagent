@@ -52,6 +52,18 @@ LAB_HTML = r"""<!doctype html>
   .said { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #cfd6e4; word-break: break-word; }
   .judge { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
   .fine { color: var(--muted); font-size: 14px; max-width: 72ch; }
+  h2.section { font-family: var(--display); font-size: 30px; margin: 36px 0 6px; }
+  .inject { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
+  .inject button {
+    justify-self: start; font: inherit; font-weight: 600; color: #1a1200; background: var(--sodium);
+    border: 0; border-radius: 999px; padding: 9px 18px; cursor: pointer;
+  }
+  .inject button:disabled { opacity: 0.6; cursor: default; }
+  .inject button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .inject ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  .inject li { min-width: 0; overflow-wrap: anywhere; }
+  .inject ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .ok { color: var(--clear); font-weight: 600; } .bad { color: var(--alarm); font-weight: 600; }
   @media (max-width: 560px) { .test dl { grid-template-columns: 1fr; gap: 0; } .test dd { margin-bottom: 8px; } }
 </style>
 </head>
@@ -69,6 +81,20 @@ LAB_HTML = r"""<!doctype html>
 
   <div class="summary" id="summary" aria-live="polite"><div class="stat"><b>…</b><span>Loading the latest results</span></div></div>
   <div class="tests" id="tests"></div>
+
+  <h2 class="section">Failure injection</h2>
+  <p class="intro">Break something on purpose and check the system copes. Each scenario replays a real failure through
+    the real server code, in a sandbox: nothing reaches the live board and no real texts are sent. How Sam talks about
+    it is covered by the tests above.</p>
+  <section class="inject" aria-labelledby="dup-title">
+    <h2 id="dup-title" style="margin:0;font-size:18px">Same caller twice</h2>
+    <p class="meta" style="margin:0">A gate is stuck open. James calls and an emergency ticket is opened and the
+      technician alerted. Twenty minutes later Dana, at the same site, calls about the same gate. Then the replay forces
+      the mistake a model might make: alerting the technician a second time.</p>
+    <p class="meta" style="margin:0" id="dup-before"></p>
+    <button type="button" id="dup-run">Run it</button>
+    <div id="dup-out" aria-live="polite"></div>
+  </section>
 
   <p class="fine">Results are read from ElevenLabs. Tools aren't really called during a test, so tests never put tickets
     or messages on the live board. A reply check is judged by an AI grader against a written pass condition; a tool
@@ -129,6 +155,37 @@ async function load() {
   }
 }
 load();
+
+document.getElementById("dup-run").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget, out = document.getElementById("dup-out");
+  btn.disabled = true; btn.textContent = "Running…";
+  try {
+    const r = await (await fetch("/api/lab/inject/duplicate-caller", { method: "POST" })).json();
+    document.getElementById("dup-before").textContent = r.before;
+    const steps = el("ol");
+    for (const s of r.steps) {
+      const li = el("li");
+      li.append(el("b", "", `${s.who}: `), document.createTextNode(s.did));
+      li.append(el("span", "said", " → " + JSON.stringify(s.result)));
+      steps.append(li);
+    }
+    const checks = el("ul");
+    for (const c of r.checks) {
+      const li = el("li");
+      li.append(el("span", c.passed ? "ok" : "bad", c.passed ? "✓ " : "✗ "), document.createTextNode(c.label),
+        el("span", "judge", c.detail));
+      checks.append(li);
+    }
+    const head = el("p", r.passed ? "ok" : "bad", r.passed ? `Passed: ${r.checks.length} of ${r.checks.length} checks`
+      : `Failed: ${r.checks.filter((c) => c.passed).length} of ${r.checks.length} checks`);
+    out.replaceChildren(head, el("h3", "meta", "What happened"), steps, el("h3", "meta", "Checks"), checks);
+    btn.textContent = "Run it again";
+  } catch {
+    out.replaceChildren(el("p", "bad", "Couldn't run the scenario just now."));
+    btn.textContent = "Run it";
+  }
+  btn.disabled = false;
+});
 </script>
 </body>
 </html>

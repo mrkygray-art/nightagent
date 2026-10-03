@@ -172,6 +172,66 @@ def lookup_customer(req: LookupRequest) -> dict:
     }
 
 
+DUPLICATE_HOURS = 12
+PRIORITY_RANK = {"routine": 0, "urgent": 1, "emergency": 2}
+
+
+def _spoken(ticket_id: str) -> str:
+    return "N S " + " ".join(ticket_id.split("-")[1])
+
+
+def _open_duplicate(customer: dict | None, callback: str, category: str) -> dict | None:
+    """An open ticket for the same problem at the same place: same account (or, without an
+    account, the same callback number) and the same category, opened in the last 12 hours."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=DUPLICATE_HOURS)).isoformat()
+    for t in get_store().open_tickets_since(since):
+        same_place = (customer and t.get("customer_id") == customer["customer_id"]) or \
+                     (not customer and not t.get("customer_id") and t.get("callback_number") == callback)
+        if same_place and t.get("category") == category:
+            return t
+    return None
+
+
+def _add_repeat_call(existing: dict, req: CreateTicketRequest, priority: str, reason: str, started: str) -> dict:
+    """Same problem, second call: no new ticket and no second page. The call is added to the open
+    ticket's history, and the priority only ever goes up."""
+    tid, conv = existing["ticket_id"], req.conversation_id
+    record_event(tid, "caller_called_again",
+                 f"{req.caller_name.strip()} called again: {req.issue_summary.strip()[:160]}",
+                 conversation_id=conv, actor_type="customer")
+    final = existing["priority"]
+    if PRIORITY_RANK.get(priority, 0) > PRIORITY_RANK.get(final, 0):
+        final = priority
+        get_store().update_ticket(tid, {"priority": priority, "priority_reason": reason})
+        record_event(tid, "priority_reviewed",
+                     f"Raised to {lifecycle.PRIORITY_LABELS[priority].lower()} after the second call: {reason}.",
+                     conversation_id=conv, actor_type="system")
+    log_tool_call("create_ticket", f"Same problem as {tid}: added this call to it, no new ticket",
+                  conversation_id=conv, ticket_id=tid, called_at=started)
+    opened = existing.get("created_at") or ""
+    if existing.get("paged_at"):
+        next_step = (f"This problem is already on an open ticket, {_spoken(tid)}, and the on-call technician was "
+                     "already alerted. Do NOT call page_on_call_tech again. Tell the caller you found their open "
+                     "ticket, you've added this call to it, and the technician already has it and will call back. "
+                     "Give the ticket number.")
+    elif final == "emergency":
+        next_step = (f"This problem is already on an open ticket, {_spoken(tid)}. Tell the caller you've added this "
+                     "call to it, then call page_on_call_tech now with this ticket_id.")
+    else:
+        next_step = (f"This problem is already on an open ticket, {_spoken(tid)}. Tell the caller you've added this "
+                     "call to it, and the follow-up timing they were given still stands. Give the ticket number.")
+    return {
+        "ticket_id": tid,
+        "ticket_number_spoken": _spoken(tid),
+        "duplicate_of": tid,
+        "opened_at": opened,
+        "already_alerted": bool(existing.get("paged_at")),
+        "priority": final,
+        "mention_billing": False,  # said on the first call, when the technician was alerted
+        "next_step": next_step,
+    }
+
+
 @router.post("/create-ticket")
 def create_ticket(req: CreateTicketRequest) -> dict:
     started = now_iso()
@@ -179,6 +239,10 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     category, priority, reason = triage(req.category, req.suggested_priority)
 
     customer = store.get_customer(req.customer_id) if req.customer_id else None
+    callback = phone_digits(req.callback_number) or req.callback_number.strip()
+    existing = _open_duplicate(customer, callback, category)
+    if existing:
+        return _add_repeat_call(existing, req, priority, reason, started)
     ticket = store.create_ticket({
         "customer_id": customer["customer_id"] if customer else None,
         "caller_name": req.caller_name.strip(),
@@ -215,10 +279,9 @@ def create_ticket(req: CreateTicketRequest) -> dict:
     else:
         next_step = "Tell the caller the office will follow up during business hours."
 
-    digits = ticket["ticket_id"].split("-")[1]
     return {
         "ticket_id": ticket["ticket_id"],
-        "ticket_number_spoken": "N S " + " ".join(digits),
+        "ticket_number_spoken": _spoken(ticket["ticket_id"]),
         "priority": priority,
         "priority_reason": reason,
         "mention_billing": mention_billing,

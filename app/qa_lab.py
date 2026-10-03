@@ -76,6 +76,19 @@ TESTS = {
         "why": "After a handoff, Jordan talked about itself in the third person (\"Jordan will look into it\").",
         "checks": "Jordan speaks as Jordan, in the first person, and promises no refund or credit.",
     },
+    "test_9301m3zvs7m2erxv8vmhz6c9j862": {
+        "name": "QA-09 Same problem reported twice: no second alert",
+        "agent": SAM, "kind": "Tool check",
+        "why": "Failure injection: a second call about the same gate opened a duplicate ticket and told Sam to alert "
+               "the technician again. The server now joins it to the open ticket and says the technician has it.",
+        "checks": "When the server says the problem is already on an open ticket, Sam does not alert the technician again.",
+    },
+    "test_0901m3zvs8p2fjz9ffx1rtnv7htr": {
+        "name": "QA-10 Same problem reported twice: points to the open ticket",
+        "agent": SAM, "kind": "Reply check",
+        "why": "Same failure: the second caller should hear that help is already on the way, not get a new ticket.",
+        "checks": "Sam gives the existing ticket number, says the technician already has it, and mentions no new ticket or charge.",
+    },
 }
 
 _cache: dict = {"at": 0.0, "data": None}

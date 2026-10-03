@@ -29,7 +29,8 @@ def _under_rate_limit() -> bool:
 
 
 def page_on_call(body: str) -> dict:
-    if not _twilio_configured():
+    from app.store import in_sandbox
+    if in_sandbox() or not _twilio_configured():
         log.info("SIMULATED PAGE: %s", body)
         return {"sent": False, "simulated": True}
 
