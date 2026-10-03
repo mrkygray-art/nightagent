@@ -72,8 +72,9 @@ The **Evaluation Lab** measures how well the agents do, from what really happene
 - **Scorecard:** plain tables of how the agents perform in tests and on real calls, each number with the sample it's based on.
 - **Fixes log** ("What broke & how we fixed it"): every real problem, why it happened, what changed, and whether the fix still holds in the latest runs.
 - **Regression tests:** problems found in live calls (and a few unclear situations) turned into repeatable tests that run against the live ElevenLabs agents using ElevenLabs Agent Testing.
+- **Voice tests:** real recorded speech sent to the live agent: phone numbers and names in noise and over a phone line, talking over Sam, going quiet, and how long the caller waits.
 - **Failure injection:** known failures replayed on purpose through the real server code, in a sandbox.
-- **Not measured yet:** what the lab can't prove yet (interruption recovery, silence, speech-to-text confidence, hallucination in general).
+- **Not measured yet:** what the lab can't prove yet (grading interruptions and silence on real calls, speech-to-text confidence, real accents and phone networks, hallucination in general).
 - **Test Inspector:** planned, not built. It will show why a single test passed or failed.
 
 This is intentionally different from a static scripted demo. The project demonstrates an engineering feedback loop:
@@ -111,6 +112,7 @@ Two tables that are never blended, because tests are controlled and real calls a
 | In tests | Passed every run / Passed at least once | Tests where all 3 latest runs passed vs. at least one did; the gap is tests that pass sometimes and fail sometimes |
 | In tests | Intent and priority | The tests that check whether the agent read the situation right (emergency or not, off-topic, unclear) |
 | In tests | Holds up against tricks | The tests where a caller tries to trick the agent (QA-17 to QA-21) |
+| In tests | Phone number heard exactly / Caller wait (voice tests) | The voice tests below: all ten digits right, and end of the caller's last word → first sound of Sam's reply |
 | On real calls | Escalation | Emergency tickets where the on-call technician was alerted |
 | On real calls | Priority matched the rules | AI-suggested priority vs. the final priority set by code |
 | On real calls | Tool calls worked / Handoffs worked | Errors in ElevenLabs' own call records |
@@ -191,13 +193,37 @@ The lab can also break things on purpose. Each scenario replays a known failure 
 
 Both "before" behaviors were reproduced by running the same scenario against the earlier code. The voice side of the duplicate-caller fix is covered by QA-09 and QA-10.
 
+### Voice tests (real audio)
+
+The regression tests are text. The voice tests send real audio: a test caller (`voicelab/run.js`) connects to the live Sam over the same WebSocket the demo page uses and streams recorded speech in 20 ms frames, like a microphone. The caller lines are ElevenLabs text-to-speech in three voices (American female, Australian male, neutral American), saved in `voicelab/clips/`, so the run can be repeated exactly. Background noise and the phone line are added in code with a fixed seed: crowd babble made from reversed speech (it sounds like a busy room but can't put real digits into the transcript), traffic rumble, and a narrowband line (300–3400 Hz, 8 kHz, 8-bit μ-law).
+
+Each call ends before a ticket is made. The calls still run Sam's real account lookup, so their conversation ids are saved with the results and the server leaves them out of the calls list, the scorecard, and Business Impact.
+
+| Test | How it's checked |
+| --- | --- |
+| **Phone numbers and names in noise** | 3 callers × 6 conditions (quiet, busy café 10 dB, street 5 dB, phone line, phone line + café, loud café 0 dB). Did the speech-to-text get all ten digits and the caller's last name, and did Sam read the right number back? |
+| **Talking over Sam** | The caller cuts in 1.5 s into Sam's read-back with the real problem. Did Sam stop, and was the next reply about the new detail? |
+| **Going quiet** | The caller stops mid-sentence and says nothing for 25 s. Did Sam check in without hanging up or opening a ticket, and carry on when the caller came back? |
+| **How long the caller waits** | End of the caller's last word → first sound of Sam's reply, timed by the test caller (it includes the network and the account lookup). |
+
+**Snapshot on 2026-10-03** (24 calls; the live numbers are on the lab page):
+
+| Result | Value |
+| --- | --- |
+| Phone number heard exactly | 18 of 18 calls, every condition |
+| Last name heard | 16 of 18. Both misses were in the loud café: "James Carter at Westside Self Storage" became "John Estrada at Westside Golf Store" (Sam read back the wrong name, so the caller could correct it), and once the whole first sentence was lost |
+| Sam read back the right number | 17 of 18. In the other call Sam asked a safety question about the open gate first |
+| Talking over Sam | 2 of 3. Sam stopped every time (about 0.46 s); once it then repeated its question instead of using the new detail |
+| Going quiet | 3 of 3. Sam answers the half-finished sentence after about 4.7 s, then checks in ("Are you still there?") after about 17 s |
+| Caller wait | Typical 1.7 s, slowest 10% 2.4 s, from 20 timed replies |
+
 ### Not measured yet
 
 The page says what it can't measure instead of showing a perfect-looking dashboard:
 
-- **How Sam recovers when interrupted.** Interruptions are counted, but grading the recovery needs tests with real audio; ElevenLabs tests are text.
-- **Silence.** What Sam does when a caller goes quiet also needs a real voice call.
-- **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn.
+- **Interruptions and silence on real calls.** The voice tests check both with recorded callers; on real calls they're only counted, not graded.
+- **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn. The voice tests check instead whether numbers and names come through exactly.
+- **Real accents and real phones.** The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.
 - **Hallucination in general.** One specific kind is measured, promises the tools didn't back up, and it's named that.
 
 ## End-to-End Workflow
@@ -292,7 +318,7 @@ The final ticket view connects the service outcome with next actions, including 
 
 - **Safety first.** Sam tells a caller to hang up and call 911 for fire, smoke, a burning smell, sparks, a break-in in progress, or anyone in danger, before asking anything else. Sam never asks for or repeats alarm codes and never explains how to bypass a system.
 - **Code sets the priority.** The agent suggests a priority, but rules in Python decide. The model can raise a ticket's priority; it can never downgrade an emergency.
-- **Locked-down tools.** Every tool endpoint requires a shared secret sent by the agent. The agents only accept calls from approved websites.
+- **Locked-down tools.** Every tool endpoint requires a shared secret sent by the agent. The agents only accept browser calls from approved websites (the per-agent caps below are what limit everything else).
 - **Caps on the public demo.** Calls end after 5 minutes, each agent takes at most 3 calls at once and 40 a day, and scenarios and follow-up calls are capped per hour. Paging the technician is simulated.
 - **Nothing private on public pages.** Phone numbers on the ticket board are masked, Engineering Mode shows word counts instead of the caller's words, and the Evaluation Lab strips the tool secret that ElevenLabs returns with test results.
 - **Made-up data.** Demo customers, invoices, and staff are fictional. Please don't share real names, numbers, or alarm codes on the demo.
@@ -386,7 +412,7 @@ Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Settings com
 | `ELEVENLABS_API_KEY` | Reading test results and call grades for the Evaluation Lab (a read-only key is enough) |
 | `ELEVENLABS_AGENT_ID`, `FOLLOWUP_AGENT_ID` | Pointing the demo page at your own agents |
 
-The live agents only accept calls from the approved websites, so voice calls from a local copy need your own ElevenLabs agents. The ticket board, Demo Mode, the lab page, and the tests all work locally. The database schema is in `supabase/`, and `scripts/export_elevenlabs.py` backs up the agents, tools, and tests (secrets redacted) into `elevenlabs/`.
+The live agents only accept browser calls from the approved websites, so voice calls from a local copy need your own ElevenLabs agents. (An origin check only stops browsers; the real limits are each agent's caps on calls per day and at once.) The ticket board, Demo Mode, the lab page, and the tests all work locally. The voice tests (`cd voicelab && npm install && node run.js`, then `scripts/save_voice_lab.py`) make real calls to the live agent and use its call minutes. The database schema is in `supabase/`, and `scripts/export_elevenlabs.py` backs up the agents, tools, and tests (secrets redacted) into `elevenlabs/`.
 
 ## Product Design Decisions
 

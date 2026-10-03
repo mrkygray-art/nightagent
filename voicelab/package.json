@@ -1,0 +1,13 @@
+{
+  "name": "nightagent-voicelab",
+  "private": true,
+  "description": "Real-audio tests for NightAgent: a scripted caller streams recorded speech to the live agent over its WebSocket.",
+  "type": "commonjs",
+  "scripts": {
+    "run": "node run.js"
+  },
+  "dependencies": {
+    "mpg123-decoder": "^1.0.3",
+    "ws": "^8.22.0"
+  }
+}

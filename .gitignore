@@ -8,3 +8,5 @@ __pycache__/
 
 .vercel
 .env*
+voicelab/node_modules/
+voicelab/out/

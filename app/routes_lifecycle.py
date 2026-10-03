@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 import logging
 
-from app import config, demo, evaluation, lifecycle, report
+from app import config, demo, evaluation, lifecycle, report, voice_lab
 from app.follow_up import follow_up_variables
 from app.service import (call_ref, move_ticket, public_event, public_message, public_opportunity, public_task,
                          public_ticket, record_event, shift)
@@ -137,9 +137,11 @@ def message_detail(message_id: str) -> dict:
 
 
 def _recent_conversations() -> list[tuple[str, list[dict]]]:
-    """Recent calls with their tool calls, newest first, from the tool-call log."""
+    """Recent calls with their tool calls, newest first, from the tool-call log. Voice-test calls are left out."""
     grouped: dict[str, list[dict]] = {}
     for row in get_store().recent_tool_calls():
+        if voice_lab.is_test(row.get("conversation_id")):
+            continue
         grouped.setdefault(row["conversation_id"], []).append(row)
     return [(conv, sorted(rows, key=lambda r: r["called_at"])) for conv, rows in grouped.items()]
 

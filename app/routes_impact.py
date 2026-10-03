@@ -5,6 +5,7 @@ follow-up calls), using the per-call assumptions below, which the page prints ne
 """
 from fastapi import APIRouter
 
+from app import voice_lab
 from app.store import get_store
 
 router = APIRouter(prefix="/api")
@@ -46,5 +47,11 @@ def _metrics(c: dict) -> dict:
 
 @router.get("/impact")
 def impact() -> dict:
-    # One cheap database call (ns_impact), so the numbers are always current.
-    return _metrics(get_store().impact_counts())
+    # One cheap database call (ns_impact), so the numbers are always current. Voice-test calls never make a
+    # ticket, so they only show up as calls without one: take those back out.
+    store = get_store()
+    counts = dict(store.impact_counts())
+    if voice_lab.test_conversation_ids():
+        tests = {r["conversation_id"] for r in store.recent_tool_calls(5000) if voice_lab.is_test(r.get("conversation_id"))}
+        counts["calls_without_ticket"] = max(0, counts.get("calls_without_ticket", 0) - len(tests))
+    return _metrics(counts)

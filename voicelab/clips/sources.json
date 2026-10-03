@@ -1,0 +1,30 @@
+{
+  "maria-full": {
+    "voice": "Jessica (ElevenLabs premade, American female)",
+    "text": "Hi, this is Maria Lopez from Sunset Dental. The number on the account is three one zero, five five five, zero one four two. Our back door won't lock."
+  },
+  "james-full": {
+    "voice": "Charlie (ElevenLabs premade, Australian male)",
+    "text": "Hey, it's James Carter at Westside Self Storage. The number's three one zero, five five five, zero one seven eight. Our front gate is stuck open."
+  },
+  "priya-full": {
+    "voice": "River (ElevenLabs premade, American, neutral)",
+    "text": "Hi, this is Priya Shah with Harbor Logistics Warehouse. Our number is four two four, five five five, zero one one nine. The main entrance won't unlock."
+  },
+  "maria-opener": {
+    "voice": "Jessica (ElevenLabs premade, American female)",
+    "text": "Hi, this is Sunset Dental. Three one zero, five five five, zero one four two."
+  },
+  "maria-bargein": {
+    "voice": "Jessica (ElevenLabs premade, American female)",
+    "text": "Yes, yes, that's me. It's our back door. It won't lock."
+  },
+  "silence-opener": {
+    "voice": "Charlie (ElevenLabs premade, Australian male)",
+    "text": "Hi, um, I'm calling about our alarm panel. It's..."
+  },
+  "silence-followup": {
+    "voice": "Charlie (ElevenLabs premade, Australian male)",
+    "text": "Sorry about that. It's beeping and showing a trouble code."
+  }
+}

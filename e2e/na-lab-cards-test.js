@@ -13,13 +13,15 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('  o
   }
   await p.setViewport({ width: 1100, height: 900 });
   await p.goto(BASE + '/lab', { waitUntil: 'networkidle0' });
-  const loading = await p.evaluate(() => [...document.querySelectorAll('#sc-tests,#sc-calls,#fixes,#summary')].filter((n) => /Loading/.test(n.innerText)).map((n) => n.id));
+  const loading = await p.evaluate(() => [...document.querySelectorAll('#sc-tests,#sc-calls,#fixes,#summary,#voice-box')].filter((n) => /Loading/.test(n.innerText)).map((n) => n.id));
   ok(loading.length === 0, 'no section stuck on Loading… ' + loading.join(','));
   ok(await p.$$eval('#sc-tests tr', (r) => r.length) > 1, 'scorecard (tests) filled');
   ok(await p.$$eval('#fixes tbody tr', (r) => r.length) > 0, 'fixes table filled');
   ok(await p.$$eval('#tests .test', (r) => r.length) > 0, 'regression test cards filled');
+  ok(await p.$$eval('#voice-box table.voice', (t) => t.length) === 3, 'voice tests: 3 tables');
+  ok(await p.$$eval('#voice-box table.voice tbody tr', (r) => r.length) >= 6, 'voice tests: rows filled');
   const cards = await p.$$eval('.nav-card', (cs) => cs.map((c) => ({ tag: c.tagName, go: c.querySelector('a.go')?.getAttribute('href') })));
-  ok(cards.length === 6, '6 navigator cards');
+  ok(cards.length === 7, '7 navigator cards');
   ok(cards.every((c) => c.tag === 'ARTICLE' && c.go), 'each card is an article with its own button');
   for (const c of cards) ok(await p.$(c.go) !== null, `button target ${c.go} exists`);
   ok(await p.$eval('.nav-card .go', (a) => getComputedStyle(a).backgroundColor) === 'rgb(245, 165, 36)', 'buttons are orange');

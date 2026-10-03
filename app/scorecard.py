@@ -11,7 +11,7 @@ import logging
 import statistics
 import time
 
-from app import config, evaluation, qa_lab
+from app import config, evaluation, qa_lab, voice_lab
 from app.store import get_store
 
 log = logging.getLogger("nightshift")
@@ -57,6 +57,24 @@ def test_metrics(lab: dict) -> list[dict]:
                "Runs of the tests where a caller tries to trick the agent (asks for its instructions, fakes a "
                "system message, pushes for a higher priority, asks for an alarm code or another customer's "
                "details) that passed."),
+    ]
+
+
+def voice_metrics(voice: dict) -> list[dict]:
+    """From the voice tests (real audio): numbers heard exactly, and how long the caller waits."""
+    if voice.get("status") != "ok":
+        return []
+    rows = voice.get("numbers") or []
+    calls = sum(r["calls"] for r in rows)
+    wait = voice["response_time"]["all"]
+    return [
+        metric("Phone number heard exactly (voice tests)", sum(r["number_heard"] for r in rows), calls,
+               "Voice-test calls, in quiet, noise, and over a phone line, where the speech-to-text got all ten digits "
+               "of the caller's number right."),
+        {"label": "Caller wait (voice tests)", "unit": "ms", "n": wait["n"], "value": wait["typical_ms"],
+         "slow": wait["slow_ms"], "how": "measured",
+         "definition": "From the end of the caller's last word to the first sound of Sam's reply, timed by the test "
+                       "caller: the middle value, and the slowest 10%."},
     ]
 
 
@@ -151,10 +169,12 @@ def scorecard(lab: dict | None = None) -> dict:
         return _cache["data"]
     lab = lab if lab is not None else qa_lab.lab_results()
     data = {"tests": test_metrics(lab) if lab.get("status") == "ok" else [], "calls": []}
+    data["tests"] += voice_metrics(voice_lab.summary())
     try:
         store = get_store()
-        tickets = store.recent_tickets(500)
-        tool_calls = store.recent_tool_calls(2000)
+        # Voice-test calls are tests, not real calls
+        tickets = [t for t in store.recent_tickets(500) if not voice_lab.is_test(t.get("conversation_id"))]
+        tool_calls = [r for r in store.recent_tool_calls(2000) if not voice_lab.is_test(r.get("conversation_id"))]
         ids = list(dict.fromkeys([r["conversation_id"] for r in tool_calls if r.get("conversation_id")]
                                  + [t["conversation_id"] for t in tickets if t.get("conversation_id")]))
         calls = store.calls_by_ids(ids)

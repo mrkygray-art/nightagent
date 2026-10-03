@@ -72,7 +72,7 @@ LAB_HTML = r"""<!doctype html>
   }
   .nav-card .go:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .nav-card .go:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-  .nav-card.future { border-style: dashed; }
+  .nav-card.future { border-style: dashed; grid-column: 1 / -1; min-height: 0; }
   .nav-card.future .go { background: transparent; color: var(--sodium); border: 1px solid var(--sodium); }
   .nav-card .soon { display: inline-block; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 6px; }
   .section-block { scroll-margin-top: 18px; border-top: 1px solid var(--line); padding-top: 2px; margin-top: 38px; }
@@ -107,6 +107,16 @@ LAB_HTML = r"""<!doctype html>
   .fixes .fid { color: var(--muted); font-size: 13px; display: block; }
   .fixes .src { color: var(--muted); font-size: 13px; display: block; margin-top: 4px; }
   .now { display: block; margin-top: 4px; font-weight: 600; }
+  .voice td.num { font-family: var(--display); font-size: 20px; font-weight: 700; white-space: nowrap; }
+  .voice .quote { display: block; color: #cfd6e4; font-size: 14px; margin-top: 4px; }
+  .bad-note { border-left: 3px solid var(--alarm); padding-left: 10px; }
+  @media (max-width: 640px) {
+    .voice thead { display: none; }
+    .voice tr { display: block; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .voice tr:last-child { border-bottom: 0; }
+    .voice td { display: block; border: 0; padding: 3px 0; }
+    .voice td[data-h]::before { content: attr(data-h); display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  }
   @media (max-width: 640px) {
     .wrap { padding-left: 14px; padding-right: 14px; }
     .top { align-items: flex-start; }
@@ -171,6 +181,12 @@ LAB_HTML = r"""<!doctype html>
       <a class="go" href="#regression">View Regression Tests ↓</a>
     </article>
     <article class="nav-card">
+      <h2>Voice Tests</h2>
+      <p>Real recorded speech sent to the live agent: phone numbers and names in noise and over a phone line, talking
+        over Sam, going quiet, and how long the caller waits for an answer.</p>
+      <a class="go" href="#voice">View Voice Tests ↓</a>
+    </article>
+    <article class="nav-card">
       <h2>Failure Injection</h2>
       <p>Intentionally break parts of the workflow in a controlled sandbox. These tests verify that NightAgent fails
         safely, avoids duplicate actions, and recovers when a dependency comes back.</p>
@@ -221,6 +237,16 @@ LAB_HTML = r"""<!doctype html>
     <div class="tests" id="tests"></div>
   </section>
 
+  <section class="section-block" id="voice">
+    <div class="section-head"><h2 class="section">Voice Tests</h2><a href="#top">Back to lab menu ↑</a></div>
+    <p class="intro">The tests above are text. These use real audio: a test caller phones the live Sam the same way the
+      demo page does and plays recorded speech, 20 milliseconds at a time, like a microphone. The callers are ElevenLabs
+      voices, so no real customer is involved. Each call stops before a ticket is made, and these calls are left out of
+      the real-call numbers.</p>
+    <p class="question">Engineering question: Does it still work when the caller is hard to hear, talks over Sam, or goes quiet?</p>
+    <div id="voice-box" aria-live="polite"><p class="fine">Loading…</p></div>
+  </section>
+
   <section class="section-block" id="failure">
     <div class="section-head"><h2 class="section">Failure Injection</h2><a href="#top">Back to lab menu ↑</a></div>
     <p class="intro">Break something on purpose and check the system copes. Each scenario replays a known failure through
@@ -255,9 +281,9 @@ LAB_HTML = r"""<!doctype html>
       is still needed.</p>
     <p class="question">Engineering question: What don't we know?</p>
     <ul class="gaps fine">
-      <li><b>How Sam recovers when interrupted.</b> The scorecard counts interruptions, but grading the recovery needs tests with real audio; these tests are text.</li>
-      <li><b>Silence.</b> What Sam does when a caller goes quiet also needs a real voice call to test.</li>
-      <li><b>Speech-to-text confidence.</b> ElevenLabs doesn't give a confidence score for each thing the caller says.</li>
+      <li><b>Interruptions and silence on real calls.</b> The voice tests check both with recorded callers. On real calls they're only counted, not graded.</li>
+      <li><b>Speech-to-text confidence.</b> ElevenLabs doesn't give a confidence score for each thing the caller says. The voice tests check instead whether phone numbers and names come through exactly.</li>
+      <li><b>Real accents and real phones.</b> The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.</li>
       <li><b>Hallucination in general.</b> One specific kind is measured—promises the tools didn't back up—and it's called that.</li>
     </ul>
     <p class="fine">Results are read from ElevenLabs. Tools aren't really called during an agent test, so tests never put
@@ -352,6 +378,74 @@ function fixTable(box, fixes) {
   }
   t.append(thead, body); box.replaceChildren(t);
 }
+function secs(ms) { return ms === null || ms === undefined ? "–" : `${(ms / 1000).toFixed(1)} s`; }
+function gridTable(cls, heads, rows) {
+  const t = el("table", `grid ${cls}`), head = el("tr");
+  for (const h of heads) head.append(el("th", "", h));
+  const thead = el("thead"); thead.append(head); const body = el("tbody");
+  for (const cells of rows) {
+    const tr = el("tr");
+    cells.forEach((c, i) => {
+      const td = el("td", c.cls || "");
+      td.dataset.h = heads[i];
+      if (c.node) td.append(c.node); else td.textContent = c.text;
+      tr.append(td);
+    });
+    body.append(tr);
+  }
+  t.append(thead, body);
+  return t;
+}
+function voiceSection(box, v) {
+  if (!v || v.status !== "ok") { box.replaceChildren(el("p", "fine", "No voice test run saved yet.")); return; }
+  const of = (x, n) => ({ text: `${x} of ${n}`, cls: "num" });
+  const out = [el("h3", "group", "Phone numbers and names in noise")];
+  out.push(el("p", "fine", "Three callers say their name, business, and the phone number on the account. " +
+    "\"Heard\" is the transcript from ElevenLabs' speech-to-text; \"read back\" is Sam saying the number back."));
+  out.push(gridTable("voice", ["Condition", "Number heard exactly", "Name heard", "Sam read back the right number", "Caller waited (typical)"],
+    v.numbers.map((r) => [{ text: r.condition, cls: "lbl" }, of(r.number_heard, r.calls), of(r.name_heard, r.calls),
+      of(r.read_back_right, r.calls), { text: r.response.n ? secs(r.response.typical_ms) : "–", cls: "num" }])));
+  const total = (k) => v.numbers.reduce((a, r) => a + r[k], 0);
+  out.push(el("p", "fine", `In ${total("turn_split")} of ${total("calls")} calls the caller's short pause after the number ` +
+    `ended their turn early, and in ${total("started_early")} of ${total("calls")} Sam started speaking before the caller ` +
+    "had finished."));
+  const misses = v.numbers.flatMap((r) => r.misses.map((m) => [`${r.condition}. Heard: "${m.heard}"`, `Sam: "${m.reply}"`]));
+  if (misses.length) {
+    const d = el("details", "fine"); d.append(el("summary", "", "The calls that missed something: what was heard, and what Sam said"));
+    for (const [heard, reply] of misses.slice(0, 6)) { d.append(el("span", "quote", heard), el("span", "judge", reply)); }
+    out.push(d);
+  }
+  out.push(el("h3", "group", "Talking over Sam and going quiet"));
+  const i = v.interruption, s = v.silence;
+  const quote = (label, text) => {
+    const n = el("span"); n.append(document.createTextNode(label));
+    if (text) n.append(el("span", "quote", `"${text}"`));
+    return n;
+  };
+  const checkIn = ((s.example.spoke_during_silence || [])[1] || {}).text;
+  out.push(gridTable("voice", ["Test", "Passed", "Timing", "What Sam did"], [
+    [{ text: "Caller talks over Sam's read-back with the real problem", cls: "lbl" }, of(i.passed, i.runs),
+     { text: `stopped in ${secs(i.timing.typical_ms)} (typical)` },
+     { node: quote("Stopped, then answered about the door:", i.example.reply) }],
+    [{ text: "Caller stops mid-sentence and goes quiet for 25 s", cls: "lbl" }, of(s.passed, s.runs),
+     { text: `checked in after ${secs(s.timing.typical_ms)} of silence (typical)` },
+     { node: quote("Waited, asked what was wrong, then checked in:", checkIn) }],
+  ]));
+  const failed = [...i.failures.map((f) => `Talking over Sam, a failed run. Sam stopped, then said: "${f.reply}"`),
+    ...s.failures.map((f) => `Going quiet, a failed run. ${f.hung_up ? "The call ended." : `Sam said: "${f.reply}"`}`)];
+  for (const f of failed) out.push(el("p", "fine bad-note", f));
+  out.push(el("h3", "group", "How long the caller waits"));
+  const rt = v.response_time;
+  const rtRow = (label, x) => [{ text: label, cls: "lbl" }, { text: secs(x.typical_ms), cls: "num" },
+    { text: secs(x.slow_ms), cls: "num" }, { text: `${x.n} replies` }];
+  out.push(gridTable("voice", ["Replies", "Typical", "Slowest 10%", "Based on"],
+    [rtRow("All voice-test replies", rt.all), rtRow("Quiet room", rt.quiet), rtRow("With noise or a phone line", rt.noisy)]));
+  out.push(el("p", "fine", "From the end of the caller's last word to the first sound of Sam's reply, timed by the test " +
+    "caller. It includes the network between the test computer and ElevenLabs and the time Sam spends looking up the " +
+    "account. The scorecard's \"Response time\" on real calls is ElevenLabs' own timing."));
+  out.push(el("p", "fine", `Last run ${when(v.run_at)}. Voices: ${v.voices.join("; ")}. Re-run with node voicelab/run.js.`));
+  box.replaceChildren(...out);
+}
 async function load() {
   const summary = document.getElementById("summary"), list = document.getElementById("tests");
   let data;
@@ -360,6 +454,7 @@ async function load() {
   scoreTable(document.getElementById("sc-tests"), sc.tests);
   scoreTable(document.getElementById("sc-calls"), sc.calls);
   fixTable(document.getElementById("fixes"), data.fixes);
+  voiceSection(document.getElementById("voice-box"), data.voice);
   if (data.status !== "ok") {
     summary.replaceChildren(stat("–", data.reason || "Results aren't available right now."));
     return;
