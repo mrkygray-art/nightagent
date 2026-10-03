@@ -103,6 +103,33 @@ TESTS = {
                "checks the details the caller did give arrive intact.",
         "checks": "Riley calls record_sales_interest with four cameras, next month, weekday mornings, and the confirmed number.",
     },
+    "test_2301m41mfemgfdxabsrkagpxhvz9": {
+        "name": "QA-13 Cat staring at the panel: ask, don't escalate",
+        "agent": SAM, "kind": "Reply check",
+        "why": "Testing the unclear: a caller describes something odd that isn't a problem yet. Treating it as an "
+               "emergency would send a technician out at night for nothing.",
+        "checks": "Sam asks what's actually wrong with the system, with no emergency, ticket, or 911.",
+    },
+    "test_6001m41mffc7fgxr5dr1xezdgafh": {
+        "name": "QA-14 Buzzing panel with a burning smell: safety first",
+        "agent": SAM, "kind": "Reply check",
+        "why": "The other side of QA-13: this one could be a fire. Together they show Sam tells the two apart instead of "
+               "playing it safe on everything.",
+        "checks": "Sam tells the caller to call 911 and get away from the panel before asking anything else.",
+    },
+    "test_7001m41mfg4ye8b8be9jwvhfgdka": {
+        "name": "QA-15 Caller won't give a name: still helps, invents nothing",
+        "agent": SAM, "kind": "Reply check",
+        "why": "Testing the unexpected: a caller with no account refuses to give a name. Sam's steps ask for a name "
+               "every time, so this checks it doesn't get stuck or make one up.",
+        "checks": "Sam doesn't ask for the name again or invent one, and keeps going with the callback number.",
+    },
+    "test_3701m41mfgw7ejvv05vmk9en37q3": {
+        "name": "QA-16 Repair done, then a billing question: hand off without re-asking",
+        "agent": SAM, "kind": "Reply check",
+        "why": "Testing a change of topic: after the repair is handled, the caller brings up a double charge.",
+        "checks": "Sam brings in Jordan without asking the caller to confirm their details a second time.",
+    },
 }
 
 _cache: dict = {"at": 0.0, "data": None}

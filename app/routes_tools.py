@@ -129,7 +129,9 @@ CONFIRM_FIRST = ("Find out what the caller needs, if you don't know yet: a probl
                  "before calling create_ticket or take_message, ask for the caller's full name if you don't "
                  "have it, read their name and callback number back (number in groups of three, three, four), "
                  "and wait for them to say it's right. Do not call either tool until they confirm. For a "
-                 "message, also ask once, before take_message, if there's a good time to call them back.")
+                 "message, also ask once, before take_message, if there's a good time to call them back. "
+                 "If the caller doesn't want to give a name, that's fine: don't ask again or say it's required. "
+                 "Read back just the callback number, and use \"not given\" as caller_name. Never make up a name.")
 
 
 def _public_customer(c: dict) -> dict:
@@ -200,7 +202,7 @@ def _add_repeat_call(existing: dict, req: CreateTicketRequest, priority: str, re
     ticket's history, and the priority only ever goes up."""
     tid, conv = existing["ticket_id"], req.conversation_id
     record_event(tid, "caller_called_again",
-                 f"{req.caller_name.strip()} called again: {req.issue_summary.strip()[:160]}",
+                 f"{given(req.caller_name, 100) or 'The caller'} called again: {req.issue_summary.strip()[:160]}",
                  conversation_id=conv, actor_type="customer")
     if conv:  # so the repeat caller's page can find the ticket their call joined
         get_store().update_ticket(tid, {"repeat_conversation_ids": [*(existing.get("repeat_conversation_ids") or []), conv]})
@@ -250,7 +252,7 @@ def create_ticket(req: CreateTicketRequest) -> dict:
         return _add_repeat_call(existing, req, priority, reason, started)
     ticket = store.create_ticket({
         "customer_id": customer["customer_id"] if customer else None,
-        "caller_name": req.caller_name.strip(),
+        "caller_name": given(req.caller_name, 100),
         "callback_number": phone_digits(req.callback_number) or req.callback_number.strip(),
         "issue_summary": req.issue_summary.strip(),
         "category": category,
@@ -346,7 +348,7 @@ def save_message(req: MessageRequest, tool: str, task_reason: str | None = None)
         "destination": dept,
         "assigned_to": who,
         "customer_id": customer["customer_id"] if customer else None,
-        "contact_name": req.caller_name.strip(),
+        "contact_name": given(req.caller_name, 100),
         "site_address": (customer or {}).get("site_address"),
         "source_ticket_id": ticket["ticket_id"] if ticket else None,
         "source_conversation_id": req.conversation_id,
@@ -432,7 +434,7 @@ def sales_interest(req: SalesInterestRequest) -> dict:
         opp_id = store.create_opportunity({
             **fields,
             "customer_id": customer["customer_id"] if customer else None,
-            "contact_name": req.caller_name.strip(),
+            "contact_name": given(req.caller_name, 100),
             "site_address": (customer or {}).get("site_address"),
             "source_conversation_id": req.conversation_id,
             "assigned_to": DESTINATIONS["account_executive"],
@@ -495,7 +497,7 @@ def page_on_call_tech(req: PageRequest) -> dict:
         return {"paged": True, "message": "The technician was already paged for this ticket."}
 
     customer = store.get_customer(ticket["customer_id"]) if ticket.get("customer_id") else None
-    who = customer["business_name"] if customer else ticket["caller_name"]
+    who = customer["business_name"] if customer else (ticket.get("caller_name") or "Caller")
     body = (
         f"[NightShift] EMERGENCY {ticket['ticket_id']} - {who}: "
         f"{ticket['issue_summary'][:140]} | Callback {ticket['callback_number']}"
