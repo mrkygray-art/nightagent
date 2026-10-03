@@ -1,6 +1,6 @@
 # NightAgent
 
-**AI-powered after-hours service intake, triage, ticket lifecycle, customer follow-up, opportunity handoff, and agent QA.**
+**AI-powered after-hours service intake, triage, ticket lifecycle, customer follow-up, opportunity handoff, and agent evaluation.**
 
 NightAgent is a portfolio demonstration of how an AI voice agent can support the complete after-hours service lifecycle for a physical-security integrator. Instead of stopping at a chatbot or voice demo, NightAgent connects the customer conversation to operational workflow: capture the problem, create and prioritize a service ticket, simulate dispatch and repair progression, call the customer back, verify the outcome, identify follow-up sales or service needs, and regression-test agent behavior against problems found during real demo calls.
 
@@ -51,6 +51,19 @@ Voice response
    v
 Evaluation / grading
 ```
+
+## The Agents
+
+Four ElevenLabs agents share the work. The backend decides what happens; the agents talk and call tools.
+
+| Agent | Role | Tools |
+| --- | --- | --- |
+| **Sam** | After-hours front desk and dispatcher: safety first, finds the account, confirms name and number, opens and prioritizes tickets, pages the on-call technician for emergencies, takes messages, and hands off to a specialist | `lookup_customer`, `create_ticket`, `page_on_call_tech`, `take_message`, `transfer_to_agent` |
+| **Jordan** | Billing assistant (own voice): looks up invoices and flags possible duplicate charges; never promises a refund or credit | `billing_lookup`, `request_billing_review`, `take_message` |
+| **Riley** | Sales assistant (own voice): gathers what the caller wants; never quotes a price, the account executive does | `record_sales_interest`, `take_message` |
+| **Follow-up call** | Sam, in the same voice, calls the customer back after the repair and reports one structured outcome; routing rules in code decide what happens next | `record_follow_up_outcome` |
+
+The staff behind the agents (billing contact, account executive, service manager, technicians) are fictional and labeled that way.
 
 ## Evaluation Lab
 
@@ -241,7 +254,8 @@ The final ticket view connects the service outcome with next actions, including 
 - Structured ticket creation from natural-language conversations
 - Rules-based service prioritization
 - Tool calling with deterministic business logic
-- Human/service-team handoff
+- Multi-agent handoffs: a front-desk agent passing billing and sales callers to specialist agents with their own voices
+- Human/service-team handoff through messages for the right department
 - Stateful ticket lifecycle tracking
 - Customer follow-up after service
 - Resolution verification rather than simple ticket completion
@@ -257,6 +271,15 @@ The final ticket view connects the service outcome with next actions, including 
 - Safe public presentation of test results without exposing tool secrets
 - Clear separation between AI behavior and simulated demo events
 - Recruiter-friendly visualization of an end-to-end AI workflow
+
+## Safety, Privacy, and Limits
+
+- **Safety first.** Sam tells a caller to hang up and call 911 for fire, smoke, a burning smell, sparks, a break-in in progress, or anyone in danger, before asking anything else. Sam never asks for or repeats alarm codes and never explains how to bypass a system.
+- **Code sets the priority.** The agent suggests a priority, but rules in Python decide. The model can raise a ticket's priority; it can never downgrade an emergency.
+- **Locked-down tools.** Every tool endpoint requires a shared secret sent by the agent. The agents only accept calls from approved websites.
+- **Caps on the public demo.** Calls end after 5 minutes, each agent takes at most 3 calls at once and 40 a day, and scenarios and follow-up calls are capped per hour. Paging the technician is simulated.
+- **Nothing private on public pages.** Phone numbers on the ticket board are masked, Engineering Mode shows word counts instead of the caller's words, and the Evaluation Lab strips the tool secret that ElevenLabs returns with test results.
+- **Made-up data.** Demo customers, invoices, and staff are fictional. Please don't share real names, numbers, or alarm codes on the demo.
 
 ## Physical-Security Context
 
@@ -305,6 +328,11 @@ Post-Service AI Check-In
    |
    +--> Additional need -----------------> Opportunity + AE task
 
+Specialists (ElevenLabs transfer_to_agent)
+   |
+   +--> Jordan: billing ------------------> Billing review request
+   +--> Riley: sales ---------------------> Sales lead + AE task
+
 Engineering feedback loop
    |
    +--> Live-call problem
@@ -322,6 +350,27 @@ Engineering feedback loop
 - **Vercel** — public demo hosting
 - **ElevenLabs Agent Testing** — regression suites against live agents
 - **Rules-based decision logic** — deterministic priority and workflow behavior where business rules should control the outcome
+- **pytest and headless Chrome** — a backend test suite, plus browser test scripts in `e2e/`
+
+## Run It Locally
+
+```bash
+python -m venv .venv
+.venv/Scripts/pip install -r requirements.txt      # macOS/Linux: .venv/bin/pip
+.venv/Scripts/python -m pytest -q                  # backend tests, no keys needed
+TOOL_SECRET=local-test .venv/Scripts/python -m uvicorn main:app --port 8765
+```
+
+Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Settings come from environment variables (or a `.env` file):
+
+| Variable | Needed for |
+| --- | --- |
+| `TOOL_SECRET` | Protecting the tool endpoints the agents call |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Saving to Supabase. Without them the app uses an in-memory store, so everything works but resets on restart |
+| `ELEVENLABS_API_KEY` | Reading test results and call grades for the Evaluation Lab (a read-only key is enough) |
+| `ELEVENLABS_AGENT_ID`, `FOLLOWUP_AGENT_ID` | Pointing the demo page at your own agents |
+
+The live agents only accept calls from the approved websites, so voice calls from a local copy need your own ElevenLabs agents. The ticket board, Demo Mode, the lab page, and the tests all work locally. The database schema is in `supabase/`, and `scripts/export_elevenlabs.py` backs up the agents, tools, and tests (secrets redacted) into `elevenlabs/`.
 
 ## Product Design Decisions
 
@@ -343,7 +392,7 @@ Engineering feedback loop
 
 NightAgent explores how an integrator could reduce after-hours response friction while improving the quality of information handed to technicians. The same workflow can also improve customer communication and preserve sales opportunities discovered during service interactions.
 
-The QA layer addresses a second business problem: conversational agents change as prompts, tools, and workflows evolve. Regression testing provides a way to verify that important behaviors—identity confirmation, emergency handling, billing language, escalation order, and agent identity—continue to work after those changes.
+The evaluation layer addresses a second business problem: conversational agents change as prompts, tools, and workflows evolve. Regression testing provides a way to verify that important behaviors—identity confirmation, emergency handling, billing language, escalation order, and agent identity—continue to work after those changes.
 
 The concept is particularly relevant to security integrators, managed service providers, field-service organizations, and other businesses where an incoming customer problem must move through multiple people and systems before it is truly resolved.
 
