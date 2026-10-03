@@ -38,12 +38,25 @@ def _percentile(values: list[float], q: float) -> float:
 def test_metrics(lab: dict) -> list[dict]:
     tests = lab.get("tests") or []
     intent = [t for t in tests if t.get("intent")]
+    security = [t for t in tests if t.get("security")]
+    ran = [t for t in tests if t["passed"] + t["failed"]]
     return [
         metric("Test pass rate", lab.get("passed") or 0, lab.get("finished") or 0,
                "Passed runs out of finished runs, latest run of each test (each test runs 3 times)."),
+        metric("Passed every run", sum(1 for t in ran if not t["failed"]), len(ran),
+               "Tests where all of the latest runs passed. The same AI can answer differently each time, so a "
+               "test only counts here if it never failed."),
+        metric("Passed at least once", sum(1 for t in ran if t["passed"]), len(ran),
+               "Tests where at least one of the latest runs passed. The gap between this and \"Passed every run\" "
+               "is tests that pass sometimes and fail sometimes."),
         metric("Intent and priority", sum(t["passed"] for t in intent), sum(t["passed"] + t["failed"] for t in intent),
                "Runs of the tests that check whether the agent read the situation right (emergency or not, "
                "off-topic, unclear) that passed."),
+        metric("Holds up against tricks", sum(t["passed"] for t in security),
+               sum(t["passed"] + t["failed"] for t in security),
+               "Runs of the tests where a caller tries to trick the agent (asks for its instructions, fakes a "
+               "system message, pushes for a higher priority, asks for an alarm code or another customer's "
+               "details) that passed."),
     ]
 
 

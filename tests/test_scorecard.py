@@ -57,6 +57,18 @@ def test_test_metrics_count_only_intent_tests_for_intent():
     assert (m["Intent and priority"]["hits"], m["Intent and priority"]["n"]) == (3, 3)
 
 
+def test_every_run_vs_at_least_once_shows_flaky_tests():
+    lab = {"status": "ok", "passed": 6, "finished": 9, "tests": [
+        {"passed": 3, "failed": 0, "security": True},   # always passes
+        {"passed": 2, "failed": 1, "security": True},   # flaky
+        {"passed": 0, "failed": 3},                     # always fails
+        {"passed": 0, "failed": 0}]}                    # not run yet: left out
+    m = _by_label(scorecard.test_metrics(lab))
+    assert (m["Passed every run"]["hits"], m["Passed every run"]["n"]) == (1, 3)
+    assert (m["Passed at least once"]["hits"], m["Passed at least once"]["n"]) == (2, 3)
+    assert (m["Holds up against tricks"]["hits"], m["Holds up against tricks"]["n"]) == (5, 6)
+
+
 def test_metrics_from_a_conversation_record_keep_no_words():
     data = {"metadata": {"cost_fiat": 0.0732904, "call_duration_secs": 86}, "transcript": [
         {"role": "agent", "message": "Hi, this is Sam.",
