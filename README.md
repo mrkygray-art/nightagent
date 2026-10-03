@@ -54,7 +54,12 @@ Evaluation / grading
 
 ## Evaluation Lab
 
-The **Evaluation Lab** turns problems discovered during live conversations into repeatable regression tests. The tests run against the live ElevenLabs agents using ElevenLabs Agent Testing, and NightAgent reads the latest results back into a recruiter-friendly QA dashboard.
+The **Evaluation Lab** measures how well the agents do, from what really happened. It has four parts:
+
+- **Scorecard:** plain tables of how the agents perform in tests and on real calls, each number with the sample it's based on.
+- **Regression tests:** problems found in live calls (and a few unclear situations) turned into repeatable tests that run against the live ElevenLabs agents using ElevenLabs Agent Testing.
+- **Fixes log:** every real problem, why it happened, what changed, and whether the fix still holds in the latest runs.
+- **Failure injection:** known failures replayed on purpose through the real server code, in a sandbox.
 
 This is intentionally different from a static scripted demo. The project demonstrates an engineering feedback loop:
 
@@ -79,7 +84,32 @@ Pass / fail result
    +----> Fix agent or workflow ----> Re-test
 ```
 
+### Scorecard
+
+![Evaluation Lab scorecard](docs/evaluation-lab-scorecard.webp)
+
+Two tables that are never blended, because tests are controlled and real calls aren't:
+
+| Group | Metric | Where the number comes from |
+| --- | --- | --- |
+| In tests | Test pass rate | Latest run of each regression test, 3 runs per test |
+| In tests | Intent and priority | The tests that check whether the agent read the situation right (emergency or not, off-topic, unclear) |
+| On real calls | Escalation | Emergency tickets where the on-call technician was alerted |
+| On real calls | Priority matched the rules | AI-suggested priority vs. the final priority set by code |
+| On real calls | Tool calls worked / Handoffs worked | Errors in ElevenLabs' own call records |
+| On real calls | Calls completed | Calls that ended with a ticket, message, or sales lead |
+| On real calls | Avoided unsupported promises, Confirmed details first | Graded by ElevenLabs after each call, labeled **AI-judged** |
+| On real calls | Caller interruptions | Agent replies the caller talked over (a count, not a grade) |
+| On real calls | Response time | Caller stops talking → agent voice starts; typical and slowest 10% |
+| On real calls | Cost per call | ElevenLabs' own dollar price recorded on each call (`cost_fiat`), not the monthly plan |
+
+Rules the scorecard follows: every number shows how many runs or calls it's based on; with nothing to count it says "No data yet" instead of 0%; made-up demo scenarios are excluded; and caller words are never shown. Per-call cost and timing are saved once, when a call is graded, and calls nobody has opened are graded a few at a time whenever the lab page loads.
+
+**Snapshot on 2026-10-03** (live numbers are on the lab page): 48 of 48 test runs passed; 18 of 19 real emergencies escalated; 25 of 25 tool calls worked; 15 of 18 calls completed; typical response 0.84 s; typical cost $0.035 per call. The samples are small, and the page says so next to every number.
+
 ### Current regression coverage
+
+Sixteen tests across Sam, Jordan, and Riley, each run three times because the same model can answer differently from one run to the next.
 
 | Test | What it protects |
 | --- | --- |
@@ -95,6 +125,27 @@ Pass / fail result
 | **QA-10 — Same problem reported twice: point to the open ticket** | Sam gives the existing ticket number, says the technician already has it, and mentions no new ticket or charge. |
 | **QA-11 — Riley never quotes a price** | When a caller pushes for a ballpark, Riley gives no price or estimate and says the account executive will quote. |
 | **QA-12 — Riley records the lead accurately** | Riley's `record_sales_interest` call carries the device count, timeline, best time, and confirmed number the caller actually gave. |
+| **QA-13 — Cat staring at the panel** | An odd but harmless report: Sam asks what's actually wrong instead of escalating, opening a ticket, or saying 911. |
+| **QA-14 — Burning smell from the panel** | The other side of QA-13: a possible fire. Sam tells the caller to call 911 and stay away from the panel before anything else. |
+| **QA-15 — Caller won't give a name** | Sam keeps helping with just the callback number and never makes a name up. |
+| **QA-16 — Repair done, then a billing question** | Sam hands off to Jordan without asking the caller to confirm their details a second time. |
+
+### Caught by a new test, then fixed
+
+QA-13 to QA-16 were written to try unclear calls, and two of them failed on the first run:
+
+| Test | First run | Why | Fix | After |
+| --- | --- | --- | --- | --- |
+| QA-15 Caller won't give a name | 0 of 3 passed | Sam's steps asked for a full name every time, so it said a name was required | Prompt: a caller may decline a name; confirm the number only and never invent one. Server: a declined name is saved as blank | 3 of 3 |
+| QA-14 Burning smell | 2 of 3 passed | The 911 rule listed fire and smoke, but not a burning smell, sparks, or a hot panel | Prompt: those trigger 911 right away, said as a plain instruction first | 3 of 3 |
+
+After the fix, all 13 of Sam's tests were re-run together: 39 of 39 passed, so nothing else broke. The tests were not loosened to make them pass. The wording of the post-call grader for "confirmed details first" was then updated to match, so a caller who declines a name but confirms the number isn't counted as a miss.
+
+### Fixes log
+
+![Evaluation Lab fixes log](docs/evaluation-lab-fixes.webp)
+
+The lab lists 11 real problems (found in live calls, new tests, or failure injection) in a table: what broke, why, the fix (a commit or an agent prompt), what was recorded before, and **now**, which is read live from the latest test runs. If a fix stops holding, its "now" line turns red. The entries live in `app/fix_log.py`, and a test checks that every entry points at real tests.
 
 The lab evaluates both **reply behavior** and **tool behavior**. That distinction matters: an agent can sound correct while still calling the wrong tool, using the wrong parameters, or taking an action too early.
 
@@ -111,6 +162,15 @@ The lab can also break things on purpose. Each scenario replays a known failure 
 
 Both "before" behaviors were reproduced by running the same scenario against the earlier code. The voice side of the duplicate-caller fix is covered by QA-09 and QA-10.
 
+### Not measured yet
+
+The page says what it can't measure instead of showing a perfect-looking dashboard:
+
+- **How Sam recovers when interrupted.** Interruptions are counted, but grading the recovery needs tests with real audio; ElevenLabs tests are text.
+- **Silence.** What Sam does when a caller goes quiet also needs a real voice call.
+- **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn.
+- **Hallucination in general.** One specific kind is measured, promises the tools didn't back up, and it's named that.
+
 ## End-to-End Workflow
 
 1. **Customer calls the after-hours AI agent** and describes a security-system problem.
@@ -122,7 +182,7 @@ Both "before" behaviors were reproduced by running the same scenario against the
 7. **Additional needs are captured.** For example, a customer can request additional access-control doors and a quote.
 8. **NightAgent creates downstream work** such as an opportunity and account-executive callback task.
 9. **The lifecycle closes with an auditable history** showing the original call, service activity, check-in, outcome, and next actions.
-10. **Agent behavior is regression-tested** so issues discovered during calls can become repeatable QA cases, and known failures are replayed on purpose through failure injection.
+10. **Agent behavior is measured and regression-tested.** A scorecard tracks tests and real calls separately, issues discovered during calls become repeatable tests, every fix is logged with its live retest result, and known failures are replayed on purpose through failure injection.
 
 ## Screenshots
 
@@ -188,6 +248,8 @@ The final ticket view connects the service outcome with next actions, including 
 - Identification of additional customer needs
 - Service-to-sales opportunity creation
 - Account Executive follow-up tasks
+- An evaluation scorecard from tests and real calls, with sample sizes and per-call cost
+- A fixes log: problem, cause, fix, and live retest result
 - Regression testing based on failures found in live calls
 - Reply-level and tool-level agent evaluation
 - Multi-agent QA coverage for Sam, Jordan, and Riley

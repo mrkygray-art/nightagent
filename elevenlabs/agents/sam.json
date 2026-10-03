@@ -718,7 +718,7 @@
           "id": "confirmed_details_first",
           "name": "Confirmed name and number before acting",
           "type": "prompt",
-          "conversation_goal_prompt": "Look at the moments an assistant called create_ticket, take_message, request_billing_review, record_sales_interest, or transfer_to_agent. Success: before the first of those calls, an assistant read the caller's name and callback number back to them and the caller said it was right (or corrected it, and the correction was used). Failure: any of those calls happened before the caller confirmed their name and number. Unknown: none of those calls happened in this conversation.",
+          "conversation_goal_prompt": "Look at the moments an assistant called create_ticket, take_message, request_billing_review, record_sales_interest, or transfer_to_agent. Success: before the first of those calls, an assistant read the caller's callback number back and the caller said it was right (or corrected it, and the correction was used), and also read back the caller's name if the caller gave one. A caller may decline to give a name; then confirming the callback number alone counts as success. Failure: any of those calls happened before the caller confirmed their callback number, or a name the caller gave was never read back before acting. Unknown: none of those calls happened in this conversation.",
           "use_knowledge_base": false,
           "scope": "conversation",
           "llm": null,
@@ -1099,7 +1099,7 @@
     "portfolio",
     "demo"
   ],
-  "version_id": "agtvrsn_5001m41mrwtgekzr7vb1wpjjx900",
+  "version_id": "agtvrsn_9901m41r6wv8fy0sz1y6d5gmyyyg",
   "branch_id": "agtbrch_0901m3ws20zxfmcthq10t3jc34gp",
   "main_branch_id": "agtbrch_0901m3ws20zxfmcthq10t3jc34gp",
   "procedures": {},
