@@ -70,4 +70,4 @@ def test_lab_without_a_key_says_so(client, monkeypatch):
     monkeypatch.setattr(config, "ELEVENLABS_API_KEY", "")
     qa_lab._cache.update(at=0.0, data=None)
     assert client.get("/api/lab").json()["status"] == "unavailable"
-    assert "Agent QA Lab" in client.get("/lab").text
+    assert "Evaluation Lab" in client.get("/lab").text

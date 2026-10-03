@@ -466,7 +466,7 @@ def _shared_store() -> MemoryStore | SupabaseStore:
     return MemoryStore()
 
 
-# A sandbox swaps in a throwaway in-memory store for one request, so the QA Lab can replay
+# A sandbox swaps in a throwaway in-memory store for one request, so the Evaluation Lab can replay
 # failures with the real code without touching the live board.
 _sandbox: ContextVar[MemoryStore | None] = ContextVar("nightagent_sandbox", default=None)
 

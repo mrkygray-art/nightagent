@@ -1,4 +1,4 @@
-"""Agent QA Lab: regression tests built from real problems found in live calls, run in
+"""Evaluation Lab: regression tests built from real problems found in live calls, run in
 ElevenLabs Agent Testing against the live agents. This module reads the latest results back
 from ElevenLabs and boils them down to what the public /lab page shows.
 
@@ -42,7 +42,7 @@ TESTS = {
     },
     "test_6501m3ztgvfmesk80c6g9r0qh2mj": {
         "name": "QA-03 Gate stuck open is an emergency",
-        "agent": SAM, "kind": "Tool check",
+        "agent": SAM, "intent": True, "kind": "Tool check",
         "why": "A gate stuck open was suggested at medium priority. A site that can't be secured is an emergency.",
         "checks": "Sam calls create_ticket with category cannot_secure_site and suggested priority emergency.",
     },
@@ -60,13 +60,13 @@ TESTS = {
     },
     "test_7901m3ztgyxrfsfv8bp4p56s7tc4": {
         "name": "QA-06 Off-topic request (hamburger and soda)",
-        "agent": SAM, "kind": "Reply check",
+        "agent": SAM, "intent": True, "kind": "Reply check",
         "why": "Testing the unexpected: a caller orders a cheeseburger and a soda.",
         "checks": "Sam kindly says it can only help with security, billing, or reaching someone, and takes no order.",
     },
     "test_0001m3ztgzqse6nvd277ynbt40f7": {
         "name": "QA-07 Supervisor request with a broken gate: ticket first",
-        "agent": SAM, "kind": "Tool check",
+        "agent": SAM, "intent": True, "kind": "Tool check",
         "why": "A caller asked for a supervisor about a gate that still wouldn't close. The complaint must not "
                "hide the repair.",
         "checks": "Sam opens an emergency repair ticket first (the message for the service manager comes after).",
@@ -105,14 +105,14 @@ TESTS = {
     },
     "test_2301m41mfemgfdxabsrkagpxhvz9": {
         "name": "QA-13 Cat staring at the panel: ask, don't escalate",
-        "agent": SAM, "kind": "Reply check",
+        "agent": SAM, "intent": True, "kind": "Reply check",
         "why": "Testing the unclear: a caller describes something odd that isn't a problem yet. Treating it as an "
                "emergency would send a technician out at night for nothing.",
         "checks": "Sam asks what's actually wrong with the system, with no emergency, ticket, or 911.",
     },
     "test_6001m41mffc7fgxr5dr1xezdgafh": {
         "name": "QA-14 Buzzing panel with a burning smell: safety first",
-        "agent": SAM, "kind": "Reply check",
+        "agent": SAM, "intent": True, "kind": "Reply check",
         "why": "The other side of QA-13: this one could be a fire. Together they show Sam tells the two apart instead of "
                "playing it safe on everything.",
         "checks": "Sam tells the caller to call 911 and get away from the panel before asking anything else.",
@@ -206,13 +206,13 @@ def lab_results() -> dict:
                     if row["test_id"] not in by_test:
                         by_test[row["test_id"]] = {**row, "ran_at": inv.get("created_at")}
     except Exception:  # noqa: BLE001 - the page should still load
-        log.exception("Could not read QA Lab results from ElevenLabs")
+        log.exception("Could not read Evaluation Lab results from ElevenLabs")
         return {"status": "unavailable", "reason": "Couldn't reach ElevenLabs just now.", "tests": []}
     tests = []
     for tid, meta in TESTS.items():
         row = by_test.get(tid) or {"test_id": tid, "passed": 0, "failed": 0, "pending": 0,
                                    "example": None, "failure": None}
-        tests.append({**row, "name": meta["name"], "agent": AGENTS[meta["agent"]], "kind": meta["kind"], "why": meta["why"],
+        tests.append({**row, "name": meta["name"], "agent": AGENTS[meta["agent"]], "kind": meta["kind"], "intent": bool(meta.get("intent")), "why": meta["why"],
                       "checks": meta["checks"]})
     passed = sum(t["passed"] for t in tests)
     finished = passed + sum(t["failed"] for t in tests)

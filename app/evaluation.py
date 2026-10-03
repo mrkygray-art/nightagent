@@ -69,7 +69,42 @@ def turn_trace(transcript: list[dict]) -> list[dict]:
     return rows
 
 
-def fetch_grade(conversation_id: str | None, want_trace: bool = False) -> dict:
+def call_metrics(data: dict) -> dict:
+    """The numbers the Evaluation Lab scorecard needs from one ElevenLabs conversation record: its price,
+    how fast the agent answered, how often the caller cut in, and how tool calls went. No words are kept."""
+    meta = data.get("metadata") or {}
+    answer_ms, agent_turns, interrupted, tools, tool_errors, transfers, transfer_errors = [], 0, 0, 0, 0, 0, 0
+    for i, e in enumerate(data.get("transcript") or []):
+        if e.get("role") != "agent":
+            continue
+        if e.get("message"):
+            agent_turns += 1
+            interrupted += bool(e.get("interrupted"))
+            ms = _ms((e.get("conversation_turn_metrics") or {}).get("metrics") or {}, "convai_ttf_audio_since_silence")
+            if ms is not None and i > 0:  # the greeting isn't an answer to anything
+                answer_ms.append(ms)
+        for result in e.get("tool_results") or []:
+            is_transfer = result.get("tool_name") == "transfer_to_agent"
+            transfers += is_transfer
+            tools += not is_transfer
+            if result.get("is_error"):
+                transfer_errors += is_transfer
+                tool_errors += not is_transfer
+    cost = meta.get("cost_fiat")
+    return {
+        "cost_usd": round(cost, 5) if isinstance(cost, (int, float)) else None,
+        "duration_s": meta.get("call_duration_secs"),
+        "answer_ms": answer_ms[:60],
+        "agent_turns": agent_turns,
+        "interrupted": interrupted,
+        "tool_calls": tools,
+        "tool_errors": tool_errors,
+        "transfers": transfers,
+        "transfer_errors": transfer_errors,
+    }
+
+
+def fetch_grade(conversation_id: str | None, want_trace: bool = False, want_metrics: bool = False) -> dict:
     """ElevenLabs' post-call grades for this conversation, cached once final.
     Returns {"status": "done" | "pending" | "unavailable", "results": {criterion: {result, rationale}}, "summary"}."""
     if not conversation_id:
@@ -82,12 +117,12 @@ def fetch_grade(conversation_id: str | None, want_trace: bool = False) -> dict:
     if cached.get("eval_status") == "done":
         saved = cached.get("evaluation") or {}
         if "results" in saved:
-            if "trace" in saved:
+            if "trace" in saved and (not want_metrics or "metrics" in saved):
                 return {"status": "done", "results": saved["results"], "trace": saved["trace"],
-                        "summary": cached.get("summary")}
+                        "metrics": saved.get("metrics"), "summary": cached.get("summary")}
         else:  # saved before the trace was kept
             results = {CRITERION: saved} if "result" in saved else saved
-            if not want_trace:
+            if not want_trace and not want_metrics:
                 return {"status": "done", "results": results, "summary": cached.get("summary")}
     if not config.ELEVENLABS_API_KEY:
         return {"status": "unavailable"}
@@ -115,9 +150,10 @@ def fetch_grade(conversation_id: str | None, want_trace: bool = False) -> dict:
                for c in CRITERIA if c in graded}
     summary = (analysis.get("transcript_summary") or "")[:500] or None
     trace = turn_trace(data.get("transcript") or [])
-    _remember(conversation_id, {"eval_status": "done", "evaluation": {"results": results, "trace": trace},
+    metrics = call_metrics(data)
+    _remember(conversation_id, {"eval_status": "done", "evaluation": {"results": results, "trace": trace, "metrics": metrics},
                                 "summary": summary, "evaluated_at": now_iso()})
-    return {"status": "done", "results": results, "trace": trace, "summary": summary}
+    return {"status": "done", "results": results, "trace": trace, "metrics": metrics, "summary": summary}
 
 
 def _remember(conversation_id: str, fields: dict) -> None:

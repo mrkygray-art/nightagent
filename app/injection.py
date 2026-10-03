@@ -1,4 +1,4 @@
-"""Failure injection for the Agent QA Lab: replay a known failure through the real server code
+"""Failure injection for the Evaluation Lab: replay a known failure through the real server code
 inside a sandbox (a throwaway in-memory store; no real texts), and check what the rules did.
 
 Only the server side is replayed here. What Sam says about it is covered by the ElevenLabs

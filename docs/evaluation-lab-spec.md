@@ -48,7 +48,8 @@ A row of metric tiles at the top of `/lab`, in two groups.
 | Confirmed details first *(AI-judged)* | Pass / graded | `confirmed_details_first` |
 | Conversation completion | Calls that ended with a ticket, message, or lead / all calls | tickets + `ns_routing_tasks` + `ns_tool_calls` |
 | Response time | Median and slowest-10% of `convai_ttf_audio_since_silence` (caller stops talking → agent audio starts) | ElevenLabs turn metrics |
-| Cost per conversation | Median dollars per call (credits × plan rate, rate shown). **Only if** the ElevenLabs conversation record has a cost field; check first, otherwise leave it out | ElevenLabs conversation metadata |
+| Cost per conversation | Median `cost_fiat` per call, in dollars (confirmed present) | ElevenLabs conversation metadata |
+| Caller interruptions | Agent turns the caller cut off (`interrupted: true`) / agent turns. A count, not a quality grade | ElevenLabs transcript |
 
 **Build notes**
 - New `app/scorecard.py` with pure functions over rows, so it's unit-testable without network calls.
@@ -107,7 +108,7 @@ Back them up with the existing ElevenLabs backup script and add them to `qa_lab.
 
 | Metric | Why not |
 |---|---|
-| Interruption handling | ElevenLabs tests are text-only; barge-in needs real audio |
+| Interruption handling (quality) | We count interruptions, but grading how well Sam recovers needs real audio tests |
 | Silence handling | Same: needs a voice call with deliberate silence |
 | Speech-to-text confidence | ElevenLabs doesn't give us a confidence score for each turn |
 | Hallucination rate (in general) | We measure one specific thing, unsupported promises, and call it that |
@@ -135,5 +136,5 @@ Plain words throughout, matching the rest of the app. Engineering detail (metric
 ## Decisions (2026-10-03)
 
 1. **Rename** "Agent QA Lab" → **"Evaluation Lab"** everywhere it's shown (page title, heading, README, portfolio). The URL stays `/lab`.
-2. **Cost is shown in dollars.** Converted from credits with a `USD_PER_1K_CREDITS` setting taken from the ElevenLabs plan, and the page states the rate used ("at $X per 1,000 credits, Creator plan"). If the plan rate isn't known, show credits until it is.
+2. **Cost is shown in dollars**, using `metadata.cost_fiat` from each ElevenLabs conversation record: ElevenLabs' own dollar price for the call (voice + LLM; e.g. conv_9301…: 86 s, 370 credits, $0.0733). No plan-rate conversion needed. The page labels it "ElevenLabs' price per call", which is not the same as the $22/month Creator subscription (275 call minutes included).
 3. **Order: E3 → E1 → E2.** New tests first, so the Fixes log can open with a fresh failure if one turns up.

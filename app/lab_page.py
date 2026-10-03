@@ -1,5 +1,6 @@
-"""The public /lab page: the Agent QA Lab. Regression tests built from real problems found in
-live calls, with their latest real results from ElevenLabs Agent Testing (read via /api/lab).
+"""The public /lab page: the Evaluation Lab. A scorecard from tests and real calls, then regression
+tests built from real problems found in live calls, with their latest results from ElevenLabs Agent
+Testing (read via /api/lab).
 """
 
 LAB_HTML = r"""<!doctype html>
@@ -7,8 +8,8 @@ LAB_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NightAgent: Agent QA Lab</title>
-<meta name="description" content="Regression tests for NightAgent's voice agents, each built from a real problem found in a live call, with their latest results.">
+<title>NightAgent: Evaluation Lab</title>
+<meta name="description" content="How well NightAgent's voice agents do, measured honestly: a scorecard from tests and real calls, and regression tests built from real problems.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101a2e'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f5a524'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,6 +64,17 @@ LAB_HTML = r"""<!doctype html>
   .inject ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
   .inject li { min-width: 0; overflow-wrap: anywhere; }
   .inject ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 12px; margin: 0 0 8px; }
+  .tile { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+  .tile b { font-family: var(--display); font-size: 30px; line-height: 1.1; }
+  .tile .lbl { font-weight: 600; }
+  .tile .n { color: var(--muted); font-size: 13.5px; }
+  .tile details { color: var(--muted); font-size: 13.5px; }
+  .tile summary { cursor: pointer; color: var(--sodium); }
+  .tile summary:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
+  .tag { font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; justify-self: start; color: var(--muted); }
+  h3.group { font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 8px; }
+  .gaps { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 72ch; }
   .ok { color: var(--clear); font-weight: 600; } .bad { color: var(--alarm); font-weight: 600; }
   @media (max-width: 560px) { .test dl { grid-template-columns: 1fr; gap: 0; } .test dd { margin-bottom: 8px; } }
 </style>
@@ -74,7 +86,18 @@ LAB_HTML = r"""<!doctype html>
     <nav><a href="/demo">Talk to Sam</a><a href="https://ky-gray-portfolio.vercel.app/">Back to Ky Gray's portfolio</a></nav>
   </header>
 
-  <h1>Agent QA Lab</h1>
+  <h1>Evaluation Lab</h1>
+  <p class="intro">How well Sam, Jordan, and Riley do, measured from what really happened: test runs and real calls.
+    Every number shows how many runs or calls it's based on. Tests and real calls are kept apart, because tests are
+    controlled and real calls aren't. Anything judged by an AI grader is labeled that way.</p>
+
+  <h2 class="section">Scorecard</h2>
+  <h3 class="group">In tests</h3>
+  <div class="tiles" id="tiles-tests" aria-live="polite"><div class="tile"><b>…</b><span class="n">Loading</span></div></div>
+  <h3 class="group">On real calls</h3>
+  <div class="tiles" id="tiles-calls" aria-live="polite"><div class="tile"><b>…</b><span class="n">Loading</span></div></div>
+
+  <h2 class="section">Regression tests</h2>
   <p class="intro">Most tests here started as a real problem found in a live call with Sam, Jordan, or Riley; the rest
     try something unexpected. Each one replays the conversation up to that moment and checks what the agent does next. They run in ElevenLabs Agent Testing against
     the live agents, three times each, because the same model can answer differently from one run to the next.</p>
@@ -106,6 +129,14 @@ LAB_HTML = r"""<!doctype html>
     </section>
   </div>
 
+  <h2 class="section">Not measured yet</h2>
+  <ul class="gaps fine">
+    <li><b>How Sam recovers when interrupted.</b> The scorecard counts interruptions, but grading the recovery needs tests with real audio; these tests are text.</li>
+    <li><b>Silence.</b> What Sam does when a caller goes quiet also needs a real voice call to test.</li>
+    <li><b>Speech-to-text confidence.</b> ElevenLabs doesn't give a confidence score for each thing the caller says.</li>
+    <li><b>Hallucination in general.</b> One specific kind is measured, promises the tools didn't back up, and it's called that.</li>
+  </ul>
+
   <p class="fine">Results are read from ElevenLabs. Tools aren't really called during a test, so tests never put tickets
     or messages on the live board. A reply check is judged by an AI grader against a written pass condition; a tool
     check compares the exact tool and values the agent chose.</p>
@@ -129,10 +160,38 @@ function when(unix) {
   if (!unix) return "";
   return new Date(unix * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
+function fmt(m) {
+  if (m.value === null || m.value === undefined) return "–";
+  if (m.unit === "%") return `${m.value}%`;
+  if (m.unit === "ms") return `${(m.value / 1000).toFixed(1)} s`;
+  if (m.unit === "usd") return `$${m.value.toFixed(3)}`;
+  return String(m.value);
+}
+function sample(m) {
+  if (!m.n) return "No data yet";
+  if (m.unit === "%") return `${m.hits} of ${m.n}`;
+  if (m.unit === "ms") return `middle of ${m.n} replies · slowest 10%: ${(m.slow / 1000).toFixed(1)} s`;
+  if (m.unit === "usd") return `middle of ${m.n} calls · $${m.total.toFixed(2)} in all`;
+  return `${m.n}`;
+}
+function tiles(box, metrics) {
+  if (!metrics || !metrics.length) { box.replaceChildren(el("p", "fine", "Not available right now.")); return; }
+  box.replaceChildren(...metrics.map((m) => {
+    const t = el("div", "tile");
+    t.append(el("span", "lbl", m.label), el("b", "", fmt(m)), el("span", "n", sample(m)));
+    if (m.how === "ai") t.append(el("span", "tag", "AI-judged"));
+    const d = el("details"); d.append(el("summary", "", "How it's measured"), document.createTextNode(m.definition));
+    t.append(d);
+    return t;
+  }));
+}
 async function load() {
   const summary = document.getElementById("summary"), list = document.getElementById("tests");
   let data;
   try { data = await (await fetch("/api/lab", { cache: "no-store" })).json(); } catch { data = { status: "unavailable" }; }
+  const sc = data.scorecard || {};
+  tiles(document.getElementById("tiles-tests"), sc.tests);
+  tiles(document.getElementById("tiles-calls"), sc.calls);
   if (data.status !== "ok") {
     summary.replaceChildren(stat("–", data.reason || "Results aren't available right now."));
     return;

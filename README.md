@@ -5,7 +5,7 @@
 NightAgent is a portfolio demonstration of how an AI voice agent can support the complete after-hours service lifecycle for a physical-security integrator. Instead of stopping at a chatbot or voice demo, NightAgent connects the customer conversation to operational workflow: capture the problem, create and prioritize a service ticket, simulate dispatch and repair progression, call the customer back, verify the outcome, identify follow-up sales or service needs, and regression-test agent behavior against problems found during real demo calls.
 
 **Live demo:** https://nightshift-dispatch.vercel.app/demo  
-**Agent QA Lab:** https://nightshift-dispatch.vercel.app/lab
+**Evaluation Lab:** https://nightshift-dispatch.vercel.app/lab
 
 > **Demo note:** The customer/AI interaction demonstrates the conversational experience. Dispatch, technician assignment, repair timing, and lifecycle progression are intentionally accelerated/simulated so a recruiter or reviewer can experience an hours-long service workflow in minutes. The UI labels simulated events accordingly.
 
@@ -13,7 +13,7 @@ NightAgent is a portfolio demonstration of how an AI voice agent can support the
 
 After-hours service is more than answering a phone call. A useful system has to understand what happened, determine urgency, capture enough information for service, keep the customer informed, and make sure the issue is actually resolved.
 
-NightAgent demonstrates how AI can sit inside that workflow rather than exist as a standalone assistant. The QA Lab extends that idea by showing that a production-style agent also needs repeatable evaluation: when a problem is discovered in a live conversation, it can become a regression test that protects the behavior going forward.
+NightAgent demonstrates how AI can sit inside that workflow rather than exist as a standalone assistant. The Evaluation Lab extends that idea by showing that a production-style agent also needs repeatable evaluation: when a problem is discovered in a live conversation, it can become a regression test that protects the behavior going forward.
 
 ## Two Ways to Explore the Demo
 
@@ -52,9 +52,9 @@ Voice response
 Evaluation / grading
 ```
 
-## Agent QA Lab
+## Evaluation Lab
 
-The **Agent QA Lab** turns problems discovered during live conversations into repeatable regression tests. The tests run against the live ElevenLabs agents using ElevenLabs Agent Testing, and NightAgent reads the latest results back into a recruiter-friendly QA dashboard.
+The **Evaluation Lab** turns problems discovered during live conversations into repeatable regression tests. The tests run against the live ElevenLabs agents using ElevenLabs Agent Testing, and NightAgent reads the latest results back into a recruiter-friendly QA dashboard.
 
 This is intentionally different from a static scripted demo. The project demonstrates an engineering feedback loop:
 
@@ -248,7 +248,7 @@ Engineering feedback loop
    +--> Live-call problem
    +--> ElevenLabs Agent Testing regression case
    +--> Reply/tool evaluation
-   +--> Pass/fail result in Agent QA Lab
+   +--> Pass/fail result in Evaluation Lab
 ```
 
 ## Technology Stack
@@ -273,7 +273,7 @@ Engineering feedback loop
 
 **Agent failures become tests.** Problems found while exercising the live agent are converted into regression cases instead of being treated as one-off prompt fixes.
 
-**Words and actions are tested separately.** The QA Lab checks both what an agent says and what tools it calls, including important parameters and action order.
+**Words and actions are tested separately.** The Evaluation Lab checks both what an agent says and what tools it calls, including important parameters and action order.
 
 **The lifecycle matters more than the chatbot.** The goal is to demonstrate orchestration across intake, operations, customer experience, sales, and AI quality—not simply an AI conversation window.
 
