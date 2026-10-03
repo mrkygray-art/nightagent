@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from app import config, injection, qa_lab, scorecard
+from app import config, fix_log, injection, qa_lab, scorecard
 from app.demo_page import DEMO_HTML
 from app.lab_page import LAB_HTML
 
@@ -21,9 +21,9 @@ def lab() -> str:
 
 @router.get("/api/lab")
 def lab_results() -> dict:
-    """Evaluation Lab: the latest regression-test results from ElevenLabs Agent Testing, plus the scorecard."""
+    """Evaluation Lab: the latest regression-test results from ElevenLabs Agent Testing, plus the scorecard and the fixes log."""
     data = qa_lab.lab_results()
-    return {**data, "scorecard": scorecard.scorecard(data)}
+    return {**data, "scorecard": scorecard.scorecard(data), "fixes": fix_log.fixes(data)}
 
 
 @router.post("/api/lab/inject/{name}")

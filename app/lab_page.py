@@ -64,15 +64,32 @@ LAB_HTML = r"""<!doctype html>
   .inject ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
   .inject li { min-width: 0; overflow-wrap: anywhere; }
   .inject ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 12px; margin: 0 0 8px; }
-  .tile { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
-  .tile b { font-family: var(--display); font-size: 30px; line-height: 1.1; }
-  .tile .lbl { font-weight: 600; }
-  .tile .n { color: var(--muted); font-size: 13.5px; }
-  .tile details { color: var(--muted); font-size: 13.5px; }
-  .tile summary { cursor: pointer; color: var(--sodium); }
-  .tile summary:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
-  .tag { font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; justify-self: start; color: var(--muted); }
+  table.grid { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 0 0 8px; }
+  .grid th, .grid td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .grid tr:last-child td { border-bottom: 0; }
+  .grid th { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; background: #13203a; }
+  .grid td.val { font-family: var(--display); font-size: 24px; font-weight: 700; white-space: nowrap; }
+  .grid td.basis { color: var(--muted); }
+  .grid .lbl { font-weight: 600; }
+  .grid details { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .grid summary { cursor: pointer; color: var(--sodium); font-size: 13.5px; }
+  .grid summary:focus-visible { outline: 2px solid var(--sodium); outline-offset: 2px; }
+  .tag { font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+  table.score { table-layout: fixed; }
+  .score th:nth-child(1) { width: 50%; } .score th:nth-child(2) { width: 18%; }
+  .fixes td { font-size: 15px; }
+  .fixes .fid { color: var(--muted); font-size: 13px; display: block; }
+  .fixes .src { color: var(--muted); font-size: 13px; display: block; margin-top: 4px; }
+  .now { display: block; margin-top: 4px; font-weight: 600; }
+  @media (max-width: 640px) {
+    .fixes thead { display: none; }
+    .fixes tr { display: block; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .fixes tr:last-child { border-bottom: 0; }
+    .fixes td { display: block; border: 0; padding: 3px 0; }
+    .fixes td[data-h]::before { content: attr(data-h); display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .grid td.val { font-size: 20px; }
+    .grid th, .grid td { padding: 9px 10px; }
+  }
   h3.group { font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 8px; }
   .gaps { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 72ch; }
   .ok { color: var(--clear); font-weight: 600; } .bad { color: var(--alarm); font-weight: 600; }
@@ -93,9 +110,14 @@ LAB_HTML = r"""<!doctype html>
 
   <h2 class="section">Scorecard</h2>
   <h3 class="group">In tests</h3>
-  <div class="tiles" id="tiles-tests" aria-live="polite"><div class="tile"><b>…</b><span class="n">Loading</span></div></div>
+  <div id="sc-tests" aria-live="polite"><p class="fine">Loading…</p></div>
   <h3 class="group">On real calls</h3>
-  <div class="tiles" id="tiles-calls" aria-live="polite"><div class="tile"><b>…</b><span class="n">Loading</span></div></div>
+  <div id="sc-calls" aria-live="polite"><p class="fine">Loading…</p></div>
+
+  <h2 class="section">What broke and how it was fixed</h2>
+  <p class="intro">Every problem below really happened: in a live call, in a new test, or when we broke something on
+    purpose. "Now" is read from the latest test runs, so if a fix stops holding, it shows here.</p>
+  <div id="fixes" aria-live="polite"><p class="fine">Loading…</p></div>
 
   <h2 class="section">Regression tests</h2>
   <p class="intro">Most tests here started as a real problem found in a live call with Sam, Jordan, or Riley; the rest
@@ -170,28 +192,62 @@ function fmt(m) {
 function sample(m) {
   if (!m.n) return "No data yet";
   if (m.unit === "%") return `${m.hits} of ${m.n}`;
-  if (m.unit === "ms") return `middle of ${m.n} replies · slowest 10%: ${(m.slow / 1000).toFixed(1)} s`;
-  if (m.unit === "usd") return `middle of ${m.n} calls · $${m.total.toFixed(2)} in all`;
+  if (m.unit === "ms") return `typical of ${m.n} replies · slowest 10%: ${(m.slow / 1000).toFixed(1)} s`;
+  if (m.unit === "usd") return `typical of ${m.n} calls · $${m.total.toFixed(2)} in all`;
   return `${m.n}`;
 }
-function tiles(box, metrics) {
+function scoreTable(box, metrics) {
   if (!metrics || !metrics.length) { box.replaceChildren(el("p", "fine", "Not available right now.")); return; }
-  box.replaceChildren(...metrics.map((m) => {
-    const t = el("div", "tile");
-    t.append(el("span", "lbl", m.label), el("b", "", fmt(m)), el("span", "n", sample(m)));
-    if (m.how === "ai") t.append(el("span", "tag", "AI-judged"));
+  const t = el("table", "grid score"), head = el("tr");
+  for (const h of ["Metric", "Value", "Based on"]) head.append(el("th", "", h));
+  const thead = el("thead"); thead.append(head); const body = el("tbody");
+  for (const m of metrics) {
+    const tr = el("tr"), name = el("td");
+    name.append(el("span", "lbl", m.label));
+    if (m.how === "ai") name.append(el("span", "tag", "AI-judged"));
     const d = el("details"); d.append(el("summary", "", "How it's measured"), document.createTextNode(m.definition));
-    t.append(d);
-    return t;
-  }));
+    name.append(d);
+    tr.append(name, el("td", "val", fmt(m)), el("td", "basis", sample(m)));
+    body.append(tr);
+  }
+  t.append(thead, body); box.replaceChildren(t);
+}
+function fixTable(box, fixes) {
+  if (!fixes || !fixes.length) { box.replaceChildren(el("p", "fine", "Not available right now.")); return; }
+  const t = el("table", "grid fixes"), head = el("tr");
+  for (const h of ["What broke", "Why", "The fix", "Before → Now"]) head.append(el("th", "", h));
+  const thead = el("thead"); thead.append(head); const body = el("tbody");
+  for (const f of fixes) {
+    const tr = el("tr");
+    const what = el("td"); what.dataset.h = "What broke";
+    what.append(el("span", "fid", `${f.id} · found in: ${f.found}`), el("span", "lbl", f.title));
+    const why = el("td"); why.dataset.h = "Why";
+    why.append(el("span", "lbl", f.cause_label), el("span", "src", f.why));
+    const fix = el("td"); fix.dataset.h = "The fix";
+    fix.append(document.createTextNode(f.fix), el("span", "src", f.where));
+    const ba = el("td"); ba.dataset.h = "Before → Now";
+    ba.append(el("span", "", "Before: " + f.before));
+    const n = f.now;
+    if (n.finished) {
+      ba.append(el("span", "now " + (n.holding ? "ok" : "bad"),
+        `Now: ${n.passed} of ${n.finished} test runs pass` + (n.holding ? "" : " (needs a look)")));
+    } else if (f.scenario) {
+      ba.append(el("span", "now", `Now: run "${f.scenario}" below`));
+    }
+    if (f.scenario && n.finished) ba.append(el("span", "src", `Also: "${f.scenario}" below`));
+    if (f.proof) ba.append(el("span", "src", f.proof));
+    tr.append(what, why, fix, ba); body.append(tr);
+  }
+  t.append(thead, body); box.replaceChildren(t);
 }
 async function load() {
   const summary = document.getElementById("summary"), list = document.getElementById("tests");
   let data;
   try { data = await (await fetch("/api/lab", { cache: "no-store" })).json(); } catch { data = { status: "unavailable" }; }
   const sc = data.scorecard || {};
-  tiles(document.getElementById("tiles-tests"), sc.tests);
-  tiles(document.getElementById("tiles-calls"), sc.calls);
+  scoreTable(document.getElementById("sc-tests"), sc.tests);
+  scoreTable(document.getElementById("sc-calls"), sc.calls);
+  fixTable(document.getElementById("fixes"), data.fixes);
   if (data.status !== "ok") {
     summary.replaceChildren(stat("–", data.reason || "Results aren't available right now."));
     return;
