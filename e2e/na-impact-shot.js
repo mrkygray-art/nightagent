@@ -1,0 +1,34 @@
+// Business Impact panel: renders, updates after a demo step, fits a phone.
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const BASE = process.env.BASE || 'http://127.0.0.1:8765';
+let pass = 0, fail = 0;
+const ok = (c, m) => { if (c) { pass++; console.log('  ok  ', m); } else { fail++; console.log('  FAIL', m); } };
+(async () => {
+  const b = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  const p = await b.newPage();
+  const errors = [];
+  p.on('pageerror', (e) => errors.push(String(e)));
+  await p.setViewport({ width: 1280, height: 900 });
+  await p.goto(BASE + '/demo', { waitUntil: 'networkidle0' });
+  await p.waitForSelector('#metrics .metric');
+  ok((await p.$$('#metrics .metric')).length === 11, 'eleven metric cards');
+  const text = await p.$eval('.impact', (n) => n.innerText);
+  ok(text.includes('Demo data') && !/\$|revenue \d/i.test(text.replace('no revenue figures', '')), 'labeled demo, no money shown');
+  const before = await p.$eval('#metrics .metric b', (n) => Number(n.textContent));
+  await (await p.$$('#scenarios button'))[0].click();
+  await p.waitForSelector('#event-panel .advance');
+  await p.click('#event-panel .advance');
+  await p.waitForFunction((n) => Number(document.querySelector('#metrics .metric b').textContent) > n, { timeout: 30000 }, before);
+  ok(true, 'Calls handled goes up after a scenario');
+  await p.evaluate(() => document.querySelector('.impact').scrollIntoView());
+  await p.screenshot({ path: path.join(__dirname, 'na-impact-desk.png') });
+  await p.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+  await p.evaluate(() => document.querySelector('.impact').scrollIntoView());
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(overflow <= 0, `no sideways scrolling on a phone (overflow ${overflow}px)`);
+  await p.screenshot({ path: path.join(__dirname, 'na-impact-phone.png') });
+  ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
+  console.log(`\n${pass} passed, ${fail} failed`);
+  await b.close();
+})().catch((e) => { console.error(e); process.exit(1); });

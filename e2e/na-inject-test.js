@@ -1,0 +1,25 @@
+const puppeteer = require('puppeteer-core'); const fs = require('fs'); const path = require('path');
+const DATA = fs.readFileSync(path.join(__dirname, '..', 'lab.json'), 'utf8');
+let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('  ok  ', m); } else { fail++; console.log('  FAIL', m); } };
+(async () => {
+  const b = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  const p = await b.newPage(); const errors = []; p.on('pageerror', (e) => errors.push(String(e)));
+  await p.setRequestInterception(true);
+  p.on('request', (r) => r.url().endsWith('/api/lab') ? r.respond({ status: 200, contentType: 'application/json', body: DATA }) : r.continue());
+  await p.setViewport({ width: 1100, height: 900 });
+  await p.goto('http://127.0.0.1:8765/lab', { waitUntil: 'networkidle0' });
+  await p.click('#dup-run');
+  await p.waitForFunction(() => /checks/.test(document.getElementById('dup-out').innerText), { timeout: 15000 });
+  const out = await p.$eval('#dup-out', (n) => n.innerText);
+  console.log(out);
+  ok(/Passed: 5 of 5 checks/.test(out), 'scenario passes');
+  ok(/Before this fix/.test(await p.$eval('#dup-before', (n) => n.innerText)), 'before note shown');
+  ok(await p.$eval('#dup-run', (n) => n.textContent) === 'Run it again', 'button resets');
+  const board = await (await fetch('http://127.0.0.1:8765/api/tickets')).json();
+  ok((board.tickets || board).length === 0, 'local board untouched by the sandbox');
+  await (await p.$('.inject')).screenshot({ path: path.join(__dirname, 'na-inject.png') });
+  await p.setViewport({ width: 390, height: 844 });
+  ok(await p.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 0, 'no sideways scrolling on a phone');
+  ok(errors.length === 0, 'no page errors ' + errors.join(' | '));
+  console.log(`\n${pass} passed, ${fail} failed`); await b.close();
+})();
