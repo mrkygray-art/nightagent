@@ -17,7 +17,7 @@ from app.store import get_store
 log = logging.getLogger("nightshift")
 
 CACHE_SECONDS = 60
-BACKFILL_PER_REQUEST = 5  # older calls graded before metrics were saved: fetch a few per page view
+BACKFILL_PER_REQUEST = 5  # calls not yet graded, or graded before metrics were saved: a few per page view
 OUTCOME_TOOLS = {"create_ticket", "take_message", "request_billing_review", "record_sales_interest"}
 SPECIALIST_TOOLS = evaluation.SPECIALIST_TOOLS
 
@@ -114,16 +114,23 @@ def call_metrics(tickets: list[dict], tool_calls: list[dict], calls: dict[str, d
     return out
 
 
-def _backfill(calls: dict[str, dict]) -> None:
-    """Calls graded before metrics were saved get them on a later view, a few at a time."""
+def _backfill(ids: list[str], calls: dict[str, dict]) -> None:
+    """Fill in calls the scorecard can't count yet, a few per page view: calls nobody has opened (so never
+    graded), and calls graded before metrics were saved. Newest first, so recent calls show up soonest."""
     if not config.ELEVENLABS_API_KEY:
         return
-    missing = [cid for cid, c in calls.items()
-               if c.get("eval_status") == "done" and "metrics" not in (c.get("evaluation") or {})]
-    for cid in missing[:BACKFILL_PER_REQUEST]:
+    todo = [cid for cid in ids
+            if (calls.get(cid) or {}).get("eval_status") != "done"
+            or "metrics" not in ((calls.get(cid) or {}).get("evaluation") or {})]
+    # Never tried first, then graded-without-metrics; calls still pending (or that keep failing) go last,
+    # so one stuck call can't block the rest
+    rank = {None: 0, "done": 1}
+    todo.sort(key=lambda cid: rank.get((calls.get(cid) or {}).get("eval_status"), 2))
+    for cid in todo[:BACKFILL_PER_REQUEST]:
         grade = evaluation.fetch_grade(cid, want_metrics=True)
-        if grade.get("metrics"):
-            calls[cid] = {**calls[cid], "evaluation": {**(calls[cid].get("evaluation") or {}), "metrics": grade["metrics"]}}
+        if grade.get("status") == "done":
+            calls[cid] = {**(calls.get(cid) or {}), "eval_status": "done",
+                          "evaluation": {"results": grade.get("results") or {}, "metrics": grade.get("metrics")}}
 
 
 def scorecard(lab: dict | None = None) -> dict:
@@ -135,10 +142,10 @@ def scorecard(lab: dict | None = None) -> dict:
         store = get_store()
         tickets = store.recent_tickets(500)
         tool_calls = store.recent_tool_calls(2000)
-        ids = sorted({r["conversation_id"] for r in tool_calls if r.get("conversation_id")}
-                     | {t["conversation_id"] for t in tickets if t.get("conversation_id")})
+        ids = list(dict.fromkeys([r["conversation_id"] for r in tool_calls if r.get("conversation_id")]
+                                 + [t["conversation_id"] for t in tickets if t.get("conversation_id")]))
         calls = store.calls_by_ids(ids)
-        _backfill(calls)
+        _backfill(ids, calls)
         data["calls"] = call_metrics(tickets, tool_calls, calls)
     except Exception:  # noqa: BLE001 - the lab page should still load
         log.exception("Could not build the Evaluation Lab scorecard")

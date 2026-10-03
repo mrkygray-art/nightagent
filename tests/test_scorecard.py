@@ -76,3 +76,22 @@ def test_api_lab_includes_the_scorecard(client):
     scorecard._cache.update(at=0.0, data=None)
     body = client.get("/api/lab").json()
     assert "scorecard" in body and {m["label"] for m in body["scorecard"]["calls"]} >= {"Escalation", "Cost per call"}
+
+
+def test_backfill_grades_unopened_calls_first_and_stuck_ones_last(monkeypatch):
+    seen = []
+
+    def fake_grade(cid, want_metrics=False):
+        seen.append(cid)
+        return {"status": "done", "results": {}, "metrics": {"cost_usd": 0.01}}
+
+    monkeypatch.setattr(scorecard.config, "ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setattr(scorecard.evaluation, "fetch_grade", fake_grade)
+    monkeypatch.setattr(scorecard, "BACKFILL_PER_REQUEST", 3)
+    calls = {"stuck": {"eval_status": "pending"},
+             "old": {"eval_status": "done", "evaluation": {"results": {}}},
+             "ready": _graded()}
+    ids = ["stuck", "old", "ready", "never1", "never2"]
+    scorecard._backfill(ids, calls)
+    assert seen == ["never1", "never2", "old"]
+    assert calls["never1"]["eval_status"] == "done" and calls["never1"]["evaluation"]["metrics"]["cost_usd"] == 0.01
