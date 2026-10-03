@@ -6,6 +6,7 @@ regression tests on the same page.
 """
 from __future__ import annotations
 
+from app.notify import paging_down
 from app.routes_tools import (CreateTicketRequest, LookupRequest, PageRequest, create_ticket,
                               lookup_customer, page_on_call_tech)
 from app.store import sandbox
@@ -70,4 +71,53 @@ def duplicate_caller() -> dict:
     }
 
 
-SCENARIOS = {"duplicate-caller": duplicate_caller}
+def paging_service_down() -> dict:
+    """The service that texts the on-call technician is down during an emergency call. Before this
+    fix, the paging error crashed the tool call: Sam got a bare error and the ticket's history never
+    showed that the alert failed."""
+    steps = []
+    with sandbox() as store:
+        lookup_customer(LookupRequest(query="4245550119", conversation_id="inject_down_1"))
+        made = create_ticket(CreateTicketRequest(
+            customer_id="C-1003", caller_name="Priya Shah", callback_number="4245550119",
+            issue_summary="Main entrance won't unlock; nobody can get in.", category="entry_blocked",
+            suggested_priority="emergency", conversation_id="inject_down_1"))
+        tid = made["ticket_id"]
+        steps.append(_step("Sam", "create_ticket: main entrance won't unlock", made, ("ticket_id", "priority", "next_step")))
+        with paging_down():
+            first = page_on_call_tech(PageRequest(ticket_id=tid))
+            steps.append(_step("Injected failure", "page_on_call_tech while the paging service is down", first,
+                               ("paged", "alert_failed", "next_step")))
+            retry = page_on_call_tech(PageRequest(ticket_id=tid))
+            steps.append(_step("Sam", "page_on_call_tech, one retry (still down)", retry, ("paged", "alert_failed")))
+        saved = store.get_ticket(tid) is not None
+        alerted_while_down = bool((store.get_ticket(tid) or {}).get("paged_at"))
+        back = page_on_call_tech(PageRequest(ticket_id=tid))
+        steps.append(_step("Later", "page_on_call_tech after the service is back", back, ("paged", "tell_the_caller")))
+        events = store.list_events(tid)
+
+    failed = [e for e in events if e["event_type"] == "page_failed"]
+    sent = [e for e in events if e["event_type"] == "technician_paged"]
+    checks = [
+        ("The call keeps going: the tool answers instead of crashing", first.get("alert_failed") is True,
+         "page_on_call_tech returned alert_failed"),
+        ("The ticket is still saved", saved, f"{tid} is on the board"),
+        ("The failure is in the ticket's history", len(failed) == 2, f"{len(failed)} \"Alert didn't go through\" event(s)"),
+        ("Sam is told not to promise a callback time",
+         "Do not promise a callback time" in (first.get("next_step") or ""), "From page_on_call_tech's next_step"),
+        ("The ticket isn't marked as alerted while the alert is failing", not alerted_while_down,
+         "No alert time saved"),
+        ("Once the service is back, the alert goes through once", back.get("paged") is True and len(sent) == 1,
+         f"{len(sent)} alert(s) sent (simulated)"),
+    ]
+    return {
+        "name": "Alert service down",
+        "before": "Before this fix, a paging error crashed the tool call: Sam got a bare error and the ticket's "
+                  "history never showed that the alert failed.",
+        "steps": steps,
+        "checks": [{"label": label, "passed": bool(ok), "detail": detail} for label, ok, detail in checks],
+        "passed": all(ok for _, ok, _ in checks),
+    }
+
+
+SCENARIOS = {"duplicate-caller": duplicate_caller, "paging-down": paging_service_down}

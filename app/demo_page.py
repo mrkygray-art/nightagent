@@ -1486,7 +1486,7 @@ function renderTickets(list, messages = lastMessages, callList = lastCalls) {
     const row1 = el("div", "row1");
     row1.appendChild(el("span", "id", t.ticket_id));
     row1.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
-    if (myCallRef && t.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
+    if (isMine(t)) row1.appendChild(el("span", "chip mine", "Your call"));
     if (t.scenario) row1.appendChild(el("span", "chip demo", "Example"));
     row1.appendChild(el("span", "when", timeAgo(t.created_at)));
     body.appendChild(row1);
@@ -1619,7 +1619,7 @@ function renderPanel(detail, message) {
   head.appendChild(el("span", "id", t.ticket_id));
   head.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
   head.appendChild(el("span", "chip stage", t.status_label));
-  if (myCallRef && t.call_ref === myCallRef) head.appendChild(el("span", "chip mine", "Your call"));
+  if (isMine(t)) head.appendChild(el("span", "chip mine", "Your call"));
   p.appendChild(head);
   p.appendChild(el("p", "ev-issue", t.issue_summary || ""));
   const meta = el("div", "ev-meta");
@@ -1988,6 +1988,8 @@ async function loadScenarios() {
 // When your own call creates a ticket, take it into Demo Mode once. Proof: the conversation id,
 // which only this browser knows.
 const claimed = new Set();
+// Your call made this ticket, or was added to it because the problem was already open
+function isMine(t) { return Boolean(myCallRef) && (t.call_ref === myCallRef || (t.call_refs || []).includes(myCallRef)); }
 async function claimMyCallTicket(list) {
   if (!conversationId) return;
   myCallRef = myCallRef || await sha16(conversationId);
@@ -2003,7 +2005,7 @@ async function claimMyCallTicket(list) {
     loadTicket(note.message_id);
   }
   const onPhone = !session && myCallRef && lastCalls.find((c) => c.call_ref === myCallRef);
-  if (onPhone && !claimed.has(onPhone.call_id) && !list.some((t) => t.call_ref === myCallRef)
+  if (onPhone && !claimed.has(onPhone.call_id) && !list.some(isMine)
       && !lastMessages.some((m) => m.call_ref === myCallRef)) {
     claimed.add(onPhone.call_id);
     if (callVoiceName) {
@@ -2013,6 +2015,13 @@ async function claimMyCallTicket(list) {
     }
     addMessage("note", "Your call is on the board below, with its call check.");
     loadTicket(onPhone.call_id);
+  }
+  const joined = myCallRef && list.find((t) => (t.call_refs || []).includes(myCallRef));
+  if (joined && !claimed.has(joined.ticket_id)) {
+    claimed.add(joined.ticket_id);
+    addMessage("note", `This problem was already on ticket ${joined.ticket_id}, so Sam added your call to it. It's on the board below.`);
+    loadTicket(joined.ticket_id);
+    return;
   }
   const mine = myCallRef && list.find((t) => t.call_ref === myCallRef);
   if (!mine || claimed.has(mine.ticket_id)) return;

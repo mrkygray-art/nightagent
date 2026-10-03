@@ -62,7 +62,7 @@ def test_lab_endpoint_reads_the_latest_run_for_each_agent(client, monkeypatch):
     assert next(t for t in data["tests"] if t["test_id"] == GATE)["why"].startswith("A gate stuck open")
     assert "SECRET-SHOULD-NOT-LEAK" not in str(data)
     client.get("/api/lab")
-    assert calls.count("/test-invocations") == 2  # second request served from the cache
+    assert calls.count("/test-invocations") == len(qa_lab.AGENTS)  # second request served from the cache
     qa_lab._cache.update(at=0.0, data=None)
 
 

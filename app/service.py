@@ -101,6 +101,7 @@ def public_ticket(t: dict) -> dict:
         "priority_label": lifecycle.PRIORITY_LABELS.get(t.get("priority"), t.get("priority")),
         "priority_reason": lifecycle.plain_words(t.get("priority_reason")) or None,
         "call_ref": call_ref(t.get("conversation_id")),
+        "call_refs": [call_ref(c) for c in (t.get("repeat_conversation_ids") or [])],  # calls that joined later
         "demo": bool(t.get("demo")),
     })
     return out

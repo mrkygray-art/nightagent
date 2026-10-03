@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 import hashlib
+import logging
 from datetime import datetime, timedelta, timezone
 
 from app import billing, config, lifecycle
@@ -17,6 +18,8 @@ from app.security import require_tool_secret
 from app.service import log_tool_call, move_ticket, record_event
 from app.store import get_store, now_iso, phone_digits
 from app.triage import triage
+
+log = logging.getLogger("nightshift")
 
 router = APIRouter(prefix="/tools", dependencies=[Depends(require_tool_secret)])
 
@@ -199,6 +202,8 @@ def _add_repeat_call(existing: dict, req: CreateTicketRequest, priority: str, re
     record_event(tid, "caller_called_again",
                  f"{req.caller_name.strip()} called again: {req.issue_summary.strip()[:160]}",
                  conversation_id=conv, actor_type="customer")
+    if conv:  # so the repeat caller's page can find the ticket their call joined
+        get_store().update_ticket(tid, {"repeat_conversation_ids": [*(existing.get("repeat_conversation_ids") or []), conv]})
     final = existing["priority"]
     if PRIORITY_RANK.get(priority, 0) > PRIORITY_RANK.get(final, 0):
         final = priority
@@ -495,7 +500,22 @@ def page_on_call_tech(req: PageRequest) -> dict:
         f"[NightShift] EMERGENCY {ticket['ticket_id']} - {who}: "
         f"{ticket['issue_summary'][:140]} | Callback {ticket['callback_number']}"
     )
-    result = page_on_call(body)
+    try:
+        result = page_on_call(body)
+    except Exception as exc:  # noqa: BLE001 - a failed alert must never end the call
+        log.warning("Paging failed for %s: %s", ticket["ticket_id"], exc)
+        note("Alert didn't go through: paging service error")
+        record_event(ticket["ticket_id"], "page_failed",
+                     "The alert to the on-call technician didn't go through. The ticket is saved; the alert can be retried.",
+                     conversation_id=ticket.get("conversation_id"), actor_type="system")
+        return {
+            "paged": False,
+            "alert_failed": True,
+            "ticket_id": ticket["ticket_id"],
+            "next_step": "The automatic alert to the technician didn't go through. You may call page_on_call_tech one "
+                         "more time to retry. If it fails again, apologize briefly, give the ticket number, and tell "
+                         "the caller the ticket is saved and flagged for the team. Do not promise a callback time.",
+        }
     paged_at = now_iso()
     if lifecycle.can_transition(ticket.get("status"), "dispatched"):
         move_ticket(ticket, "dispatched", {"paged_at": paged_at})

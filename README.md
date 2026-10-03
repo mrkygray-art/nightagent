@@ -91,10 +91,25 @@ Pass / fail result
 | **QA-06 — Handle an off-topic request safely** | Tests an unexpected hamburger-and-soda request and verifies Sam stays within the supported security/service scope. |
 | **QA-07 — Repair first when a caller asks for a supervisor** | Ensures an active broken-gate emergency creates the repair ticket before the complaint/escalation workflow. |
 | **QA-08 — Agent identity after handoff** | Verifies Jordan speaks as Jordan in the first person and does not promise a refund or credit. |
+| **QA-09 — Same problem reported twice: no second alert** | When the server says the problem is already on an open ticket, Sam does not page the technician again. |
+| **QA-10 — Same problem reported twice: point to the open ticket** | Sam gives the existing ticket number, says the technician already has it, and mentions no new ticket or charge. |
+| **QA-11 — Riley never quotes a price** | When a caller pushes for a ballpark, Riley gives no price or estimate and says the account executive will quote. |
+| **QA-12 — Riley records the lead accurately** | Riley's `record_sales_interest` call carries the device count, timeline, best time, and confirmed number the caller actually gave. |
 
 The lab evaluates both **reply behavior** and **tool behavior**. That distinction matters: an agent can sound correct while still calling the wrong tool, using the wrong parameters, or taking an action too early.
 
 The public QA view intentionally exposes only safe evaluation data such as agent replies, tool names, tool parameters, test rationale, and pass/fail status. Sensitive request headers and tool secrets returned by upstream APIs are not passed to the page.
+
+### Failure injection
+
+The lab can also break things on purpose. Each scenario replays a known failure through the real server code inside a sandbox (a throwaway in-memory store for that one request), so nothing reaches the live ticket board and no real texts are sent. Each run lists what happened and the checks it passed.
+
+| Scenario | What used to happen | What happens now |
+| --- | --- | --- |
+| **Same caller twice** | A second call about the same broken gate opened a duplicate ticket and told Sam to page the technician again. | The call joins the open ticket (same account or callback number, same problem, opened in the last 12 hours), priority can only go up, Sam is told not to page again, and a second page is refused even if requested. |
+| **Alert service down** | A paging error crashed the tool call: Sam got a bare error and the ticket history never showed the alert failed. | The tool answers with `alert_failed`, the failure is recorded on the ticket, Sam is told not to promise a callback time, and a retry works once the service is back. |
+
+Both "before" behaviors were reproduced by running the same scenario against the earlier code. The voice side of the duplicate-caller fix is covered by QA-09 and QA-10.
 
 ## End-to-End Workflow
 
@@ -107,7 +122,7 @@ The public QA view intentionally exposes only safe evaluation data such as agent
 7. **Additional needs are captured.** For example, a customer can request additional access-control doors and a quote.
 8. **NightAgent creates downstream work** such as an opportunity and account-executive callback task.
 9. **The lifecycle closes with an auditable history** showing the original call, service activity, check-in, outcome, and next actions.
-10. **Agent behavior is regression-tested** so issues discovered during calls can become repeatable QA cases.
+10. **Agent behavior is regression-tested** so issues discovered during calls can become repeatable QA cases, and known failures are replayed on purpose through failure injection.
 
 ## Screenshots
 
@@ -175,7 +190,8 @@ The final ticket view connects the service outcome with next actions, including 
 - Account Executive follow-up tasks
 - Regression testing based on failures found in live calls
 - Reply-level and tool-level agent evaluation
-- Multi-agent QA coverage for Sam and Jordan
+- Multi-agent QA coverage for Sam, Jordan, and Riley
+- Failure injection in a sandbox: duplicate callers and a paging outage
 - Safe public presentation of test results without exposing tool secrets
 - Clear separation between AI behavior and simulated demo events
 - Recruiter-friendly visualization of an end-to-end AI workflow

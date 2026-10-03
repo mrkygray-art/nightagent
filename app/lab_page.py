@@ -75,26 +75,36 @@ LAB_HTML = r"""<!doctype html>
   </header>
 
   <h1>Agent QA Lab</h1>
-  <p class="intro">Every test here started as a real problem found in a live call with Sam or Jordan. Each one replays
-    the conversation up to that moment and checks what the agent does next. They run in ElevenLabs Agent Testing against
+  <p class="intro">Most tests here started as a real problem found in a live call with Sam, Jordan, or Riley; the rest
+    try something unexpected. Each one replays the conversation up to that moment and checks what the agent does next. They run in ElevenLabs Agent Testing against
     the live agents, three times each, because the same model can answer differently from one run to the next.</p>
 
   <div class="summary" id="summary" aria-live="polite"><div class="stat"><b>…</b><span>Loading the latest results</span></div></div>
   <div class="tests" id="tests"></div>
 
   <h2 class="section">Failure injection</h2>
-  <p class="intro">Break something on purpose and check the system copes. Each scenario replays a real failure through
+  <p class="intro">Break something on purpose and check the system copes. Each scenario replays a known failure through
     the real server code, in a sandbox: nothing reaches the live board and no real texts are sent. How Sam talks about
     it is covered by the tests above.</p>
-  <section class="inject" aria-labelledby="dup-title">
-    <h2 id="dup-title" style="margin:0;font-size:18px">Same caller twice</h2>
-    <p class="meta" style="margin:0">A gate is stuck open. James calls and an emergency ticket is opened and the
-      technician alerted. Twenty minutes later Dana, at the same site, calls about the same gate. Then the replay forces
-      the mistake a model might make: alerting the technician a second time.</p>
-    <p class="meta" style="margin:0" id="dup-before"></p>
-    <button type="button" id="dup-run">Run it</button>
-    <div id="dup-out" aria-live="polite"></div>
-  </section>
+  <div class="tests">
+    <section class="inject" data-scenario="duplicate-caller" aria-labelledby="dup-title">
+      <h2 id="dup-title" style="margin:0;font-size:18px">Same caller twice</h2>
+      <p class="meta" style="margin:0">A gate is stuck open. James calls; an emergency ticket is opened and the technician
+        alerted. Twenty minutes later Dana, at the same site, calls about the same gate. Then the replay forces the mistake
+        a model might make: alerting the technician a second time.</p>
+      <p class="meta before" style="margin:0"></p>
+      <button type="button">Run it</button>
+      <div class="out" aria-live="polite"></div>
+    </section>
+    <section class="inject" data-scenario="paging-down" aria-labelledby="down-title">
+      <h2 id="down-title" style="margin:0;font-size:18px">Alert service down</h2>
+      <p class="meta" style="margin:0">Priya's main entrance won't unlock, so it's an emergency. The service that texts
+        the on-call technician fails, twice. Later it comes back and the alert is sent.</p>
+      <p class="meta before" style="margin:0"></p>
+      <button type="button">Run it</button>
+      <div class="out" aria-live="polite"></div>
+    </section>
+  </div>
 
   <p class="fine">Results are read from ElevenLabs. Tools aren't really called during a test, so tests never put tickets
     or messages on the live board. A reply check is judged by an AI grader against a written pass condition; a tool
@@ -156,12 +166,14 @@ async function load() {
 }
 load();
 
-document.getElementById("dup-run").addEventListener("click", async (ev) => {
-  const btn = ev.currentTarget, out = document.getElementById("dup-out");
+async function runScenario(box) {
+  const btn = box.querySelector("button"), out = box.querySelector(".out");
   btn.disabled = true; btn.textContent = "Running…";
   try {
-    const r = await (await fetch("/api/lab/inject/duplicate-caller", { method: "POST" })).json();
-    document.getElementById("dup-before").textContent = r.before;
+    const res = await fetch(`/api/lab/inject/${box.dataset.scenario}`, { method: "POST" });
+    if (!res.ok) throw new Error();
+    const r = await res.json();
+    box.querySelector(".before").textContent = r.before;
     const steps = el("ol");
     for (const s of r.steps) {
       const li = el("li");
@@ -176,8 +188,8 @@ document.getElementById("dup-run").addEventListener("click", async (ev) => {
         el("span", "judge", c.detail));
       checks.append(li);
     }
-    const head = el("p", r.passed ? "ok" : "bad", r.passed ? `Passed: ${r.checks.length} of ${r.checks.length} checks`
-      : `Failed: ${r.checks.filter((c) => c.passed).length} of ${r.checks.length} checks`);
+    const passed = r.checks.filter((c) => c.passed).length;
+    const head = el("p", r.passed ? "ok" : "bad", `${r.passed ? "Passed" : "Failed"}: ${passed} of ${r.checks.length} checks`);
     out.replaceChildren(head, el("h3", "meta", "What happened"), steps, el("h3", "meta", "Checks"), checks);
     btn.textContent = "Run it again";
   } catch {
@@ -185,7 +197,9 @@ document.getElementById("dup-run").addEventListener("click", async (ev) => {
     btn.textContent = "Run it";
   }
   btn.disabled = false;
-});
+}
+document.querySelectorAll(".inject").forEach((box) =>
+  box.querySelector("button").addEventListener("click", () => runScenario(box)));
 </script>
 </body>
 </html>

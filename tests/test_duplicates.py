@@ -71,3 +71,22 @@ def test_failure_injection_runs_in_a_sandbox(client):
     assert result["passed"] and len(result["checks"]) == 5
     assert get_store().tickets == {} and get_store().tool_calls == []  # the live store was never touched
     assert client.post("/api/lab/inject/nope").status_code == 404
+
+
+def test_a_real_call_in_demo_mode_still_catches_a_repeat(tool):
+    first = _ticket(tool, "conv_dup_14")
+    get_store().update_ticket(first["ticket_id"], {"demo": True})  # the caller's page claimed it into Demo Mode
+    assert _ticket(tool, "conv_dup_15")["duplicate_of"] == first["ticket_id"]
+
+
+def test_made_up_scenarios_never_absorb_a_real_call(tool):
+    fake = get_store().create_ticket({**GATE, "priority": "emergency", "scenario": "after_hours_emergency"})
+    assert _ticket(tool, "conv_dup_16")["ticket_id"] != fake["ticket_id"]
+
+
+def test_the_board_knows_which_calls_joined_a_ticket(client, tool):
+    from app.service import call_ref
+    first = _ticket(tool, "conv_dup_17")
+    _ticket(tool, "conv_dup_18")
+    row = next(t for t in client.get("/api/tickets").json() if t["ticket_id"] == first["ticket_id"])
+    assert row["call_ref"] == call_ref("conv_dup_17") and row["call_refs"] == [call_ref("conv_dup_18")]

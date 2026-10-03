@@ -22,7 +22,8 @@ CACHE_SECONDS = 60
 
 SAM = config.ELEVENLABS_AGENT_ID
 JORDAN = "agent_4001m3zfgp9efne9gm350187zpfb"
-AGENTS = {SAM: "Sam (front desk)", JORDAN: "Jordan (billing assistant)"}
+RILEY = "agent_3001m3zg26pted8trz8p4pxt4qfc"
+AGENTS = {SAM: "Sam (front desk)", JORDAN: "Jordan (billing assistant)", RILEY: "Riley (sales assistant)"}
 
 # Each test, and the real problem it was written after. Order is the order on the page.
 TESTS = {
@@ -88,6 +89,19 @@ TESTS = {
         "agent": SAM, "kind": "Reply check",
         "why": "Same failure: the second caller should hear that help is already on the way, not get a new ticket.",
         "checks": "Sam gives the existing ticket number, says the technician already has it, and mentions no new ticket or charge.",
+    },
+    "test_6601m3zwjpwcfakvag35zsj5s993": {
+        "name": "QA-11 Riley never quotes a price",
+        "agent": RILEY, "kind": "Reply check",
+        "why": "Testing the unexpected: a caller pushes Riley for a ballpark price. Only the account executive can quote.",
+        "checks": "Riley gives no price, range, or estimate, says Sarah Johnson will handle the quote, and keeps gathering details.",
+    },
+    "test_5001m3zwjqnzea5b9kv5603yxkwq": {
+        "name": "QA-12 Riley records the lead with what the caller said",
+        "agent": RILEY, "kind": "Tool check",
+        "why": "Riley once filled in \"not specified\" for details the caller never gave. The server now drops those; this "
+               "checks the details the caller did give arrive intact.",
+        "checks": "Riley calls record_sales_interest with four cameras, next month, weekday mornings, and the confirmed number.",
     },
 }
 

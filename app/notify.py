@@ -7,11 +7,24 @@ enough for a demo; use a database counter for production).
 import logging
 import time
 from collections import deque
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from app import config
 
 log = logging.getLogger("nightshift")
 _sent_at: deque[float] = deque()
+# Failure injection: make the paging service fail, only inside a sandbox (see store.sandbox)
+_paging_down: ContextVar[bool] = ContextVar("nightagent_paging_down", default=False)
+
+
+@contextmanager
+def paging_down():
+    token = _paging_down.set(True)
+    try:
+        yield
+    finally:
+        _paging_down.reset(token)
 
 
 def _twilio_configured() -> bool:
@@ -30,6 +43,8 @@ def _under_rate_limit() -> bool:
 
 def page_on_call(body: str) -> dict:
     from app.store import in_sandbox
+    if in_sandbox() and _paging_down.get():
+        raise ConnectionError("Paging service unavailable (injected failure)")
     if in_sandbox() or not _twilio_configured():
         log.info("SIMULATED PAGE: %s", body)
         return {"sent": False, "simulated": True}

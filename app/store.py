@@ -121,7 +121,7 @@ class MemoryStore:
 
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         return sorted((t for t in self.tickets.values() if t["created_at"] >= since_iso
-                       and t.get("status") not in CLOSED_STATES and not t.get("demo")),
+                       and t.get("status") not in CLOSED_STATES and not t.get("scenario")),
                       key=lambda t: t["created_at"], reverse=True)
 
     def upsert_call(self, call: dict) -> None:
@@ -302,7 +302,7 @@ class SupabaseStore:
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         rows = (self.db.table(self.tickets_table).select("*").gte("created_at", since_iso)
                 .not_.in_("status", list(CLOSED_STATES)).order("created_at", desc=True).limit(50).execute().data)
-        return [r for r in rows if not r.get("demo")]
+        return [r for r in rows if not r.get("scenario")]
 
     def upsert_call(self, call: dict) -> None:
         # Upsert on conversation_id so webhook retries never create duplicates.

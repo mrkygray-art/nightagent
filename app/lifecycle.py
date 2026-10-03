@@ -92,6 +92,7 @@ EVENT_LABELS = {
     "opportunity_identified": "Upgrade interest passed to sales",
     "task_created": "Someone will follow up",
     "caller_called_again": "Same problem reported again",
+    "page_failed": "Alert didn't go through",
 }
 
 PRIORITY_LABELS = {"emergency": "High priority", "urgent": "Medium priority", "routine": "Normal priority"}
