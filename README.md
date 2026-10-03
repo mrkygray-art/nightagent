@@ -67,12 +67,14 @@ The staff behind the agents (billing contact, account executive, service manager
 
 ## Evaluation Lab
 
-The **Evaluation Lab** measures how well the agents do, from what really happened. It has four parts:
+The **Evaluation Lab** measures how well the agents do, from what really happened. The page opens with a card for each section, a short note on what it's for, and a button that jumps to it:
 
 - **Scorecard:** plain tables of how the agents perform in tests and on real calls, each number with the sample it's based on.
+- **Fixes log** ("What broke & how we fixed it"): every real problem, why it happened, what changed, and whether the fix still holds in the latest runs.
 - **Regression tests:** problems found in live calls (and a few unclear situations) turned into repeatable tests that run against the live ElevenLabs agents using ElevenLabs Agent Testing.
-- **Fixes log:** every real problem, why it happened, what changed, and whether the fix still holds in the latest runs.
 - **Failure injection:** known failures replayed on purpose through the real server code, in a sandbox.
+- **Not measured yet:** what the lab can't prove yet (interruption recovery, silence, speech-to-text confidence, hallucination in general).
+- **Test Inspector:** planned, not built. It will show why a single test passed or failed.
 
 This is intentionally different from a static scripted demo. The project demonstrates an engineering feedback loop:
 
