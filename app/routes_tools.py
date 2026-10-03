@@ -179,6 +179,7 @@ def create_ticket(req: CreateTicketRequest) -> dict:
         "category": category,
         "priority": priority,
         "priority_reason": reason,
+        "suggested_priority": (req.suggested_priority or "").strip().lower() or None,
         "conversation_id": req.conversation_id,
         "status": "awaiting_dispatch",
     })

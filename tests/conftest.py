@@ -12,6 +12,7 @@ os.environ["SUPABASE_SERVICE_KEY"] = ""
 os.environ["TOOL_SECRET"] = "test-tool-secret"
 os.environ["ELEVENLABS_WEBHOOK_SECRET"] = "test-webhook-secret"
 os.environ["ALLOW_UNSIGNED_WEBHOOKS"] = "false"
+os.environ["ELEVENLABS_API_KEY"] = ""  # tests never call ElevenLabs
 for name in ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "ONCALL_TECH_PHONE"):
     os.environ[name] = ""
 

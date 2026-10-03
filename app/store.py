@@ -117,6 +117,21 @@ class MemoryStore:
     def upsert_call(self, call: dict) -> None:
         self.calls[call["conversation_id"]] = {**call, "received_at": now_iso()}
 
+    def merge_call(self, conversation_id: str, fields: dict) -> None:
+        row = self.calls.setdefault(conversation_id, {"conversation_id": conversation_id, "received_at": now_iso()})
+        row.update(fields)
+
+    def recent_tool_calls(self, limit: int = 300) -> list[dict]:
+        return sorted(self.tool_calls, key=lambda r: (r["called_at"], r["id"]), reverse=True)[:limit]
+
+    def records_for_conversations(self, conversation_ids: list[str]) -> set[str]:
+        """Which of these conversations already have a ticket or a message."""
+        ids = set(conversation_ids)
+        hit = {t.get("conversation_id") for t in self.tickets.values()} | \
+              {t.get("follow_up_conversation_id") for t in self.tickets.values()} | \
+              {t.get("source_conversation_id") for t in self.tasks.values()}
+        return ids & hit
+
     def add_event(self, event: dict) -> dict:
         self._event_seq += 1
         row = {"simulated": False, "source": "call", "occurred_at": now_iso(), **event,
@@ -270,6 +285,31 @@ class SupabaseStore:
     def upsert_call(self, call: dict) -> None:
         # Upsert on conversation_id so webhook retries never create duplicates.
         self.db.table(self.calls_table).upsert(call, on_conflict="conversation_id").execute()
+
+    def merge_call(self, conversation_id: str, fields: dict) -> None:
+        # Upsert only touches the columns sent, so other fields on the row are kept.
+        self.db.table(self.calls_table).upsert({"conversation_id": conversation_id, **fields},
+                                               on_conflict="conversation_id").execute()
+
+    def recent_tool_calls(self, limit: int = 300) -> list[dict]:
+        return (
+            self.db.table(self.tool_calls_table).select("*").not_.is_("conversation_id", "null")
+            .order("called_at", desc=True).limit(limit).execute().data
+        )
+
+    def records_for_conversations(self, conversation_ids: list[str]) -> set[str]:
+        safe = [c for c in conversation_ids if c and _SAFE_ID.fullmatch(c)]
+        if not safe:
+            return set()
+        joined = ",".join(safe)
+        found = set()
+        for row in (self.db.table(self.tickets_table).select("conversation_id,follow_up_conversation_id")
+                    .or_(f"conversation_id.in.({joined}),follow_up_conversation_id.in.({joined})").execute().data):
+            found.update({row.get("conversation_id"), row.get("follow_up_conversation_id")})
+        for row in (self.db.table(self.tasks_table).select("source_conversation_id")
+                    .in_("source_conversation_id", safe).execute().data):
+            found.add(row.get("source_conversation_id"))
+        return set(safe) & found
 
     def add_event(self, event: dict) -> dict:
         return self.db.table(self.events_table).insert(event).execute().data[0]

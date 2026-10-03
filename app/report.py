@@ -88,6 +88,22 @@ def build_message(task: dict, tool_calls: list[dict], department: str, callback:
     return {"rows": rows, "tool_count": len(tool_calls)}
 
 
+def build_call(view: dict, tool_calls: list[dict], voice: str | None) -> dict:
+    """The report for a call that ended without a ticket or a message."""
+    agent, channel = _agent_and_channel(voice)
+    team = agents_line(tool_calls)
+    rows = [
+        {"label": "Agent", "value": agent},
+        *([{"label": "Agents on this call", "value": team}] if team else []),
+        {"label": "Call", "value": channel},
+        {"label": "Account", "value": view.get("customer") or "No matching account"},
+        {"label": "What happened", "value": view.get("summary")},
+        {"label": "Tools Sam used", "value": _tools_line(tool_calls)},
+        {"label": "Outcome", "value": "Handled on the call: no ticket or message needed"},
+    ]
+    return {"rows": rows, "tool_count": len(tool_calls)}
+
+
 def public_tool_call(row: dict) -> dict:
     return {
         "tool": row["tool"],

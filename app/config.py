@@ -12,6 +12,8 @@ def _bool(name: str, default: bool = False) -> bool:
 
 TOOL_SECRET = os.getenv("TOOL_SECRET", "")
 ELEVENLABS_WEBHOOK_SECRET = os.getenv("ELEVENLABS_WEBHOOK_SECRET", "")
+# Read-only key, server side only: reads each call's post-call analysis for the call check.
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ALLOW_UNSIGNED_WEBHOOKS = _bool("ALLOW_UNSIGNED_WEBHOOKS")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")

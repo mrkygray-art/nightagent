@@ -287,6 +287,24 @@ DEMO_HTML = r"""<!doctype html>
   .tag-sim { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--sodium); border: 1px solid rgba(245,165,36,.5); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; }
   @media (max-width: 560px) { .timeline li { grid-template-columns: 60px 16px 1fr; gap: 0 8px; } }
 
+  .check { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; background: var(--night); }
+  .check-head { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; }
+  .check-head b { font-size: 15px; }
+  .check-head .score { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--clear); line-height: 1; }
+  .check-head .score.mid { color: var(--sodium); }
+  .check-head .score.low { color: var(--alarm); }
+  .check-head small { color: var(--muted); font-size: 13px; }
+  .check ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+  .check li { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; font-size: 14px; }
+  .check li .mark { font-weight: 700; text-align: center; }
+  .check li.pass .mark { color: var(--clear); }
+  .check li.fail .mark { color: var(--alarm); }
+  .check li.pending .mark { color: var(--sodium); }
+  .check li.na, .check li.info { color: var(--muted); }
+  .check li small { display: block; color: var(--muted); font-size: 12.5px; }
+  .check .how { white-space: nowrap; font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-left: 6px; color: var(--muted); }
+  .check .how.ai { border-color: rgba(143,156,255,.6); color: #c9d0ff; }
+  .ticket[data-priority="call"] .bar { background: var(--muted); }
   .report { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; scroll-margin-top: 12px; }
   .report-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
   .report h3 { margin: 0; font-size: 16px; }
@@ -1208,6 +1226,32 @@ function el(tag, cls, text) {
 }
 
 let lastMessages = []; // messages Sam took for a department or a person
+let lastCalls = [];    // calls handled entirely on the phone (no ticket, no message)
+
+function callCard(c) {
+  const li = el("li", "ticket call");
+  li.dataset.priority = "call";
+  li.dataset.id = c.call_id;
+  li.tabIndex = 0;
+  li.setAttribute("aria-label", "A call handled on the phone: open its report");
+  if (c.call_id === selectedId) li.setAttribute("aria-current", "true");
+  if (!firstLoad && !seen.has(c.call_id)) li.classList.add("fresh");
+  seen.add(c.call_id);
+  li.appendChild(el("div", "bar"));
+  const body = el("div", "body");
+  const row1 = el("div", "row1");
+  row1.appendChild(el("span", "id", "Call"));
+  row1.appendChild(el("span", "chip stage", "Handled on the call"));
+  if (myCallRef && c.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
+  row1.appendChild(el("span", "when", timeAgo(c.created_at)));
+  body.appendChild(row1);
+  body.appendChild(el("p", "issue", c.summary || ""));
+  const meta = el("div", "meta");
+  meta.appendChild(el("span", "", c.agents || "Sam (front desk)"));
+  body.appendChild(meta);
+  li.appendChild(body);
+  return li;
+}
 
 function messageCard(m) {
   const li = el("li", "ticket message");
@@ -1235,17 +1279,19 @@ function messageCard(m) {
   return li;
 }
 
-function renderTickets(list, messages = lastMessages) {
+function renderTickets(list, messages = lastMessages, callList = lastCalls) {
   els.tickets.replaceChildren();
-  if (!list.length && !messages.length) {
+  if (!list.length && !messages.length && !callList.length) {
     els.tickets.appendChild(el("li", "empty", "No tickets yet. Start a call and report a problem; the ticket shows up here before you hang up."));
     return;
   }
   // Tickets and messages share the board, newest first
-  const items = [...list.map((t) => ({ at: t.created_at, t })), ...messages.map((m) => ({ at: m.created_at, m }))]
+  const items = [...list.map((t) => ({ at: t.created_at, t })), ...messages.map((m) => ({ at: m.created_at, m })),
+                 ...callList.map((c) => ({ at: c.created_at, c }))]
     .sort((a, b) => new Date(b.at) - new Date(a.at));
-  for (const { t, m } of items) {
+  for (const { t, m, c } of items) {
     if (m) { els.tickets.appendChild(messageCard(m)); continue; }
+    if (c) { els.tickets.appendChild(callCard(c)); continue; }
     const li = el("li", "ticket");
     li.dataset.priority = t.priority || "";
     li.dataset.id = t.ticket_id;
@@ -1284,14 +1330,16 @@ function renderTickets(list, messages = lastMessages) {
 
 async function refreshTickets() {
   try {
-    const [res, msgRes] = await Promise.all([
+    const [res, msgRes, callRes] = await Promise.all([
       fetch("/api/tickets", { cache: "no-store" }),
       fetch("/api/messages", { cache: "no-store" }).catch(() => null),
+      fetch("/api/calls", { cache: "no-store" }).catch(() => null),
     ]);
     if (!res.ok) throw new Error(res.status);
     const list = await res.json();
     try { lastMessages = msgRes && msgRes.ok ? await msgRes.json() : lastMessages; } catch {}
-    renderTickets(list, lastMessages);
+    try { lastCalls = callRes && callRes.ok ? await callRes.json() : lastCalls; } catch {}
+    renderTickets(list, lastMessages, lastCalls);
     els.boardStatus.textContent = "Updates live";
     await claimMyCallTicket(list);
     if (selectedId && !busy) loadTicket(selectedId, { quiet: true });
@@ -1386,6 +1434,7 @@ function renderPanel(detail, message) {
     return;
   }
   if (detail.message) { renderMessagePanel(detail); return; }
+  if (detail.call) { renderCallPanel(detail); return; }
   const t = detail.ticket;
   const head = el("div", "ev-head");
   head.appendChild(el("span", "id", t.ticket_id));
@@ -1490,7 +1539,7 @@ function renderPanel(detail, message) {
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
   const acts = businessActions(detail, key);
   if (acts) p.appendChild(acts);
-  if (detail.report) p.appendChild(callReport(t.ticket_id, detail.report));
+  if (detail.report) p.appendChild(callReport(t.ticket_id, detail.report, detail.check));
   p.appendChild(tl);
 }
 
@@ -1508,7 +1557,29 @@ function renderMessagePanel(detail) {
   meta.appendChild(el("span", "", `Caller: ${m.contact_name || "Unknown"}`));
   meta.appendChild(el("span", "", "No repair needed, so there's no service ticket. Sam passed the message on."));
   p.appendChild(meta);
-  p.appendChild(callReport(m.message_id, detail.report));
+  p.appendChild(callReport(m.message_id, detail.report, detail.check));
+  appendToolSteps(p, detail);
+}
+
+// A call handled entirely on the phone: no ticket, no message
+function renderCallPanel(detail) {
+  const p = els.panel;
+  const c = detail.call;
+  const head = el("div", "ev-head");
+  head.appendChild(el("span", "id", "Call"));
+  head.appendChild(el("span", "chip stage", "Handled on the call"));
+  if (myCallRef && c.call_ref === myCallRef) head.appendChild(el("span", "chip mine", "Your call"));
+  p.appendChild(head);
+  p.appendChild(el("p", "ev-issue", c.summary || ""));
+  const meta = el("div", "ev-meta");
+  meta.appendChild(el("span", "", c.agents || "Sam (front desk)"));
+  meta.appendChild(el("span", "", "Nothing needed a ticket or a message, so this card keeps the record."));
+  p.appendChild(meta);
+  p.appendChild(callReport(c.call_id, detail.report, detail.check));
+  appendToolSteps(p, detail);
+}
+
+function appendToolSteps(p, detail) {
   if (els.prefTech.checked && (detail.tool_calls || []).length) {
     const tl = el("ol", "timeline");
     tl.setAttribute("aria-label", "Tool calls");
@@ -1528,8 +1599,36 @@ function renderMessagePanel(detail) {
   }
 }
 
+const CHECK_MARKS = { pass: "✓", fail: "✗", na: "–", pending: "…", info: "•" };
+
+// How well the assistants handled the call: facts from our records, plus one AI-judged check
+function callCheck(check) {
+  const box = el("div", "check");
+  const head = el("div", "check-head");
+  head.appendChild(el("b", "", "Call check"));
+  if (check.score !== null && check.score !== undefined) {
+    head.appendChild(el("span", `score${check.score < 60 ? " low" : check.score < 90 ? " mid" : ""}`, `${check.score}%`));
+  }
+  const waiting = check.pending ? ` · ${check.pending} still to come` : "";
+  head.appendChild(el("small", "", `${check.passed} of ${check.applicable} checks passed${waiting}`));
+  box.appendChild(head);
+  const ul = el("ul");
+  for (const i of check.items) {
+    const li = el("li", i.status);
+    li.appendChild(el("span", "mark", CHECK_MARKS[i.status] || "•"));
+    const what = el("div");
+    what.appendChild(document.createTextNode(i.label));
+    what.appendChild(el("span", `how ${i.how === "ai" ? "ai" : ""}`, i.how === "ai" ? "AI-judged · ElevenLabs" : "Rules"));
+    what.appendChild(el("small", "", i.status === "na" ? `Not applicable: ${i.detail}` : i.detail));
+    li.appendChild(what);
+    ul.appendChild(li);
+  }
+  box.appendChild(ul);
+  return box;
+}
+
 // What happened behind this conversation, from the server's own records.
-function callReport(id, report) {
+function callReport(id, report, check) {
   const box = el("section", "report");
   box.id = "call-report";
   box.setAttribute("aria-label", "Call report");
@@ -1543,14 +1642,15 @@ function callReport(id, report) {
   });
   head.appendChild(copy);
   box.appendChild(head);
+  if (check) box.appendChild(callCheck(check));
   const dl = el("dl");
   for (const r of report.rows) {
     dl.appendChild(el("dt", "", r.label));
     dl.appendChild(el("dd", "", r.value));
   }
   box.appendChild(dl);
-  const isMessage = id.startsWith("TASK-");
-  box.appendChild(el("span", "tech-line", `Voice (ElevenLabs) → Sam's reasoning → tool calls → rules in code → ${isMessage ? "message" : "ticket"} → handoff · GET /api/${isMessage ? "messages" : "tickets"}/${id}`));
+  const kind = id.startsWith("TASK-") ? "messages" : id.startsWith("CALL-") ? "calls" : "tickets";
+  box.appendChild(el("span", "tech-line", `Voice (ElevenLabs) → Sam's reasoning → tool calls → rules in code → record → handoff → post-call grading · GET /api/${kind}/${id}`));
   return box;
 }
 
@@ -1635,7 +1735,8 @@ async function loadTicket(id, { quiet = false, scroll = false } = {}) {
   selectedId = id;
   markSelected();
   try {
-    const detail = await api(id.startsWith("TASK-") ? `/api/messages/${encodeURIComponent(id)}` : `/api/tickets/${encodeURIComponent(id)}`);
+    const path = id.startsWith("TASK-") ? "messages" : id.startsWith("CALL-") ? "calls" : "tickets";
+    const detail = await api(`/api/${path}/${encodeURIComponent(id)}`);
     if (selectedId !== id || busy) return;
     // Background refreshes only redraw when something changed, so a click is never lost mid-redraw
     if (quiet && JSON.stringify(detail) === JSON.stringify(selectedDetail)) return;
@@ -1721,6 +1822,18 @@ async function claimMyCallTicket(list) {
     }
     addMessage("note", `Sam passed your message to ${(note.assigned_to || "the team").replace(" (fictional)", "")}. It's on the board below.`);
     loadTicket(note.message_id);
+  }
+  const onPhone = !session && myCallRef && lastCalls.find((c) => c.call_ref === myCallRef);
+  if (onPhone && !claimed.has(onPhone.call_id) && !list.some((t) => t.call_ref === myCallRef)
+      && !lastMessages.some((m) => m.call_ref === myCallRef)) {
+    claimed.add(onPhone.call_id);
+    if (callVoiceName) {
+      api("/api/demo/voice", { ticket_id: onPhone.call_id, conversation_id: conversationId, voice: callVoiceName })
+        .then(() => loadTicket(onPhone.call_id, { quiet: true }))
+        .catch((err) => console.warn(err));
+    }
+    addMessage("note", "Your call is on the board below, with its call check.");
+    loadTicket(onPhone.call_id);
   }
   const mine = myCallRef && list.find((t) => t.call_ref === myCallRef);
   if (!mine || claimed.has(mine.ticket_id)) return;
@@ -1937,7 +2050,7 @@ schedulePoll(0);
   // A shared link: /demo?ticket=NS-1042&view=report opens that ticket's call report
   const params = new URLSearchParams(location.search);
   const shared = (params.get("ticket") || "").trim().toUpperCase();
-  if (/^(NS|TASK)-\d{4}$/.test(shared)) {
+  if (/^(NS|TASK)-\d{4}$/.test(shared) || /^CALL-[0-9A-F]{16}$/.test(shared)) {
     loadTicket(shared, { scroll: params.get("view") !== "report" }).then(() => {
       const r = document.getElementById("call-report");
       if (r && params.get("view") === "report") r.scrollIntoView({ behavior: "smooth", block: "start" });

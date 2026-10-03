@@ -14,9 +14,9 @@ from pydantic import BaseModel, Field
 
 import logging
 
-from app import config, demo, lifecycle, report
+from app import config, demo, evaluation, lifecycle, report
 from app.follow_up import follow_up_variables
-from app.service import (move_ticket, public_event, public_message, public_opportunity, public_task,
+from app.service import (call_ref, move_ticket, public_event, public_message, public_opportunity, public_task,
                          public_ticket, record_event, shift)
 from app.store import get_store, now_iso
 from app.triage import triage
@@ -36,7 +36,7 @@ class ClaimRequest(BaseModel):
 
 
 class VoiceRequest(BaseModel):
-    ticket_id: str = Field(..., max_length=20)
+    ticket_id: str = Field(..., max_length=30)  # NS-1234, TASK-1234, or CALL-<16 hex>
     conversation_id: str = Field(..., min_length=8, max_length=120)
     voice: str = Field(..., max_length=20)
 
@@ -83,11 +83,16 @@ def _detail(ticket: dict) -> dict:
     except Exception:  # noqa: BLE001 - the report is a bonus; the ticket must still load
         logging.getLogger("nightshift").exception("Could not load tool calls for %s", tid)
         tool_calls = []
+    check = None
+    if tool_calls and not ticket.get("scenario"):
+        own = [t for t in tool_calls if t.get("conversation_id") == ticket.get("conversation_id") or t.get("ticket_id") == tid]
+        check = evaluation.build("ticket", own, evaluation.fetch_grade(ticket.get("conversation_id")), ticket=ticket)
     return {
         "ticket": public_ticket(ticket),
         "events": [public_event(e) for e in events],
         "tool_calls": [report.public_tool_call(t) for t in tool_calls],
         "report": report.build(ticket, events, tool_calls, tasks, opportunities),
+        "check": check,
         "next_step": lifecycle.STATE_LABELS[nxt[0]] if nxt else None,
         "follow_up_ready": lifecycle.normalize_state(ticket.get("status")) == "follow_up_pending",
         "actions": {
@@ -124,9 +129,65 @@ def message_detail(message_id: str) -> dict:
     opp = store.opportunity_for_call(task["source_conversation_id"]) if task.get("destination") == "account_executive" else None
     return {
         "message": msg,
+        "check": evaluation.build("message", tool_calls, evaluation.fetch_grade(task["source_conversation_id"]), task=task),
         "tool_calls": [report.public_tool_call(t) for t in tool_calls],
         "report": report.build_message(task, tool_calls, msg["department"], msg["callback_number"],
                                        [opp] if opp else None),
+    }
+
+
+def _recent_conversations() -> list[tuple[str, list[dict]]]:
+    """Recent calls with their tool calls, newest first, from the tool-call log."""
+    grouped: dict[str, list[dict]] = {}
+    for row in get_store().recent_tool_calls():
+        grouped.setdefault(row["conversation_id"], []).append(row)
+    return [(conv, sorted(rows, key=lambda r: r["called_at"])) for conv, rows in grouped.items()]
+
+
+def find_conversation(ref: str) -> str | None:
+    return next((conv for conv, _ in _recent_conversations() if call_ref(conv) == ref), None)
+
+
+def _call_view(conv: str, rows: list[dict], cached: dict) -> dict:
+    found = next((r for r in rows if r["tool"] == "lookup_customer" and (r.get("outcome") or "").startswith("Found")), None)
+    who = found["outcome"][len("Found "):] if found else None
+    return {
+        "call_id": f"CALL-{call_ref(conv)}",
+        "call_ref": call_ref(conv),
+        "customer": who,
+        "summary": cached.get("summary") or (f"Call with {who}" if who else "Call with an unmatched caller"),
+        "agents": report.agents_line(rows) or "Sam (front desk)",
+        "created_at": rows[0]["called_at"],
+    }
+
+
+@router.get("/calls")
+def calls() -> list[dict]:
+    """Calls handled entirely on the phone: no ticket and no message, so nothing else shows them."""
+    store = get_store()
+    recent = _recent_conversations()[:40]
+    with_records = store.records_for_conversations([c for c, _ in recent])
+    left = [(c, rows) for c, rows in recent if c not in with_records
+            and not {r["tool"] for r in rows} <= {"record_follow_up_outcome"}][:15]
+    cached = store.calls_by_ids([c for c, _ in left])
+    return [_call_view(c, rows, cached.get(c) or {}) for c, rows in left]
+
+
+@router.get("/calls/{call_id}")
+def call_detail(call_id: str) -> dict:
+    ref = call_id.strip().lower().removeprefix("call-")
+    hit = next(((c, rows) for c, rows in _recent_conversations() if call_ref(c) == ref), None)
+    if not hit:
+        raise HTTPException(status_code=404, detail="Call not found.")
+    conv, rows = hit
+    grade = evaluation.fetch_grade(conv)
+    cached = get_store().calls_by_ids([conv]).get(conv) or {}
+    view = _call_view(conv, rows, cached)
+    return {
+        "call": view,
+        "check": evaluation.build("call", rows, grade),
+        "tool_calls": [report.public_tool_call(t) for t in rows],
+        "report": report.build_call(view, rows, cached.get("voice")),
     }
 
 
@@ -199,6 +260,16 @@ def note_voice(req: VoiceRequest) -> dict:
     claim: only the caller's browser knows the conversation id."""
     store = get_store()
     record_id = req.ticket_id.strip().upper()
+    if record_id.startswith("CALL-"):  # a call handled entirely on the phone
+        conv = find_conversation(record_id[5:].lower())
+        if not conv or not hmac.compare_digest(conv, req.conversation_id):
+            raise HTTPException(status_code=403, detail="That record came from a different call.")
+        voice = req.voice.strip()
+        voice = report.TEXT_CHAT if voice.lower() == report.TEXT_CHAT else voice.capitalize()
+        if voice != report.TEXT_CHAT and voice not in report.VOICES:
+            raise HTTPException(status_code=400, detail="Unknown voice.")
+        store.merge_call(conv, {"voice": voice})
+        return {"ok": True}
     if record_id.startswith("TASK-"):  # a message rather than a ticket
         record = store.get_task(record_id)
         conv = (record or {}).get("source_conversation_id")
