@@ -225,7 +225,14 @@ def take_message(req: MessageRequest) -> dict:
     """The front desk: the caller wants a department or a person, not (only) a repair. Code decides
     who gets the message and what the caller is told; the agent just collects the details."""
     task_id, dept, who, best_time = save_message(req, "take_message")
-    return _message_reply(task_id, dept, who, best_time)
+    reply = _message_reply(task_id, dept, who, best_time)
+    if dept == "service_manager" and not req.ticket_id:
+        # A complaint often comes with something that's still broken; that needs a repair ticket too.
+        reply["next_step"] = ("If the caller said something is still broken or not working, that also needs a repair: "
+                              "ask what's happening if you need to, call create_ticket, then call take_message again for "
+                              "the service manager with that ticket_id so the complaint is attached to the ticket. "
+                              + reply["next_step"])
+    return reply
 
 
 def save_message(req: MessageRequest, tool: str, task_reason: str | None = None) -> tuple[str, str, str, str | None]:
@@ -249,7 +256,14 @@ def save_message(req: MessageRequest, tool: str, task_reason: str | None = None)
                   "person_requested": given(req.person_requested, 100) or earlier.get("person_requested"),
                   "callback_number": phone_digits(req.callback_number) or earlier.get("callback_number")}
         fields["requested_follow_up"] = "Call the caller back" + (f" ({fields['best_time']})" if fields["best_time"] else "")
+        if ticket and not earlier.get("source_ticket_id"):
+            # A repair ticket opened after the message: the message now belongs to that ticket
+            fields["source_ticket_id"] = ticket["ticket_id"]
+            record_event(ticket["ticket_id"], "task_created", f"{earlier['task_id']} for {who}: {(reason or earlier.get('summary') or '')[:160]}",
+                         conversation_id=req.conversation_id, actor_type="agent",
+                         metadata={"task_id": earlier["task_id"], "destination": dept})
         store.update_task(earlier["task_id"], fields)
+        earlier = {**earlier, **fields}
         best_time = fields["best_time"]
         log_tool_call(tool, f"{earlier['task_id']} updated for {who}", conversation_id=req.conversation_id,
                       ticket_id=earlier.get("source_ticket_id"), called_at=started)

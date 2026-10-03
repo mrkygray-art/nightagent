@@ -85,3 +85,19 @@ def test_second_message_to_the_same_person_updates_the_first(client, tool):
     assert rows["Tools Sam used"] == "2: Took a message; Updated the message"
     other = _message(tool, department="billing", reason="Invoice question")
     assert other["message_id"] != first["message_id"]  # a different person gets their own message
+
+
+def test_complaint_about_something_broken_ends_up_on_a_repair_ticket(client, tool):
+    first = _message(tool, department="service_manager", reason="Technician left a mess and the gate still sticks",
+                     conversation_id="conv_complaint_1")
+    assert "call create_ticket" in first["next_step"]  # the server reminds Sam about the repair
+    made = tool("create-ticket", {"customer_id": "C-1002", "caller_name": "James Carter", "callback_number": "3105550178",
+                                  "issue_summary": "Gate still sticks after the repair", "category": "cannot_secure_site",
+                                  "conversation_id": "conv_complaint_1"})
+    again = _message(tool, department="service_manager", reason="Technician left a mess and the gate still sticks",
+                     ticket_id=made["ticket_id"], conversation_id="conv_complaint_1")
+    assert again["message_id"] == first["message_id"]
+    assert "call create_ticket" not in again["next_step"]
+    assert client.get("/api/messages").json() == []  # now it lives on the ticket
+    rows = {r["label"]: r["value"] for r in client.get(f"/api/tickets/{made['ticket_id']}").json()["report"]["rows"]}
+    assert "Alex Moreno" in rows["Handed to"]
