@@ -1,0 +1,3097 @@
+{
+  "runId": "2026-10-04T02-20-47-223Z",
+  "scoredAt": "2026-10-04T02:37:23.883Z",
+  "utterances": 45,
+  "scoredDataset": {
+    "utterancesSha256": "ad2929323517f7abbbb2e5bf304ed41101d4ea0d74815622d43492e668957d66",
+    "termsSha256": "d2a6d2716997e272fa6c49f4915da3d4cda2b605448d5451b222596796acf14c"
+  },
+  "datasetChangedSinceRun": true,
+  "groups": [
+    {
+      "provider": "deepgram",
+      "condition": "baseline",
+      "source": "human",
+      "model": "nova-3",
+      "requests": 132,
+      "failures": 0,
+      "failureRate": 0,
+      "scoredRequests": 132,
+      "scoredAudioSeconds": 974.13,
+      "missingIds": [
+        "u037"
+      ],
+      "unknownIds": [],
+      "werPct": 11.74,
+      "termAccuracy": {
+        "hits": 108,
+        "expected": 174,
+        "pct": 62.07
+      },
+      "latencyMs": {
+        "median": 119,
+        "p95": 598,
+        "n": 132
+      },
+      "inconsistentTranscripts": [],
+      "perTerm": {
+        "NVR": {
+          "expected": 9,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u001",
+              "run": 1,
+              "heardAs": ""
+            },
+            {
+              "id": "u001",
+              "run": 2,
+              "heardAs": ""
+            },
+            {
+              "id": "u001",
+              "run": 3,
+              "heardAs": ""
+            },
+            {
+              "id": "u007",
+              "run": 1,
+              "heardAs": "mvr"
+            },
+            {
+              "id": "u007",
+              "run": 2,
+              "heardAs": "mvr"
+            },
+            {
+              "id": "u007",
+              "run": 3,
+              "heardAs": "mvr"
+            },
+            {
+              "id": "u042",
+              "run": 1,
+              "heardAs": "mbr"
+            },
+            {
+              "id": "u042",
+              "run": 2,
+              "heardAs": "mbr"
+            },
+            {
+              "id": "u042",
+              "run": 3,
+              "heardAs": "mbr"
+            }
+          ]
+        },
+        "VMS": {
+          "expected": 6,
+          "hits": 3,
+          "misses": [
+            {
+              "id": "u009",
+              "run": 1,
+              "heardAs": "bms"
+            },
+            {
+              "id": "u009",
+              "run": 2,
+              "heardAs": "bms"
+            },
+            {
+              "id": "u009",
+              "run": 3,
+              "heardAs": "bms"
+            }
+          ]
+        },
+        "PTZ": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "WDR": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u004",
+              "run": 1,
+              "heardAs": "wdor"
+            },
+            {
+              "id": "u004",
+              "run": 2,
+              "heardAs": "wdor"
+            },
+            {
+              "id": "u004",
+              "run": 3,
+              "heardAs": "wdor"
+            }
+          ]
+        },
+        "fisheye": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "varifocal": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u006",
+              "run": 1,
+              "heardAs": "rear focal"
+            },
+            {
+              "id": "u006",
+              "run": 2,
+              "heardAs": "rear focal"
+            },
+            {
+              "id": "u006",
+              "run": 3,
+              "heardAs": "rear focal"
+            }
+          ]
+        },
+        "ONVIF": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u007",
+              "run": 1,
+              "heardAs": "on vif"
+            },
+            {
+              "id": "u007",
+              "run": 2,
+              "heardAs": "on vif"
+            },
+            {
+              "id": "u007",
+              "run": 3,
+              "heardAs": "on vif"
+            }
+          ]
+        },
+        "Avigilon": {
+          "expected": 6,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u008",
+              "run": 1,
+              "heardAs": "vigilant"
+            },
+            {
+              "id": "u008",
+              "run": 2,
+              "heardAs": "vigilant"
+            },
+            {
+              "id": "u008",
+              "run": 3,
+              "heardAs": "vigilant"
+            },
+            {
+              "id": "u036",
+              "run": 1,
+              "heardAs": "a digilon"
+            },
+            {
+              "id": "u036",
+              "run": 2,
+              "heardAs": "a digilon"
+            },
+            {
+              "id": "u036",
+              "run": 3,
+              "heardAs": "a digilon"
+            }
+          ]
+        },
+        "REX": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "mag lock": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "fail safe": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u011",
+              "run": 1,
+              "heardAs": "failed safe"
+            },
+            {
+              "id": "u011",
+              "run": 2,
+              "heardAs": "failed safe"
+            },
+            {
+              "id": "u011",
+              "run": 3,
+              "heardAs": "failed safe"
+            }
+          ]
+        },
+        "electric strike": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u012",
+              "run": 1,
+              "heardAs": "electric stripe"
+            },
+            {
+              "id": "u012",
+              "run": 2,
+              "heardAs": "electric stripe"
+            },
+            {
+              "id": "u012",
+              "run": 3,
+              "heardAs": "electric stripe"
+            }
+          ]
+        },
+        "Wiegand": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u013",
+              "run": 1,
+              "heardAs": "the weekend"
+            },
+            {
+              "id": "u013",
+              "run": 2,
+              "heardAs": "the weekend"
+            },
+            {
+              "id": "u013",
+              "run": 3,
+              "heardAs": "the weekend"
+            }
+          ]
+        },
+        "OSDP": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "door contact": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "fail secure": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "card reader": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Mercury": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Cisco Catalyst": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "PoE": {
+          "expected": 9,
+          "hits": 6,
+          "misses": [
+            {
+              "id": "u019",
+              "run": 1,
+              "heardAs": "the puh"
+            },
+            {
+              "id": "u019",
+              "run": 2,
+              "heardAs": "the puh"
+            },
+            {
+              "id": "u019",
+              "run": 3,
+              "heardAs": "the puh"
+            }
+          ]
+        },
+        "VLAN": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "IDF": {
+          "expected": 6,
+          "hits": 3,
+          "misses": [
+            {
+              "id": "u021",
+              "run": 1,
+              "heardAs": "ivf"
+            },
+            {
+              "id": "u021",
+              "run": 2,
+              "heardAs": "ivf"
+            },
+            {
+              "id": "u021",
+              "run": 3,
+              "heardAs": "ivf"
+            }
+          ]
+        },
+        "MDF": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Cat6": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Meraki": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "SFP": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Ubiquiti": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "J-hook": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "conduit": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Verkada": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u028",
+              "run": 1,
+              "heardAs": "vricata"
+            },
+            {
+              "id": "u028",
+              "run": 2,
+              "heardAs": "vricata"
+            },
+            {
+              "id": "u028",
+              "run": 3,
+              "heardAs": "vricata"
+            }
+          ]
+        },
+        "Axis": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u029",
+              "run": 1,
+              "heardAs": "access"
+            },
+            {
+              "id": "u029",
+              "run": 2,
+              "heardAs": "access"
+            },
+            {
+              "id": "u029",
+              "run": 3,
+              "heardAs": "access"
+            }
+          ]
+        },
+        "Hanwha": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u029",
+              "run": 1,
+              "heardAs": "hot wall"
+            },
+            {
+              "id": "u029",
+              "run": 2,
+              "heardAs": "hot wall"
+            },
+            {
+              "id": "u029",
+              "run": 3,
+              "heardAs": "hot wall"
+            }
+          ]
+        },
+        "Genetec": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u030",
+              "run": 1,
+              "heardAs": "genitex"
+            },
+            {
+              "id": "u030",
+              "run": 2,
+              "heardAs": "genitex"
+            },
+            {
+              "id": "u030",
+              "run": 3,
+              "heardAs": "genitex"
+            }
+          ]
+        },
+        "Milestone": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "DMP": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "central station": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Lenel": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u033",
+              "run": 1,
+              "heardAs": "lonell"
+            },
+            {
+              "id": "u033",
+              "run": 2,
+              "heardAs": "lonell"
+            },
+            {
+              "id": "u033",
+              "run": 3,
+              "heardAs": "lonell"
+            }
+          ]
+        },
+        "Brivo": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u033",
+              "run": 1,
+              "heardAs": "maribo"
+            },
+            {
+              "id": "u033",
+              "run": 2,
+              "heardAs": "maribo"
+            },
+            {
+              "id": "u033",
+              "run": 3,
+              "heardAs": "maribo"
+            }
+          ]
+        },
+        "Openpath": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Aiphone": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u035",
+              "run": 1,
+              "heardAs": "ai"
+            },
+            {
+              "id": "u035",
+              "run": 2,
+              "heardAs": "ai"
+            },
+            {
+              "id": "u035",
+              "run": 3,
+              "heardAs": "ai"
+            }
+          ]
+        },
+        "tamper": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "supervisory": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "glass break": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u043",
+              "run": 1,
+              "heardAs": "glass"
+            },
+            {
+              "id": "u043",
+              "run": 2,
+              "heardAs": "glass"
+            },
+            {
+              "id": "u043",
+              "run": 3,
+              "heardAs": "glass"
+            }
+          ]
+        },
+        "PIR": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        }
+      },
+      "utterances": [
+        {
+          "id": "u001",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.15789473684210525,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.15789473684210525,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.15789473684210525,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u002",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u003",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u004",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.4375,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.4375,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.4375,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u005",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u006",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.23529411764705882,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.23529411764705882,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.23529411764705882,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u007",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.2,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.2,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.2,
+              "termHits": 0,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u008",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.0625,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.0625,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.0625,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u009",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u010",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u011",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.2631578947368421,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.2631578947368421,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.2631578947368421,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u012",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u013",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.25,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.25,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.25,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u014",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u015",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u016",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u017",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u018",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u019",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u020",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u021",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u022",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u023",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u024",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.05555555555555555,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.05555555555555555,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.05555555555555555,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u025",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u026",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.15789473684210525,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.15789473684210525,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.15789473684210525,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u027",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u028",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u029",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u030",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u031",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u032",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u033",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.25,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.25,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.25,
+              "termHits": 0,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u034",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u035",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.2857142857142857,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.2857142857142857,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.2857142857142857,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u036",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.23076923076923078,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.23076923076923078,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.23076923076923078,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u038",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u039",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u040",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u041",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.058823529411764705,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.058823529411764705,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.058823529411764705,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u042",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.16666666666666666,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.16666666666666666,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.16666666666666666,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u043",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u044",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u045",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        }
+      ],
+      "estCost": {
+        "usd": 0.069813,
+        "perAudioHourUsd": 0.258,
+        "pricesRetrievedOn": "2026-10-03",
+        "source": "https://deepgram.com/pricing"
+      }
+    },
+    {
+      "provider": "elevenlabs",
+      "condition": "baseline",
+      "source": "human",
+      "model": "scribe_v2",
+      "requests": 132,
+      "failures": 0,
+      "failureRate": 0,
+      "scoredRequests": 132,
+      "scoredAudioSeconds": 974.13,
+      "missingIds": [
+        "u037"
+      ],
+      "unknownIds": [],
+      "werPct": 5.75,
+      "termAccuracy": {
+        "hits": 138,
+        "expected": 174,
+        "pct": 79.31
+      },
+      "latencyMs": {
+        "median": 451,
+        "p95": 711,
+        "n": 132
+      },
+      "inconsistentTranscripts": [
+        "u019",
+        "u033",
+        "u035",
+        "u040",
+        "u041"
+      ],
+      "perTerm": {
+        "NVR": {
+          "expected": 9,
+          "hits": 9,
+          "misses": []
+        },
+        "VMS": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "PTZ": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "WDR": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "fisheye": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "varifocal": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "ONVIF": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Avigilon": {
+          "expected": 6,
+          "hits": 3,
+          "misses": [
+            {
+              "id": "u008",
+              "run": 1,
+              "heardAs": "uh vigilant"
+            },
+            {
+              "id": "u008",
+              "run": 2,
+              "heardAs": "uh vigilant"
+            },
+            {
+              "id": "u008",
+              "run": 3,
+              "heardAs": "uh vigilant"
+            }
+          ]
+        },
+        "REX": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "mag lock": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "fail safe": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u011",
+              "run": 1,
+              "heardAs": "and failed safe"
+            },
+            {
+              "id": "u011",
+              "run": 2,
+              "heardAs": "and failed safe"
+            },
+            {
+              "id": "u011",
+              "run": 3,
+              "heardAs": "and failed safe"
+            }
+          ]
+        },
+        "electric strike": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u012",
+              "run": 1,
+              "heardAs": "electric stripe"
+            },
+            {
+              "id": "u012",
+              "run": 2,
+              "heardAs": "electric stripe"
+            },
+            {
+              "id": "u012",
+              "run": 3,
+              "heardAs": "electric stripe"
+            }
+          ]
+        },
+        "Wiegand": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u013",
+              "run": 1,
+              "heardAs": "weekend"
+            },
+            {
+              "id": "u013",
+              "run": 2,
+              "heardAs": "weekend"
+            },
+            {
+              "id": "u013",
+              "run": 3,
+              "heardAs": "weekend"
+            }
+          ]
+        },
+        "OSDP": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "door contact": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "fail secure": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "card reader": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Mercury": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Cisco Catalyst": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "PoE": {
+          "expected": 9,
+          "hits": 6,
+          "misses": [
+            {
+              "id": "u019",
+              "run": 1,
+              "heardAs": "the poh"
+            },
+            {
+              "id": "u019",
+              "run": 2,
+              "heardAs": "the qh"
+            },
+            {
+              "id": "u019",
+              "run": 3,
+              "heardAs": "the peh"
+            }
+          ]
+        },
+        "VLAN": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "IDF": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "MDF": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Cat6": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Meraki": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "SFP": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Ubiquiti": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "J-hook": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "conduit": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Verkada": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Axis": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u029",
+              "run": 1,
+              "heardAs": "access"
+            },
+            {
+              "id": "u029",
+              "run": 2,
+              "heardAs": "access"
+            },
+            {
+              "id": "u029",
+              "run": 3,
+              "heardAs": "access"
+            }
+          ]
+        },
+        "Hanwha": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u029",
+              "run": 1,
+              "heardAs": "hall one"
+            },
+            {
+              "id": "u029",
+              "run": 2,
+              "heardAs": "hall one"
+            },
+            {
+              "id": "u029",
+              "run": 3,
+              "heardAs": "hall one"
+            }
+          ]
+        },
+        "Genetec": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u030",
+              "run": 1,
+              "heardAs": "genetech"
+            },
+            {
+              "id": "u030",
+              "run": 2,
+              "heardAs": "genetech"
+            },
+            {
+              "id": "u030",
+              "run": 3,
+              "heardAs": "genetech"
+            }
+          ]
+        },
+        "Milestone": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "DMP": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "central station": {
+          "expected": 6,
+          "hits": 6,
+          "misses": []
+        },
+        "Lenel": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u033",
+              "run": 1,
+              "heardAs": "linnell"
+            },
+            {
+              "id": "u033",
+              "run": 2,
+              "heardAs": "mynell"
+            },
+            {
+              "id": "u033",
+              "run": 3,
+              "heardAs": "linnell"
+            }
+          ]
+        },
+        "Brivo": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u033",
+              "run": 1,
+              "heardAs": "horiba"
+            },
+            {
+              "id": "u033",
+              "run": 2,
+              "heardAs": "horiba"
+            },
+            {
+              "id": "u033",
+              "run": 3,
+              "heardAs": "forebo"
+            }
+          ]
+        },
+        "Openpath": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "Aiphone": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u035",
+              "run": 1,
+              "heardAs": "ai"
+            },
+            {
+              "id": "u035",
+              "run": 2,
+              "heardAs": "ai"
+            },
+            {
+              "id": "u035",
+              "run": 3,
+              "heardAs": "ai"
+            }
+          ]
+        },
+        "tamper": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "supervisory": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        },
+        "glass break": {
+          "expected": 3,
+          "hits": 0,
+          "misses": [
+            {
+              "id": "u043",
+              "run": 1,
+              "heardAs": "glass"
+            },
+            {
+              "id": "u043",
+              "run": 2,
+              "heardAs": "glass"
+            },
+            {
+              "id": "u043",
+              "run": 3,
+              "heardAs": "glass"
+            }
+          ]
+        },
+        "PIR": {
+          "expected": 3,
+          "hits": 3,
+          "misses": []
+        }
+      },
+      "utterances": [
+        {
+          "id": "u001",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u002",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u003",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u004",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.3125,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.3125,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.3125,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u005",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u006",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.17647058823529413,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u007",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u008",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.125,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.125,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.125,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u009",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u010",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u011",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21052631578947367,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.21052631578947367,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.21052631578947367,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u012",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u013",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.125,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u014",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u015",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u016",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u017",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u018",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u019",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 1,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u020",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u021",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u022",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u023",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u024",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u025",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u026",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u027",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u028",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u029",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u030",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.07692307692307693,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u031",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u032",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u033",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.25,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0.1875,
+              "termHits": 0,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0.1875,
+              "termHits": 0,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u034",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u035",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.21428571428571427,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.14285714285714285,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u036",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u038",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 2,
+              "termExpected": 2
+            }
+          ]
+        },
+        {
+          "id": "u039",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.15384615384615385,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u040",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.13333333333333333,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u041",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.058823529411764705,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u042",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u043",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 0,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u044",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0.06666666666666667,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        },
+        {
+          "id": "u045",
+          "runs": [
+            {
+              "run": 1,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 2,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            },
+            {
+              "run": 3,
+              "wer": 0,
+              "termHits": 1,
+              "termExpected": 1
+            }
+          ]
+        }
+      ],
+      "estCost": {
+        "usd": 0.05953,
+        "perAudioHourUsd": 0.22,
+        "pricesRetrievedOn": "2026-10-03",
+        "source": "https://elevenlabs.io/pricing/api"
+      }
+    }
+  ]
+}

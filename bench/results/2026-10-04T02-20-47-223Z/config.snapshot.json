@@ -1,0 +1,137 @@
+{
+  "startedAt": "2026-10-04T02:20:47.224Z",
+  "gitCommit": "3442f5a6e3ff3dbf0add9b276ebd39b2e788f855",
+  "dataset": {
+    "utterancesSha256": "19f50dc70862e60634b3423a6d7026b18e471c57ab798420a8e76aacd35d6f03",
+    "termsSha256": "d2a6d2716997e272fa6c49f4915da3d4cda2b605448d5451b222596796acf14c"
+  },
+  "keyterms": [
+    "NVR",
+    "VMS",
+    "PTZ",
+    "WDR",
+    "fisheye",
+    "varifocal",
+    "ONVIF",
+    "REX",
+    "mag lock",
+    "fail safe",
+    "fail secure",
+    "electric strike",
+    "Wiegand",
+    "OSDP",
+    "door contact",
+    "card reader",
+    "glass break",
+    "PIR",
+    "PoE",
+    "VLAN",
+    "IDF",
+    "MDF",
+    "Cat6",
+    "SFP",
+    "J-hook",
+    "conduit",
+    "Cisco Catalyst",
+    "Meraki",
+    "Ubiquiti",
+    "Verkada",
+    "Axis",
+    "Hanwha",
+    "Genetec",
+    "Milestone",
+    "Avigilon",
+    "Mercury",
+    "DMP",
+    "Lenel",
+    "Brivo",
+    "Openpath",
+    "Aiphone",
+    "central station",
+    "tamper",
+    "supervisory"
+  ],
+  "estimate": {
+    "requests": 264,
+    "audioMinutes": 32.47099999999998,
+    "usd": 0.12934281666666678
+  },
+  "config": {
+    "providers": {
+      "deepgram": {
+        "model": "nova-3",
+        "endpoint": "https://api.deepgram.com/v1/listen",
+        "baseline": {
+          "language": "en",
+          "smart_format": true
+        },
+        "boost": {
+          "available": true,
+          "parameter": "keyterm",
+          "note": "Repeated query parameter, one per term; plain terms, no weights; 500-token limit per request."
+        },
+        "docs": [
+          "https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded",
+          "https://developers.deepgram.com/docs/keyterm",
+          "https://developers.deepgram.com/docs/models-languages-overview"
+        ]
+      },
+      "elevenlabs": {
+        "model": "scribe_v2",
+        "endpoint": "https://api.elevenlabs.io/v1/speech-to-text",
+        "baseline": {
+          "language_code": "en",
+          "tag_audio_events": false,
+          "diarize": false,
+          "timestamps_granularity": "none"
+        },
+        "boost": {
+          "available": true,
+          "parameter": "keyterms",
+          "note": "Repeated multipart field, one per term (as the official elevenlabs-js SDK sends it); max 1000 terms, each under 50 characters and at most 5 words."
+        },
+        "docs": [
+          "https://elevenlabs.io/docs/api-reference/speech-to-text/convert",
+          "https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/batch/keyterm-prompting",
+          "https://elevenlabs.io/docs/overview/models"
+        ]
+      }
+    },
+    "pricing": {
+      "retrieved_on": "2026-10-03",
+      "currency": "USD",
+      "note": "List prices, used only for estimated cost. Actual billing depends on the account's plan.",
+      "deepgram": {
+        "source": "https://deepgram.com/pricing",
+        "plan": "Pay As You Go",
+        "per_minute": 0.0043,
+        "boost_per_minute": 0.0013
+      },
+      "elevenlabs": {
+        "source": "https://elevenlabs.io/pricing/api",
+        "plan": "API list price",
+        "per_hour": 0.22,
+        "boost_per_hour": 0.05,
+        "note": "The API reference describes keyterms as a 20% surcharge on the base cost; the pricing page lists $0.05/hour. This uses the pricing page."
+      }
+    },
+    "retry": {
+      "max_retries": 2,
+      "backoff_ms": [
+        1000,
+        3000
+      ],
+      "max_retry_after_ms": 30000,
+      "timeout_ms": 60000
+    },
+    "runs_per_source": {
+      "human": 3,
+      "tts": 1,
+      "noisy": 1
+    },
+    "budget": {
+      "max_usd_per_run": 1,
+      "note": "Set by Ky on 2026-10-03. run.js refuses to call any API while this is null, and stops before any request that would pass it."
+    }
+  }
+}

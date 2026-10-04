@@ -186,7 +186,12 @@ function scoreRun(runDir, dataDir) {
   const raw = readRaw(path.join(runDir, 'raw'));
   // Prices come from the run's own config snapshot, so a later price change can't alter old results
   const snapPath = path.join(runDir, 'config.snapshot.json');
-  const pricing = fs.existsSync(snapPath) ? JSON.parse(fs.readFileSync(snapPath, 'utf8')).config.pricing : null;
+  const snapshot = fs.existsSync(snapPath) ? JSON.parse(fs.readFileSync(snapPath, 'utf8')) : null;
+  const pricing = snapshot?.config.pricing ?? null;
+  // Record which dataset version was scored, and whether it differs from the one the run used
+  const sha = (f) => require('crypto').createHash('sha256').update(fs.readFileSync(path.join(dataDir, f))).digest('hex');
+  const scoredDataset = { utterancesSha256: sha('utterances.json'), termsSha256: sha('terms.json') };
+  const datasetChangedSinceRun = snapshot ? (snapshot.dataset.utterancesSha256 !== scoredDataset.utterancesSha256 || snapshot.dataset.termsSha256 !== scoredDataset.termsSha256) : null;
   const groups = Object.values(raw).map(({ provider, condition, source, files }) => {
     const g = { provider, condition, source, ...scoreGroup(files, utterances, aliases) };
     if (pricing?.[provider]) {
@@ -199,7 +204,7 @@ function scoreRun(runDir, dataDir) {
     }
     return g;
   });
-  return { runId: path.basename(runDir), scoredAt: new Date().toISOString(), utterances: utterances.length, groups };
+  return { runId: path.basename(runDir), scoredAt: new Date().toISOString(), utterances: utterances.length, scoredDataset, datasetChangedSinceRun, groups };
 }
 
 function main() {

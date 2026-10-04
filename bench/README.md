@@ -23,13 +23,17 @@ Each utterance is one or two sentences written the way a tech, SE, or customer w
 
 **Term aliases were fixed before any provider was run and will not be edited based on results.** An alias is another correct way to write the same term (`PoE` / `P o E` / `power over ethernet`), never a likely mishearing. Matching is whole-word, so "poem" does not count as "PoE". The dry-run check enforces that every term spoken in a reference is listed for it, so nothing is silently left out of the score.
 
+### Reference corrections (after the first run)
+
+After the first baseline run (`2026-10-04T02-20-47-223Z`), Ky listened to every clip where both providers, on every repeat, disagreed with the reference on an ordinary word. Five references were changed to match what was actually said (u020, u027, u029, u034, u042). For example, the script said "interior hallways" but the recording says "exterior hallways". Six clips were left unchanged because the recording matched the script (u011, u012, u035, u039, u043, u044), so those misses still count, including the muffled "swap" in u012. No jargon term or alias was changed, so jargon accuracy was unaffected; WER went down slightly for both providers. Every change is listed in [`data/reference-corrections.json`](data/reference-corrections.json). That run's original scores are kept in its `summary.original-references.json`, and each `summary.json` records the dataset hash it was scored against.
+
 ### Audio sources (to be recorded)
 
 Each source is reported separately and never averaged together.
 
 | Source | How | Count |
 |---|---|---|
-| `human` | Ky's own voice, recorded on a phone or headset. **The headline uses only this source.** | not recorded yet |
+| `human` | Ky's own voice, Windows Sound Recorder, uncompressed WAV, one sitting, same mic and room. **The headline uses only this source.** | 44 of 45 (u037 not recorded) |
 | `tts` | ElevenLabs voices | not generated yet |
 | `noisy` | `human` audio mixed with a documented background-noise file at a fixed SNR | not made yet |
 

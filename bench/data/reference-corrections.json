@@ -1,0 +1,32 @@
+{
+  "note": "References corrected to match what the speaker actually said, decided by the speaker (Ky) listening to each clip after the first baseline run. Only non-jargon words changed; no term or alias was edited. Clips where both providers disagreed with the reference but the speaker had said the reference (u011, u012, u035, u039, u043, u044) were left unchanged, so those misses still count.",
+  "date": "2026-10-03",
+  "afterRun": "2026-10-04T02-20-47-223Z",
+  "changes": [
+    {
+      "id": "u020",
+      "before": "Put all the cameras on their own VLAN so they're separated from the guest network.",
+      "after": "Pull all the cameras on their own VLAN so they're separated from the guest network."
+    },
+    {
+      "id": "u027",
+      "before": "The conduit between the buildings is full, so we can't pull another Cat six through it.",
+      "after": "The conduit between the buildings is full, so we can't pull other Cat six through it."
+    },
+    {
+      "id": "u029",
+      "before": "The customer wants Axis cameras on the exterior and Hanwha for the interior hallways.",
+      "after": "The customer wants Axis cameras on the exterior and Hanwha for the exterior hallways."
+    },
+    {
+      "id": "u034",
+      "before": "The Openpath reader on the gym door won't take phone credentials since the update.",
+      "after": "The Openpath reader on the gym floor won't take phone credentials since the update."
+    },
+    {
+      "id": "u042",
+      "before": "Our cameras are all offline and the NVR screen just says no signal.",
+      "after": "Our cameras are offline and the NVR screen just says no signal."
+    }
+  ]
+}

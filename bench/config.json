@@ -35,5 +35,5 @@
   },
   "retry": { "max_retries": 2, "backoff_ms": [1000, 3000], "max_retry_after_ms": 30000, "timeout_ms": 60000 },
   "runs_per_source": { "human": 3, "tts": 1, "noisy": 1 },
-  "budget": { "max_usd_per_run": null, "note": "Set before the first paid run; run.js refuses to call any API while this is null." }
+  "budget": { "max_usd_per_run": 1, "note": "Set by Ky on 2026-10-03. run.js refuses to call any API while this is null, and stops before any request that would pass it." }
 }
