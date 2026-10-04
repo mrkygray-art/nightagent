@@ -1,0 +1,28 @@
+name: Jargon Bench tests
+
+on:
+  push:
+    paths: ['bench/**', '.github/workflows/bench-tests.yml']
+  pull_request:
+    paths: ['bench/**', '.github/workflows/bench-tests.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 24]
+    defaults:
+      run:
+        working-directory: bench
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      # No API keys in CI: the tests use fake servers and committed summaries only
+      - run: npm test
+      - run: npm run dry-run

@@ -26,7 +26,9 @@ function exactValues() {
 test('every published percentage traces to an exact result', () => {
   const vals = exactValues();
   const m = model();
-  const docs = { 'README.md': fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'), scorecard: scorecard(m), readout: readout(m) };
+  const docs = { 'README.md': fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'), scorecard: scorecard(m), readout: readout(m),
+    // NightAgent's main README quotes the headline too
+    'main README.md': fs.readFileSync(path.join(ROOT, '..', 'README.md'), 'utf8').split('## Jargon Bench')[1].split('\n## ')[0] };
   for (const [name, text] of Object.entries(docs)) {
     const found = [...text.matchAll(/(\d+\.\d)%/g)].map((x) => x[1]);
     assert.ok(found.length > 0, name);

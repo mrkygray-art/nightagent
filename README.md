@@ -6,7 +6,7 @@ NightAgent is a portfolio demonstration of how an AI voice agent can support the
 
 **Live demo:** https://nightshift-dispatch.vercel.app/demo  
 **Evaluation Lab:** https://nightshift-dispatch.vercel.app/lab  
-**How it's built:** [Architecture](#architecture) · [Run it locally](#run-it-locally)
+**How it's built:** [Architecture](#architecture) · [Run it locally](#run-it-locally) · [Jargon Bench](#jargon-bench-speech-to-text-on-security-vocabulary)
 
 > **Demo note:** The customer/AI interaction demonstrates the conversational experience. Dispatch, technician assignment, repair timing, and lifecycle progression are intentionally accelerated/simulated so a recruiter or reviewer can experience an hours-long service workflow in minutes. The UI labels simulated events accordingly.
 
@@ -228,6 +228,19 @@ The page says what it can't measure instead of showing a perfect-looking dashboa
 - **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn. The voice tests check instead whether numbers and names come through exactly.
 - **Real accents and real phones.** The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.
 - **Hallucination in general.** One specific kind is measured, promises the tools didn't back up, and it's named that.
+
+## Jargon Bench (speech-to-text on security vocabulary)
+
+Sam can only act on what speech-to-text hears, and brand and part names are where it slips ("Wiegand" heard as "weekend"). [Jargon Bench](bench/) measures that for Deepgram and ElevenLabs on 45 field-style sentences containing 44 trade terms, with and without each provider's keyterm boosting. The scorer and its tests were written before any provider was called, term aliases were frozen before the first run, and every published number traces to a result file in `bench/results/`.
+
+Snapshot, recorded speech (one speaker, 44 clips, each sent 3 times; runs of 2026-10-04 UTC):
+
+| Jargon terms heard correctly | Default | Boosted |
+| --- | --- | --- |
+| Deepgram `nova-3` | 62.1% | 89.7% |
+| ElevenLabs `scribe_v2` | 79.3% | 95.4% |
+
+Boosting also produced a few false positives ("access point" written as "Axis"), and TTS audio from ElevenLabs voices scored higher than real speech for both providers, which is why it is kept out of the headline. Results by audio source, method, and limitations: [bench/README.md](bench/README.md) · [one-page readout (PDF)](bench/report/readout.pdf).
 
 ## End-to-End Workflow
 
