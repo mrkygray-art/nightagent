@@ -1,6 +1,6 @@
 {
   "runId": "2026-10-04T02-53-18-454Z",
-  "scoredAt": "2026-10-04T02:54:33.580Z",
+  "scoredAt": "2026-10-04T02:59:08.164Z",
   "utterances": 45,
   "scoredDataset": {
     "utterancesSha256": "ad2929323517f7abbbb2e5bf304ed41101d4ea0d74815622d43492e668957d66",
@@ -21,6 +21,10 @@
       "missingIds": [],
       "unknownIds": [],
       "werPct": 3.05,
+      "wordErrors": {
+        "edits": 21,
+        "refWords": 689
+      },
       "termAccuracy": {
         "hits": 49,
         "expected": 59,
@@ -835,6 +839,10 @@
       "missingIds": [],
       "unknownIds": [],
       "werPct": 0.73,
+      "wordErrors": {
+        "edits": 5,
+        "refWords": 689
+      },
       "termAccuracy": {
         "hits": 58,
         "expected": 59,
@@ -1595,6 +1603,10 @@
       "missingIds": [],
       "unknownIds": [],
       "werPct": 0.73,
+      "wordErrors": {
+        "edits": 5,
+        "refWords": 689
+      },
       "termAccuracy": {
         "hits": 57,
         "expected": 59,
@@ -2361,6 +2373,10 @@
       "missingIds": [],
       "unknownIds": [],
       "werPct": 0.44,
+      "wordErrors": {
+        "edits": 3,
+        "refWords": 689
+      },
       "termAccuracy": {
         "hits": 59,
         "expected": 59,

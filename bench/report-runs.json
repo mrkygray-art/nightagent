@@ -1,0 +1,9 @@
+{
+  "note": "The runs the scorecard and readout are built from. Each (source, provider, condition) must come from exactly one run, and all runs must be scored against the same dataset version.",
+  "runs": [
+    "2026-10-04T02-20-47-223Z",
+    "2026-10-04T02-40-00-605Z",
+    "2026-10-04T02-52-00-161Z",
+    "2026-10-04T02-53-18-454Z"
+  ]
+}

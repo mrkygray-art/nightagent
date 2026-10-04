@@ -3,9 +3,12 @@
   "private": true,
   "description": "Jargon Bench: speech-to-text accuracy on physical-security vocabulary (Deepgram vs. ElevenLabs).",
   "type": "commonjs",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test",
-    "dry-run": "node run.js --dry-run"
+    "dry-run": "node run.js --dry-run",
+    "report": "node report.js"
   }
 }

@@ -170,6 +170,7 @@ function scoreGroup(files, utterances, aliases) {
     missingIds: utterances.map((u) => u.id).filter((id) => !seen.has(id)),
     unknownIds: g.unknownIds,
     werPct: pct(g.edits, g.refWords),
+    wordErrors: { edits: g.edits, refWords: g.refWords },
     termAccuracy: { hits: g.hits, expected: g.expected, pct: pct(g.hits, g.expected) },
     insertedTerms: { count: g.inserted.reduce((n, x) => n + x.extra, 0), items: g.inserted },
     latencyMs: { median: median(g.latencies), p95: p95(g.latencies), n: g.latencies.length },

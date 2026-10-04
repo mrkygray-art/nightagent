@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 6 of 8).** Human, noisy, and TTS runs are done (results below). Still to do: the scorecard page and one-page readout, CI, and the portfolio section. Every number here comes from a `summary.json` in `bench/results/`.
+> **Status: in progress (build step 7 of 8).** Human, noisy, and TTS runs are done, with a [scorecard](report/scorecard.html) and a one-page [customer readout (PDF)](report/readout.pdf). Still to do: CI and the portfolio section. Every number here comes from a `summary.json` in `bench/results/`, and a test checks that every percentage in this README, the scorecard, and the readout matches an exact result.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -86,6 +86,8 @@ node run.js --providers deepgram,elevenlabs --sources human --conditions baselin
 node run.js --providers deepgram,elevenlabs --sources human --conditions baseline,boosted --confirm
 
 node score.js --run <run-id>   # re-scores an existing run
+npm run report                 # builds report/scorecard.html and the one-page report/readout.pdf
+                               # from the runs listed in report-runs.json (PDF needs Chrome)
 ```
 
 Provider keys go in `bench/.env` (copy [`.env.example`](.env.example)); that file is git-ignored. A paid run refuses to start unless `budget.max_usd_per_run` is set in `config.json`, the estimate is under it, and `--confirm` is given; it also stops before any request that would pass the cap. Requests run one at a time, so latency isn't distorted by the bench's own concurrency.
@@ -117,7 +119,7 @@ Each run writes `results/<run-id>/config.snapshot.json` (models, settings, price
 
 | | Deepgram baseline | Deepgram boosted | ElevenLabs baseline | ElevenLabs boosted |
 |---|---|---|---|---|
-| Word error rate | 11.7% | 8.6% | 5.8% | 3.5% |
+| Word error rate | 11.7% | 8.6% | 5.7% | 3.5% |
 | Median latency | 119 ms | 128 ms | 451 ms | 472 ms |
 | p95 latency | 598 ms | 597 ms | 711 ms | 703 ms |
 | Failed requests | 0 of 132 | 0 of 132 | 0 of 132 | 0 of 132 |
@@ -148,8 +150,8 @@ Noisy run [`2026-10-04T02-52-00-161Z`](results/2026-10-04T02-52-00-161Z/summary.
 
 | Word error rate | Human | Noisy | TTS |
 |---|---|---|---|
-| Deepgram baseline / boosted | 11.7% / 8.6% | 17.7% / 13.7% | 3.1% / 0.7% |
-| ElevenLabs baseline / boosted | 5.8% / 3.5% | 9.1% / 5.5% | 0.7% / 0.4% |
+| Deepgram baseline / boosted | 11.7% / 8.6% | 17.7% / 13.7% | 3.0% / 0.7% |
+| ElevenLabs baseline / boosted | 5.7% / 3.5% | 9.1% / 5.5% | 0.7% / 0.4% |
 
 - **Noise hurt both baselines, and boosting recovered most of it.** Deepgram's baseline fell the most (to 46.6%). Boosted, both providers landed close to their human results. Failed requests: 0 of 176.
 - **TTS audio made every condition look better than real speech**, and ElevenLabs' own voices gave ElevenLabs its only perfect score. That is the bias this source exists to show, which is why the headline uses human audio only. Failed requests: 0 of 180.

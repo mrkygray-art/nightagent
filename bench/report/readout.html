@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Jargon Bench Readout</title><style>
+@page { size: Letter; margin: 0.55in; }
+body { font: 11.5px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; color: #14171f; margin: 0; }
+h1 { font-size: 20px; margin: 0 0 2px; } h2 { font-size: 13px; margin: 14px 0 5px; text-transform: uppercase; letter-spacing: .04em; color: #2557d6; }
+p { margin: 4px 0; } .muted { color: #5b6474; } table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 4px 7px; border-bottom: 1px solid #e3e6eb; } th { color: #5b6474; font-weight: 600; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; } ul { margin: 4px 0; padding-left: 18px; }
+</style></head><body>
+<h1>Speech-to-text on security jargon: readout</h1>
+<p class="muted">Jargon Bench · runs on 2026-10-04 (UTC) · prepared by Ky Gray</p>
+<h2>1. What we tested and why</h2>
+<p>Field techs and customers use brand and part names (Verkada, PoE, Wiegand, NVR) that general speech-to-text often mishears, and a misheard word becomes a wrong ticket. We measured how often Deepgram and ElevenLabs get those terms right on 44 recorded field-style sentences, with and without each provider's keyterm boosting.</p>
+<h2>2. Headline: jargon terms heard correctly (recorded speech)</h2>
+<table><thead><tr><th>Provider</th><th class="num">Default</th><th class="num">Boosted</th><th class="num">Median latency (boosted)</th><th class="num">List price / audio hr (boosted)</th></tr></thead><tbody><tr><td>Deepgram <span class="muted">(nova-3)</span></td><td class="num">62.1%</td><td class="num"><b>89.7%</b></td><td class="num">128 ms</td><td class="num">$0.34</td></tr><tr><td>ElevenLabs <span class="muted">(scribe_v2)</span></td><td class="num">79.3%</td><td class="num"><b>95.4%</b></td><td class="num">472 ms</td><td class="num">$0.27</td></tr></tbody></table>
+<h2>3. Top 5 mangled terms, and what boosting did</h2>
+<table><thead><tr><th>Term</th><th>Deepgram heard</th><th class="num">Deepgram default → boosted</th><th>ElevenLabs heard</th><th class="num">ElevenLabs default → boosted</th></tr></thead><tbody><tr><td><b>Avigilon</b></td><td>“a digilon”</td><td class="num">0/6 → 6/6</td><td>“uh vigilant”</td><td class="num">3/6 → 6/6</td></tr><tr><td><b>NVR</b></td><td>“mbr”</td><td class="num">0/9 → 9/9</td><td><span class="muted">heard right</span></td><td class="num">9/9 → 9/9</td></tr><tr><td><b>Aiphone</b></td><td>“ai”</td><td class="num">0/3 → 0/3</td><td>“ai”</td><td class="num">0/3 → 0/3</td></tr><tr><td><b>Axis</b></td><td>“access”</td><td class="num">0/3 → 0/3</td><td>“access”</td><td class="num">0/3 → 3/3</td></tr><tr><td><b>Brivo</b></td><td>“maribo”</td><td class="num">0/3 → 3/3</td><td>“horiba”</td><td class="num">0/3 → 3/3</td></tr></tbody></table>
+<p class="muted">Ranked by misses on recorded speech without boosting, both providers combined; ties alphabetical. Counts are correct occurrences across 3 repeats.</p>
+<h2>4. Latency and cost</h2>
+<p>Deepgram: median 119 ms default, 128 ms boosted; $0.26 → $0.34 per audio hour at list price. ElevenLabs: median 451 ms default, 472 ms boosted; $0.22 → $0.27 per audio hour at list price. Latency was measured from a home connection and includes upload.</p>
+<h2>5. Recommendation and caveats</h2>
+<ul><li>Turn on keyterm boosting for field audio. On recorded speech it raised jargon accuracy from 62.1% to 89.7% with Deepgram and from 79.3% to 95.4% with ElevenLabs.</li><li>The cost was small: median latency changed by 9 ms and 21 ms, and list price rose from $0.26 to $0.34 and from $0.22 to $0.27 per audio hour.</li><li>On this dataset ElevenLabs was more accurate (95.4% vs 89.7% boosted) and Deepgram answered faster (median 128 ms vs 472 ms).</li><li>Review the boost list for terms that sound like everyday words: boosting wrote &quot;Axis&quot; and &quot;supervisory&quot; where it wasn&#39;t said (5 clip-level cases across all audio).</li></ul>
+<p class="muted">44 recorded clips from one speaker, each sent 3 times; 58 jargon-term occurrences. Noise is steady synthetic pink noise; real job sites are usually harder. TTS audio came from ElevenLabs voices and is excluded from the headline. Batch transcription only. Models and list prices as of 2026-10-03; runs on 2026-10-04 (UTC). Full scorecard and method: github.com/mrkygray-art/nightagent/tree/main/bench</p>
+</body></html>

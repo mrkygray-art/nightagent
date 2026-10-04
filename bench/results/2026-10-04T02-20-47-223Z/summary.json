@@ -1,6 +1,6 @@
 {
   "runId": "2026-10-04T02-20-47-223Z",
-  "scoredAt": "2026-10-04T02:43:13.800Z",
+  "scoredAt": "2026-10-04T02:59:07.689Z",
   "utterances": 45,
   "scoredDataset": {
     "utterancesSha256": "ad2929323517f7abbbb2e5bf304ed41101d4ea0d74815622d43492e668957d66",
@@ -23,6 +23,10 @@
       ],
       "unknownIds": [],
       "werPct": 11.74,
+      "wordErrors": {
+        "edits": 237,
+        "refWords": 2019
+      },
       "termAccuracy": {
         "hits": 108,
         "expected": 174,
@@ -1645,6 +1649,10 @@
       ],
       "unknownIds": [],
       "werPct": 5.75,
+      "wordErrors": {
+        "edits": 116,
+        "refWords": 2019
+      },
       "termAccuracy": {
         "hits": 138,
         "expected": 174,
