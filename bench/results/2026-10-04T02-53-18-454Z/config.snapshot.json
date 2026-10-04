@@ -1,0 +1,228 @@
+{
+  "startedAt": "2026-10-04T02:53:18.454Z",
+  "gitCommit": "8bcea01b372ee14607b9db7709da1fa7f01767c7",
+  "dataset": {
+    "utterancesSha256": "ad2929323517f7abbbb2e5bf304ed41101d4ea0d74815622d43492e668957d66",
+    "termsSha256": "d2a6d2716997e272fa6c49f4915da3d4cda2b605448d5451b222596796acf14c"
+  },
+  "keyterms": [
+    "NVR",
+    "VMS",
+    "PTZ",
+    "WDR",
+    "fisheye",
+    "varifocal",
+    "ONVIF",
+    "REX",
+    "mag lock",
+    "fail safe",
+    "fail secure",
+    "electric strike",
+    "Wiegand",
+    "OSDP",
+    "door contact",
+    "card reader",
+    "glass break",
+    "PIR",
+    "PoE",
+    "VLAN",
+    "IDF",
+    "MDF",
+    "Cat6",
+    "SFP",
+    "J-hook",
+    "conduit",
+    "Cisco Catalyst",
+    "Meraki",
+    "Ubiquiti",
+    "Verkada",
+    "Axis",
+    "Hanwha",
+    "Genetec",
+    "Milestone",
+    "Avigilon",
+    "Mercury",
+    "DMP",
+    "Lenel",
+    "Brivo",
+    "Openpath",
+    "Aiphone",
+    "central station",
+    "tamper",
+    "supervisory"
+  ],
+  "audioSha256": {
+    "audio/tts/u001.wav": "72aacb3568689a607ac26917bc73084fcce4d6aaa48ee8df256332dd9d03d028",
+    "audio/tts/u002.wav": "93d58b39ff69e06ad78ebbcb9bcf49420be2733b44b001dc177b4d5c2eb28b43",
+    "audio/tts/u003.wav": "e8b8629f3ac912ef5056866de2d85a3a414e13b0a54b6e5920fad9dda4da60be",
+    "audio/tts/u004.wav": "b3ec7da015bfc1b9a2f516addf455447126fd8ab2c9aadc928aee2230d88abd8",
+    "audio/tts/u005.wav": "536207e85438e73a3ffcd672e395d5b6d988609fd4d6730645d8208615e7b1aa",
+    "audio/tts/u006.wav": "a30903f808738144a1b09f29de7b5918390ef3f7f429fd400fa8189e1e2ff8e9",
+    "audio/tts/u007.wav": "562aeda92aa799b2d48644c15e73b762f688c997758ac384488435ae995dd981",
+    "audio/tts/u008.wav": "de2deef89df5d921a825f5b9f32912ca3089fa23d177a838f57b8ccb0ff346e3",
+    "audio/tts/u009.wav": "7992f4f2139cb41cd58ed1caf71b40e5a237fd11f338c34c8684bb39a4bf4484",
+    "audio/tts/u010.wav": "de1924217f4baba0bffc260cdcb82a0f06dd36b52c9c448a0c547982d84affcc",
+    "audio/tts/u011.wav": "914546d41e5b6390087b010eec5ee2594055a5ff26c1e2487642c510a168b3f3",
+    "audio/tts/u012.wav": "7216aeff9bf4f769bbdd7478a7a490b92186d1a7982754cd42f802526a268ec2",
+    "audio/tts/u013.wav": "dab977d7b8305498cde81929c1d97cb336e9275400ac1ea82851efc7f4b31ce8",
+    "audio/tts/u014.wav": "f4890a59eb1b52122ada106fc679a15da156c5f6833db7d0dbc4cb0a5582496f",
+    "audio/tts/u015.wav": "d2e2016124edb6a989b5b5aca5308ced6dd8280f23b8df75785de7bd257db632",
+    "audio/tts/u016.wav": "2ecaa722fdb71344b2229746dffbd11f0b2caa0fc4e1d45e8da5adeee8331c1d",
+    "audio/tts/u017.wav": "5d8c38c88ad43f87c3d31d671ffa9217813cc3e84f2abd5ade8ed106a0a96e97",
+    "audio/tts/u018.wav": "9d2ec44fd6d1f6aa7611893017d9af95421e995acb5ca1224594f971b946ec9d",
+    "audio/tts/u019.wav": "704dbd855e8746c7a69594e0be7c4b082bde27767dee51bbb901374d2fc3eac7",
+    "audio/tts/u020.wav": "e847a140db6d25c3880d9d1716b93fdf68beaf505beeae93ca62507ba219e0b6",
+    "audio/tts/u021.wav": "d048a063a44f1d643d98cba90596b1001970d6e874b0058e39bbd1e9aeb0564a",
+    "audio/tts/u022.wav": "6405d5a3dbf9ac4df0604f6262b1dfeca3f424dffdec678459fd5d9b6abf32ee",
+    "audio/tts/u023.wav": "920be0fddb40de78064269e779752fa73e7b457ed2d6c86e8d34027a5d282242",
+    "audio/tts/u024.wav": "7534cdedfc0ba186f0d1716350873f90ae3aa042094ebd17b67d222d85f54514",
+    "audio/tts/u025.wav": "864e00cbe5933418146baac3c870ec13a2cfcec2a68a9d24fc0ee1080a6eaaa5",
+    "audio/tts/u026.wav": "efa1a6a44dc72dbc439aaf429b129302ee57b169d2e81785600013bad409bd59",
+    "audio/tts/u027.wav": "51d41b86e1a64099a1c41705773f05d01bf9006493f99436816ef79ad9a1cac4",
+    "audio/tts/u028.wav": "25480d69af01300b32e3a9cd8dd0db9214c571008d47a1fce9cd6e6ee6365b7c",
+    "audio/tts/u029.wav": "a5856ff9712c016acc81303c4bbcd78f849b642793044e04743e10110ac93c95",
+    "audio/tts/u030.wav": "dd9d04349a6303ca57782a921a021773299ffb6b986b0d1706c3989f2038799e",
+    "audio/tts/u031.wav": "dea22e2d74633f15f3ce3d657bb85925de49bf84ccd32c5840496e10b6c9c842",
+    "audio/tts/u032.wav": "fd5e43d9b2559b1ed2f1d427bc1ece953ef87311f6fad432289981b8c862ea03",
+    "audio/tts/u033.wav": "561fa2439ecf0ece2746e6bca2057854276412dbcd01edad1ece4fab6ae99f59",
+    "audio/tts/u034.wav": "3c32b98f5e407a31f0cb630f19352a90067e1823dc16731d489d2053196a29e2",
+    "audio/tts/u035.wav": "8e96e1dfbfa2a4d5c2883246c4ddb6cc22699256ae6f3b4d832edd8fd8aba2df",
+    "audio/tts/u036.wav": "76cbb3e2e8f292c17a3a1dafc010a58578ac1b0420056f7aeda02be521a48470",
+    "audio/tts/u037.wav": "b42f7588de374b44cbb161e55bd385da12ece97812bfc61a18e02e1e7a822ffc",
+    "audio/tts/u038.wav": "fca87e963b2daab716b40e4a780bb2e0f2baf2f0cfc50f0861cf4cd4a1436445",
+    "audio/tts/u039.wav": "dcc8ad0e7083690c330cecc70a1d5ad86d9e4ee335299e8f719e7c53f4951cb8",
+    "audio/tts/u040.wav": "33b5d40bd03a6fbead93689b7494c9f9ebffbdb6ea0bef66db9f486606ebf8c0",
+    "audio/tts/u041.wav": "53caf94a7f808fd51803c7086db4dad125f9d390f9d631b02fa2c99c1ddbf247",
+    "audio/tts/u042.wav": "8600f3b2b9b4af4fa91c1dd4f44d8b58dd5a6973c3006c19310b065efecacb37",
+    "audio/tts/u043.wav": "c1397e9e8fe5416880bddd7910dbc5f728711a6c69faf69f2c635cc40cd1d595",
+    "audio/tts/u044.wav": "f713196d8334d9d81256a6a241a7a710a1820a5af1ad6aa1de71a3b004d4abbf",
+    "audio/tts/u045.wav": "6d03df1be8b0accf33bb79b489dc64dbee15d085a69239954ec55fa953da26af"
+  },
+  "estimate": {
+    "requests": 180,
+    "audioMinutes": 13.870062499999994,
+    "usd": 0.06264644895833338
+  },
+  "config": {
+    "providers": {
+      "deepgram": {
+        "model": "nova-3",
+        "endpoint": "https://api.deepgram.com/v1/listen",
+        "baseline": {
+          "language": "en",
+          "smart_format": true
+        },
+        "boost": {
+          "available": true,
+          "parameter": "keyterm",
+          "note": "Repeated query parameter, one per term; plain terms, no weights; 500-token limit per request."
+        },
+        "docs": [
+          "https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded",
+          "https://developers.deepgram.com/docs/keyterm",
+          "https://developers.deepgram.com/docs/models-languages-overview"
+        ]
+      },
+      "elevenlabs": {
+        "model": "scribe_v2",
+        "endpoint": "https://api.elevenlabs.io/v1/speech-to-text",
+        "baseline": {
+          "language_code": "en",
+          "tag_audio_events": false,
+          "diarize": false,
+          "timestamps_granularity": "none"
+        },
+        "boost": {
+          "available": true,
+          "parameter": "keyterms",
+          "note": "Repeated multipart field, one per term (as the official elevenlabs-js SDK sends it); max 1000 terms, each under 50 characters and at most 5 words."
+        },
+        "docs": [
+          "https://elevenlabs.io/docs/api-reference/speech-to-text/convert",
+          "https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/batch/keyterm-prompting",
+          "https://elevenlabs.io/docs/overview/models"
+        ]
+      }
+    },
+    "pricing": {
+      "retrieved_on": "2026-10-03",
+      "currency": "USD",
+      "note": "List prices, used only for estimated cost. Actual billing depends on the account's plan.",
+      "deepgram": {
+        "source": "https://deepgram.com/pricing",
+        "plan": "Pay As You Go",
+        "per_minute": 0.0043,
+        "boost_per_minute": 0.0013
+      },
+      "elevenlabs": {
+        "source": "https://elevenlabs.io/pricing/api",
+        "plan": "API list price",
+        "per_hour": 0.22,
+        "boost_per_hour": 0.05,
+        "note": "The API reference describes keyterms as a 20% surcharge on the base cost; the pricing page lists $0.05/hour. This uses the pricing page."
+      }
+    },
+    "retry": {
+      "max_retries": 2,
+      "backoff_ms": [
+        1000,
+        3000
+      ],
+      "max_retry_after_ms": 30000,
+      "timeout_ms": 60000
+    },
+    "runs_per_source": {
+      "human": 3,
+      "tts": 1,
+      "noisy": 1
+    },
+    "budget": {
+      "max_usd_per_run": 1,
+      "note": "Set by Ky on 2026-10-03. run.js refuses to call any API while this is null, and stops before any request that would pass it."
+    },
+    "tts": {
+      "generator": "elevenlabs",
+      "endpoint": "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+      "model": "eleven_multilingual_v2",
+      "output_format": "wav_16000",
+      "seed": 20261003,
+      "voices": [
+        {
+          "name": "Roger",
+          "voice_id": "CwhRBWXzGAHq8TQ4Fs17",
+          "labels": "American, male, middle-aged (premade)"
+        },
+        {
+          "name": "Jessica",
+          "voice_id": "cgSgspJ2msm6clMCkdW9",
+          "labels": "American, female, young (premade)"
+        },
+        {
+          "name": "Charlie",
+          "voice_id": "IKne3meq5aSn9XLyUdCD",
+          "labels": "Australian, male, young (premade)"
+        }
+      ],
+      "assignment": "Rotate by utterance order: 1st Roger, 2nd Jessica, 3rd Charlie, repeat.",
+      "pricing": {
+        "per_1k_chars": 0.08,
+        "source": "https://elevenlabs.io/pricing/api",
+        "retrieved_on": "2026-10-03",
+        "note": "Multilingual v2 list price; billed in credits on subscription plans."
+      },
+      "note": "Seed is best effort; ElevenLabs says determinism is not guaranteed. Generated files are logged with SHA-256 in recordings/tts/manifest.json.",
+      "docs": [
+        "https://elevenlabs.io/docs/api-reference/text-to-speech/convert",
+        "https://elevenlabs.io/docs/overview/models"
+      ]
+    },
+    "noise": {
+      "from_source": "human",
+      "type": "pink",
+      "generator": "ffmpeg anoisesrc",
+      "seed": 20261003,
+      "snr_db": 10,
+      "note": "Steady synthetic pink noise (HVAC/server-room-like hiss), a different fixed seed per clip (seed + clip number). SNR is set per clip from the whole clip's RMS level, including short pauses."
+    }
+  }
+}

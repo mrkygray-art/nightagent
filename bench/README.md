@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 5 of 8).** Baseline and boosted runs on Ky's recorded voice are done (results below). Still to do: TTS and noisy audio, the scorecard page and one-page readout, CI, and the portfolio section. Every number here comes from a `summary.json` in `bench/results/`.
+> **Status: in progress (build step 6 of 8).** Human, noisy, and TTS runs are done (results below). Still to do: the scorecard page and one-page readout, CI, and the portfolio section. Every number here comes from a `summary.json` in `bench/results/`.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -34,8 +34,8 @@ Each source is reported separately and never averaged together.
 | Source | How | Count |
 |---|---|---|
 | `human` | Ky's own voice, Windows Sound Recorder, uncompressed WAV, one sitting, same mic and room. **The headline uses only this source.** | 44 of 45 (u037 not recorded) |
-| `tts` | ElevenLabs voices | not generated yet |
-| `noisy` | `human` audio mixed with a documented background-noise file at a fixed SNR | not made yet |
+| `tts` | ElevenLabs voices Roger, Jessica, and Charlie (premade), `eleven_multilingual_v2`, rotated by line; logged in [`data/tts-manifest.json`](data/tts-manifest.json) | 45 of 45 |
+| `noisy` | `human` audio mixed with seeded synthetic pink noise (steady, HVAC-like hiss) at 10 dB SNR per clip; regenerates byte-identically; logged in [`data/noisy-manifest.json`](data/noisy-manifest.json) | 44 of 45 |
 
 **TTS bias caveat:** all TTS audio is generated with ElevenLabs voices. Audio from one vendor's TTS can score unusually well on the same vendor's speech-to-text, so `tts` results are labeled "ElevenLabs-generated" and are never used for the headline.
 
@@ -95,7 +95,10 @@ Each run writes `results/<run-id>/config.snapshot.json` (models, settings, price
 ## Limitations (known in advance)
 
 - Small sample: 45 utterances.
-- One human speaker (Ky), one noise profile.
+- One human speaker (Ky), recorded in one sitting on one device; u037 has no human recording.
+- One noise profile: steady synthetic pink noise at 10 dB SNR. Real job sites add speech, tools, and alarms, which are usually harder.
+- TTS clips come only from ElevenLabs voices, so they can favor ElevenLabs speech-to-text.
+- Noisy and TTS clips were each sent once (human clips three times).
 - Batch (prerecorded) transcription only; no streaming.
 - Models, settings, and prices are as of the run date recorded in each result file.
 
@@ -131,3 +134,24 @@ Latency is measured from a home internet connection and includes uploading the c
 - **No term got worse with boosting, but each provider produced one false positive**, on all 3 repeats: Deepgram wrote "access control panels" as "**Axis** Control Panel" (u036), and ElevenLabs wrote "supervision" as "**supervisory**" (u013). Term accuracy can't see these (it only checks terms that were said), so the scorer counts them separately (`insertedTerms` in `summary.json`).
 
 With one speaker and 44 clips, treat these as directional, not definitive.
+
+### Other audio sources (1 run each, never averaged with the human results)
+
+Noisy run [`2026-10-04T02-52-00-161Z`](results/2026-10-04T02-52-00-161Z/summary.json) (44 clips, 58 term occurrences) and TTS run [`2026-10-04T02-53-18-454Z`](results/2026-10-04T02-53-18-454Z/summary.json) (45 clips, 59 term occurrences). Each clip was sent once, so these can't show run-to-run variation, and one term is worth about 1.7 points.
+
+| Jargon terms correct | Human (from above) | Noisy, 10 dB SNR | TTS (ElevenLabs-generated) |
+|---|---|---|---|
+| Deepgram baseline | 62.1% | 27 of 58 (46.6%) | 49 of 59 (83.1%) |
+| Deepgram boosted | 89.7% | 50 of 58 (86.2%) | 58 of 59 (98.3%) |
+| ElevenLabs baseline | 79.3% | 44 of 58 (75.9%) | 57 of 59 (96.6%) |
+| ElevenLabs boosted | 95.4% | 56 of 58 (96.6%) | 59 of 59 (100%) |
+
+| Word error rate | Human | Noisy | TTS |
+|---|---|---|---|
+| Deepgram baseline / boosted | 11.7% / 8.6% | 17.7% / 13.7% | 3.1% / 0.7% |
+| ElevenLabs baseline / boosted | 5.8% / 3.5% | 9.1% / 5.5% | 0.7% / 0.4% |
+
+- **Noise hurt both baselines, and boosting recovered most of it.** Deepgram's baseline fell the most (to 46.6%). Boosted, both providers landed close to their human results. Failed requests: 0 of 176.
+- **TTS audio made every condition look better than real speech**, and ElevenLabs' own voices gave ElevenLabs its only perfect score. That is the bias this source exists to show, which is why the headline uses human audio only. Failed requests: 0 of 180.
+- **Boosting false positives showed up again in noise:** both providers turned "access point" into "Axis" (u023), and ElevenLabs again wrote "supervisory" for "supervision" (u013). No TTS false positives.
+- **A scoring edge case:** in TTS, Deepgram (boosted) wrote "backdoor contact" for "back door contact" (u038). Because terms match as whole words and aliases are frozen, that counts as a miss of "door contact" even though the meaning is right.
