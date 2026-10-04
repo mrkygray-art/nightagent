@@ -5,7 +5,8 @@
 NightAgent is a portfolio demonstration of how an AI voice agent can support the complete after-hours service lifecycle for a physical-security integrator. Instead of stopping at a chatbot or voice demo, NightAgent connects the customer conversation to operational workflow: capture the problem, create and prioritize a service ticket, simulate dispatch and repair progression, call the customer back, verify the outcome, identify follow-up sales or service needs, and regression-test agent behavior against problems found during real demo calls.
 
 **Live demo:** https://nightshift-dispatch.vercel.app/demo  
-**Evaluation Lab:** https://nightshift-dispatch.vercel.app/lab
+**Evaluation Lab:** https://nightshift-dispatch.vercel.app/lab  
+**How it's built:** [Architecture](#architecture) · [Run it locally](#run-it-locally)
 
 > **Demo note:** The customer/AI interaction demonstrates the conversational experience. Dispatch, technician assignment, repair timing, and lifecycle progression are intentionally accelerated/simulated so a recruiter or reviewer can experience an hours-long service workflow in minutes. The UI labels simulated events accordingly.
 
@@ -338,52 +339,83 @@ The demo scenarios are based on the kinds of problems a security integrator enco
 
 This is intentional: NightAgent combines my physical-security / Sales Engineering background with AI application development rather than demonstrating AI with a generic use case.
 
-## Architecture Concept
+## Architecture
 
-```text
-Customer
-   |
-   v
-ElevenLabs Voice Agent
-   |
-   +--> Customer & account identification
-   +--> Problem discovery
-   +--> Safety / urgency questions
-   +--> Tool calls
-   |
-   v
-Python / FastAPI Service Workflow
-   |
-   +--> Ticket creation
-   +--> Classification
-   +--> Rules-based priority
-   +--> Dispatch / assignment lifecycle
-   +--> Status timeline
-   |
-   v
-Supabase Persistence
-   |
-   v
-Post-Service AI Check-In
-   |
-   +--> Confirm resolved -----------------> Close ticket
-   |
-   +--> Still broken ---------------------> Continue service workflow
-   |
-   +--> Additional need -----------------> Opportunity + AE task
+The agents talk; the backend decides. Every action an agent takes is a call to a FastAPI endpoint, where Python rules set the priority, move the ticket through its lifecycle, and save it to Supabase.
 
-Specialists (ElevenLabs transfer_to_agent)
-   |
-   +--> Jordan: billing ------------------> Billing review request
-   +--> Riley: sales ---------------------> Sales lead + AE task
+```mermaid
+flowchart LR
+    subgraph Browser["Browser: /demo page"]
+        UI["Ticket board +<br/>Engineering Mode"]
+        SDK["@elevenlabs/client<br/>live voice over WebSocket"]
+    end
 
-Engineering feedback loop
-   |
-   +--> Live-call problem
-   +--> ElevenLabs Agent Testing regression case
-   +--> Reply/tool evaluation
-   +--> Pass/fail result in Evaluation Lab
+    subgraph EL["ElevenLabs Agents"]
+        SAM["Sam<br/>intake + dispatch"]
+        JOR["Jordan<br/>billing"]
+        RIL["Riley<br/>sales"]
+        FU["Follow-up call"]
+        TESTS["Agent Testing<br/>regression suite"]
+    end
+
+    subgraph API["FastAPI on Vercel"]
+        TOOLS["/tools/*<br/>server tools<br/>X-Tool-Secret checked"]
+        RULES["Python rules<br/>priority, lifecycle,<br/>follow-up routing"]
+        HOOK["/webhooks/elevenlabs/post-call<br/>HMAC signature checked"]
+        DEMO["/api/demo/*, /api/tickets"]
+        LAB["/lab<br/>Evaluation Lab"]
+    end
+
+    DB[("Supabase<br/>tickets, events, calls")]
+    SMS["Twilio SMS page<br/>simulated unless configured"]
+
+    SDK <--> SAM
+    SAM -- transfer_to_agent --> JOR
+    SAM -- transfer_to_agent --> RIL
+    SDK <--> FU
+    SAM -- tool calls --> TOOLS
+    JOR -- tool calls --> TOOLS
+    RIL -- tool calls --> TOOLS
+    FU -- record_follow_up_outcome --> TOOLS
+    TOOLS --> RULES --> DB
+    RULES -. page_on_call_tech .-> SMS
+    SAM -. "after each call:<br/>transcript + analysis" .-> HOOK --> DB
+    UI --> DEMO --> DB
+    DEMO -- "follow-up agent id +<br/>single-use pass" --> SDK
+    LAB -- "test results + call grades<br/>(read-only API key)" --> TESTS
 ```
+
+### One emergency call, step by step
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Caller (browser)
+    participant S as Sam (ElevenLabs)
+    participant T as FastAPI /tools
+    participant D as Supabase
+
+    C->>S: "Our gate won't close" (live audio)
+    S->>T: lookup_customer (phone number)
+    T->>D: find the account
+    T-->>S: account, plan, contact
+    S->>C: Reads back name and number,<br/>asks if that's right
+    C->>S: "Yes"
+    S->>T: create_ticket (category,<br/>suggested priority)
+    Note right of T: Rules set the final priority.<br/>The AI can raise it,<br/>never lower it.
+    T->>D: Save ticket + timeline events
+    T-->>S: Ticket number + next_step<br/>("page the on-call tech")
+    S->>T: page_on_call_tech (ticket_id)
+    T-->>S: tell_the_caller<br/>(who was alerted, callback window)
+    S->>C: Who was alerted, when to expect<br/>a call, and the ticket number
+```
+
+Design choices that show up in the diagrams:
+
+- **Business rules live in code, not in the prompt.** The agent suggests a category and priority, and `app/triage.py` decides. Tools return a `next_step` and a `tell_the_caller` sentence, so what the agent says matches what the backend did.
+- **Both directions are authenticated.** Agents call tools with a shared secret header. Post-call webhooks are checked against the `ElevenLabs-Signature` HMAC, with a 30-minute replay window.
+- **The browser holds no secret.** The demo page uses public agent IDs, and the agents only accept calls from the approved websites. The API key that reads test results stays on the server and is read-only.
+- **Follow-up calls carry a single-use pass.** The backend gives the page a one-time token for that ticket. The follow-up agent sends it back with the outcome, so a call can only update its own ticket.
 
 ## Technology Stack
 
@@ -405,14 +437,20 @@ python -m venv .venv
 TOOL_SECRET=local-test .venv/Scripts/python -m uvicorn main:app --port 8765
 ```
 
-Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Settings come from environment variables (or a `.env` file):
+Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Nothing below is required for that: with no settings, the app uses an in-memory store and simulates the SMS page. Settings come from environment variables or a `.env` file. Copy `.env.example` to `.env` to start:
 
-| Variable | Needed for |
-| --- | --- |
-| `TOOL_SECRET` | Protecting the tool endpoints the agents call |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Saving to Supabase. Without them the app uses an in-memory store, so everything works but resets on restart |
-| `ELEVENLABS_API_KEY` | Reading test results and call grades for the Evaluation Lab (a read-only key is enough) |
-| `ELEVENLABS_AGENT_ID`, `FOLLOWUP_AGENT_ID` | Pointing the demo page at your own agents |
+| Variable | Needed for | If unset |
+| --- | --- | --- |
+| `TOOL_SECRET` | Shared secret the agents send in `X-Tool-Secret` when they call `/tools/*` | Tool endpoints are open (local only; a warning is logged) |
+| `ELEVENLABS_WEBHOOK_SECRET` | Checking the HMAC signature on post-call webhooks | Webhooks are rejected |
+| `ALLOW_UNSIGNED_WEBHOOKS` | Local testing of the webhook without a signature (`true`) | Signatures required |
+| `ELEVENLABS_API_KEY` | Evaluation Lab: reading test results and call grades (a read-only key is enough) | Lab shows no live results |
+| `ELEVENLABS_AGENT_ID`, `FOLLOWUP_AGENT_ID` | Pointing the demo page at your own agents | Uses the public demo agents |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Saving to Supabase (server side only) | In-memory store that resets on restart |
+| `TABLE_PREFIX` | Table name prefix in a shared Supabase project | `ns_` |
+| `FOLLOW_UPS_PER_HOUR` | Demo-wide cap on follow-up calls | `30` |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `ONCALL_TECH_PHONE` | Sending a real SMS page for emergencies | Page is simulated and logged |
+| `ONCALL_TECH_NAME`, `CALLBACK_WINDOW_MINUTES`, `SMS_MAX_PER_HOUR` | What the agent tells the caller, and the SMS rate limit | `the on-call technician`, `15`, `5` |
 
 The live agents only accept browser calls from the approved websites, so voice calls from a local copy need your own ElevenLabs agents. (An origin check only stops browsers; the real limits are each agent's caps on calls per day and at once.) The ticket board, Demo Mode, the lab page, and the tests all work locally. The voice tests (`cd voicelab && npm install && node run.js`, then `scripts/save_voice_lab.py`) make real calls to the live agent and use its call minutes. The database schema is in `supabase/`, and `scripts/export_elevenlabs.py` backs up the agents, tools, and tests (secrets redacted) into `elevenlabs/`.
 

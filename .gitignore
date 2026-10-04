@@ -10,3 +10,4 @@ __pycache__/
 .env*
 voicelab/node_modules/
 voicelab/out/
+!.env.example
