@@ -11,3 +11,6 @@ __pycache__/
 voicelab/node_modules/
 voicelab/out/
 !.env.example
+bench/node_modules/
+bench/data/audio/
+bench/results/*/raw/
