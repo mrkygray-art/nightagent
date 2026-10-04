@@ -485,3 +485,7 @@ NightAgent was built as an applied AI workflow project demonstrating the interse
 **AI + Voice Agents + Agent Evaluation + Physical Security + Customer Experience + Service Operations + Sales Engineering**
 
 The project is designed to show how I approach a business problem from the initial customer interaction through operational execution, measurable next actions, and repeatable QA—not just how to connect an LLM to a user interface.
+
+---
+
+© 2026 Ky Gray. All rights reserved.
