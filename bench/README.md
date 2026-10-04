@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 2 of 8).** The dataset, its validation, and the scorer (with tests) are done. The scorer was written and tested before any provider was called. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
+> **Status: in progress (build step 3 of 8).** The dataset, its validation, the scorer, and both provider adapters are done, all with tests. The scorer was written and tested before any provider was called, and the adapters are tested against a fake server. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -34,6 +34,25 @@ Each source is reported separately and never averaged together.
 | `noisy` | `human` audio mixed with a documented background-noise file at a fixed SNR | not made yet |
 
 **TTS bias caveat:** all TTS audio is generated with ElevenLabs voices. Audio from one vendor's TTS can score unusually well on the same vendor's speech-to-text, so `tts` results are labeled "ElevenLabs-generated" and are never used for the headline.
+
+## Providers and conditions
+
+Models, settings, and prices are pinned in [`config.json`](config.json) and copied into every result file. They were checked against each vendor's docs on 2026-10-03 (links are in the config).
+
+| | Deepgram | ElevenLabs |
+|---|---|---|
+| Endpoint | `POST /v1/listen` (pre-recorded) | `POST /v1/speech-to-text` (batch) |
+| Model | `nova-3` | `scribe_v2` |
+| Baseline settings | English, `smart_format` on | English, audio-event tags off, no diarization |
+| Boosted | adds one `keyterm` per term | adds one `keyterms` field per term |
+| List price, baseline | $0.0043/min (Pay As You Go) | $0.22/hour |
+| Boosting surcharge | +$0.0013/min | +$0.05/hour |
+
+Prices as of 2026-10-03, from [deepgram.com/pricing](https://deepgram.com/pricing) and [elevenlabs.io/pricing/api](https://elevenlabs.io/pricing/api). They are used only for estimated cost; actual billing depends on the account's plan. ElevenLabs' API reference describes the keyterm surcharge as 20% of the base cost, while its pricing page lists $0.05/hour; this uses the pricing page.
+
+**Baseline** uses each provider's default recognition with English pinned. **Boosted** changes only one thing: the 44 canonical names from `terms.json` are sent as the provider's keyterms, the same list for every utterance.
+
+Each request is retried up to 2 times on rate limits (429), server errors (5xx), or network errors, with backoff; anything still failing is recorded as a failure.
 
 ## How it's scored
 

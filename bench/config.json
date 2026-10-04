@@ -1,0 +1,39 @@
+{
+  "providers": {
+    "deepgram": {
+      "model": "nova-3",
+      "endpoint": "https://api.deepgram.com/v1/listen",
+      "baseline": { "language": "en", "smart_format": true },
+      "boost": { "available": true, "parameter": "keyterm", "note": "Repeated query parameter, one per term; plain terms, no weights; 500-token limit per request." },
+      "docs": ["https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded", "https://developers.deepgram.com/docs/keyterm", "https://developers.deepgram.com/docs/models-languages-overview"]
+    },
+    "elevenlabs": {
+      "model": "scribe_v2",
+      "endpoint": "https://api.elevenlabs.io/v1/speech-to-text",
+      "baseline": { "language_code": "en", "tag_audio_events": false, "diarize": false, "timestamps_granularity": "none" },
+      "boost": { "available": true, "parameter": "keyterms", "note": "Repeated multipart field, one per term (as the official elevenlabs-js SDK sends it); max 1000 terms, each under 50 characters and at most 5 words." },
+      "docs": ["https://elevenlabs.io/docs/api-reference/speech-to-text/convert", "https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/batch/keyterm-prompting", "https://elevenlabs.io/docs/overview/models"]
+    }
+  },
+  "pricing": {
+    "retrieved_on": "2026-10-03",
+    "currency": "USD",
+    "note": "List prices, used only for estimated cost. Actual billing depends on the account's plan.",
+    "deepgram": {
+      "source": "https://deepgram.com/pricing",
+      "plan": "Pay As You Go",
+      "per_minute": 0.0043,
+      "boost_per_minute": 0.0013
+    },
+    "elevenlabs": {
+      "source": "https://elevenlabs.io/pricing/api",
+      "plan": "API list price",
+      "per_hour": 0.22,
+      "boost_per_hour": 0.05,
+      "note": "The API reference describes keyterms as a 20% surcharge on the base cost; the pricing page lists $0.05/hour. This uses the pricing page."
+    }
+  },
+  "retry": { "max_retries": 2, "backoff_ms": [1000, 3000], "max_retry_after_ms": 30000, "timeout_ms": 60000 },
+  "runs_per_source": { "human": 3, "tts": 1, "noisy": 1 },
+  "budget": { "max_usd_per_run": null, "note": "Set before the first paid run; run.js refuses to call any API while this is null." }
+}
