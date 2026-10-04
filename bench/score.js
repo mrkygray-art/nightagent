@@ -65,6 +65,12 @@ function heardAs(ops, hypTokens, start, end) {
   let last = idx[idx.length - 1];
   while (first > 0 && ops[first - 1].op === 'ins') first--;
   while (last < ops.length - 1 && ops[last + 1].op === 'ins') last++;
+  // Equal-cost alignments can pair the term with nothing (a deletion) and its misheard word
+  // with a neighbor ("the NVR in" -> "the MBR and"). Then show the substituted neighbors.
+  if (ops.slice(first, last + 1).every((o) => o.hyp === null)) {
+    if (first > 0 && ops[first - 1].op === 'sub') first--;
+    if (last < ops.length - 1 && ops[last + 1].op === 'sub') last++;
+  }
   return ops.slice(first, last + 1).filter((o) => o.hyp !== null).map((o) => hypTokens[o.hyp]).join(' ');
 }
 
@@ -91,7 +97,14 @@ function scoreUtterance(utterance, transcript, aliases) {
       .slice(0, expected - hits);
     return { term, expected, found, hits, heardAs: missed };
   });
-  return { wer: a.wer, edits: a.edits, refWords: a.refWords, terms };
+  // Any term (listed or not) written more often than it was said: a false positive that
+  // term accuracy can't see, and the known risk of vocabulary boosting
+  const insertedTerms = [];
+  for (const [term, list] of Object.entries(aliases)) {
+    const extra = findPhrases(hypTokens, list).length - findPhrases(refTokens, list).length;
+    if (extra > 0) insertedTerms.push({ term, extra });
+  }
+  return { wer: a.wer, edits: a.edits, refWords: a.refWords, terms, insertedTerms };
 }
 
 // ---------- Stats ----------
@@ -116,7 +129,7 @@ const pct = (num, den) => (den ? Math.round((num / den) * 10000) / 100 : null);
 // files: parsed raw files for one (provider, condition, source) group
 function scoreGroup(files, utterances, aliases) {
   const byId = Object.fromEntries(utterances.map((u) => [u.id, u]));
-  const g = { requests: 0, failures: 0, scored: 0, audioSeconds: 0, edits: 0, refWords: 0, hits: 0, expected: 0, latencies: [], perTerm: {}, inconsistent: [], unknownIds: [], utterances: [] };
+  const g = { requests: 0, failures: 0, scored: 0, audioSeconds: 0, edits: 0, refWords: 0, hits: 0, expected: 0, latencies: [], perTerm: {}, inserted: [], inconsistent: [], unknownIds: [], utterances: [] };
   for (const f of files) {
     const u = byId[f.id];
     if (!u) { g.unknownIds.push(f.id); continue; }
@@ -140,6 +153,7 @@ function scoreGroup(files, utterances, aliases) {
         pt.hits += t.hits;
         for (const h of t.heardAs) pt.misses.push({ id: f.id, run: r.run, heardAs: h });
       }
+      for (const x of s.insertedTerms) g.inserted.push({ id: f.id, run: r.run, term: x.term, extra: x.extra, text: r.text });
       runs.push({ run: r.run, wer: s.wer, termHits: s.terms.reduce((n, t) => n + t.hits, 0), termExpected: s.terms.reduce((n, t) => n + t.expected, 0) });
     }
     if (texts.size > 1) g.inconsistent.push(f.id);
@@ -157,6 +171,7 @@ function scoreGroup(files, utterances, aliases) {
     unknownIds: g.unknownIds,
     werPct: pct(g.edits, g.refWords),
     termAccuracy: { hits: g.hits, expected: g.expected, pct: pct(g.hits, g.expected) },
+    insertedTerms: { count: g.inserted.reduce((n, x) => n + x.extra, 0), items: g.inserted },
     latencyMs: { median: median(g.latencies), p95: p95(g.latencies), n: g.latencies.length },
     inconsistentTranscripts: g.inconsistent,
     perTerm: g.perTerm,

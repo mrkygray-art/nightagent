@@ -138,12 +138,37 @@ test('scoreUtterance: a term split into several words is shown whole', () => {
   assert.deepEqual(s.terms[0].heardAs, ['burke otto']);
 });
 
+test('scoreUtterance: a miss the alignment pairs with nothing still shows the nearby misheard word', () => {
+  // Real case from the first run: "The NVR in the back office" -> "The MBR and back office"
+  const aliases = aliasMap({ NVR: ['NVR', 'N V R'] });
+  const u = { id: 'u001', reference: 'The NVR in the back office stopped recording.', terms: ['NVR'] };
+  const s = scoreUtterance(u, 'The MBR and back office stopped recording.', aliases);
+  assert.equal(s.terms[0].hits, 0);
+  assert.notEqual(s.terms[0].heardAs[0], '');
+  assert.match(s.terms[0].heardAs[0], /mbr/);
+});
+
+test('scoreUtterance: a term that was really dropped shows as empty', () => {
+  const aliases = aliasMap({ NVR: ['NVR'] });
+  const u = { id: 'x', reference: 'The NVR is down tonight.', terms: ['NVR'] };
+  assert.deepEqual(scoreUtterance(u, 'The is down tonight.', aliases).terms[0].heardAs, ['']);
+});
+
 test('scoreUtterance: repeated terms score min(found, expected)', () => {
   const u = { ...U019, reference: 'PoE on port one and PoE on port two.', terms: ['PoE'] };
   const once = scoreUtterance(u, 'PoE on port one and pony on port two.', ALIASES).terms[0];
   assert.deepEqual([once.hits, once.expected], [1, 2]);
   const extra = scoreUtterance(u, 'PoE PoE PoE on port one and two.', ALIASES).terms[0];
   assert.deepEqual([extra.hits, extra.expected], [2, 2]);
+});
+
+test('scoreUtterance: a term written where it was not said is reported as inserted', () => {
+  const aliases = aliasMap({ Axis: ['Axis'], Avigilon: ['Avigilon'] });
+  const u = { id: 'u036', reference: 'We quoted Avigilon for the access control panels.', terms: ['Avigilon'] };
+  const s = scoreUtterance(u, 'We quoted Avigilon for the Axis Control Panel.', aliases);
+  assert.deepEqual(s.insertedTerms, [{ term: 'Axis', extra: 1 }]);
+  assert.equal(s.terms[0].hits, 1); // term accuracy alone can't see it
+  assert.deepEqual(scoreUtterance(u, u.reference, aliases).insertedTerms, []);
 });
 
 test('scoreUtterance: empty transcript misses every term', () => {

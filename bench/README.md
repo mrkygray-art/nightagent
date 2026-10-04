@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 4 of 8).** The dataset, its validation, the scorer, both provider adapters, and the runner are done, all with tests. The scorer was written and tested before any provider was called, and the adapters and runner are tested against fakes. Next: recording the human audio, then the first real run. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
+> **Status: in progress (build step 5 of 8).** Baseline and boosted runs on Ky's recorded voice are done (results below). Still to do: TTS and noisy audio, the scorecard page and one-page readout, CI, and the portfolio section. Every number here comes from a `summary.json` in `bench/results/`.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -66,6 +66,7 @@ All scoring is in [`score.js`](score.js), and every rule below has a unit test i
 - **Jargon term accuracy (the headline):** every occurrence of a term in a reference counts. Aliases count, whole words only. If a reference says a term twice and the transcript has it once, that's 1 of 2.
 - **WER:** word error rate against the exact reference wording, counted over the whole set (total word errors / total reference words), not averaged per utterance. Aliases don't apply here, so "power over ethernet" in place of "PoE" is a word error even though the term is correct.
 - **Misses:** for every missed term, the scorer records what the provider wrote in its place. For example, if a transcript had "Burke Otto" where "Verkada" was said, the miss would show "burke otto". (That example is from the tests, not a real result.)
+- **Inserted terms:** any term the transcript contains more often than the reference (a false positive, the known risk of vocabulary boosting) is counted separately, since term accuracy only checks terms that were said.
 - **Latency:** median and 95th percentile (nearest rank) over successful requests.
 - **Failures:** counted in the failure rate and listed, never dropped. Failed requests aren't scored for accuracy; the summary shows how many requests were scored. Utterances with no result are listed as missing, and transcripts that change between repeat runs are flagged.
 
@@ -100,4 +101,33 @@ Each run writes `results/<run-id>/config.snapshot.json` (models, settings, price
 
 ## Results
 
-None yet. No provider has been run.
+**Snapshot: human audio only, runs of 2026-10-04 (UTC).** 44 clips (u037 not recorded), each sent 3 times per provider and condition, so each cell below covers 132 requests and 174 jargon-term occurrences (58 x 3). Baseline run [`2026-10-04T02-20-47-223Z`](results/2026-10-04T02-20-47-223Z/summary.json), boosted run [`2026-10-04T02-40-00-605Z`](results/2026-10-04T02-40-00-605Z/summary.json); both scored against the same dataset version (after the reference corrections above).
+
+**Jargon term accuracy (the headline)**
+
+| Provider (model) | Baseline | Boosted |
+|---|---|---|
+| Deepgram (`nova-3`) | 108 of 174 (62.1%) | **156 of 174 (89.7%)** |
+| ElevenLabs (`scribe_v2`) | 138 of 174 (79.3%) | **166 of 174 (95.4%)** |
+
+**Everything else**
+
+| | Deepgram baseline | Deepgram boosted | ElevenLabs baseline | ElevenLabs boosted |
+|---|---|---|---|---|
+| Word error rate | 11.7% | 8.6% | 5.8% | 3.5% |
+| Median latency | 119 ms | 128 ms | 451 ms | 472 ms |
+| p95 latency | 598 ms | 597 ms | 711 ms | 703 ms |
+| Failed requests | 0 of 132 | 0 of 132 | 0 of 132 | 0 of 132 |
+| Clips whose transcript changed between repeats | 0 of 44 | 0 of 44 | 5 of 44 | 3 of 44 |
+| Terms written where they weren't said | 0 | 3 (1 clip x 3) | 0 | 3 (1 clip x 3) |
+| Est. cost per audio hour (list price, 2026-10-03) | $0.26 | $0.34 | $0.22 | $0.27 |
+
+Latency is measured from a home internet connection and includes uploading the clip.
+
+**What boosting fixed, what it didn't, and what it broke**
+
+- **Deepgram** now gets every occurrence of NVR, WDR, varifocal, ONVIF, Avigilon, electric strike, Verkada, Hanwha, Genetec, Lenel, and Brivo (all missed at baseline) and of VMS and IDF (half right at baseline). Still missed when boosted: Wiegand ("the weekend"), Axis ("access"), fail safe ("failed safe"), Aiphone, glass break, and PoE in one clip (6 of 9).
+- **ElevenLabs** fixed Avigilon, fail safe, electric strike, Wiegand, Axis, Hanwha, Genetec, Lenel, Brivo, and PoE in one more repeat (7 of 9). Still missed when boosted: Aiphone and glass break.
+- **No term got worse with boosting, but each provider produced one false positive**, on all 3 repeats: Deepgram wrote "access control panels" as "**Axis** Control Panel" (u036), and ElevenLabs wrote "supervision" as "**supervisory**" (u013). Term accuracy can't see these (it only checks terms that were said), so the scorer counts them separately (`insertedTerms` in `summary.json`).
+
+With one speaker and 44 clips, treat these as directional, not definitive.

@@ -1,16 +1,16 @@
 {
-  "runId": "2026-10-04T02-20-47-223Z",
-  "scoredAt": "2026-10-04T02:43:13.800Z",
+  "runId": "2026-10-04T02-40-00-605Z",
+  "scoredAt": "2026-10-04T02:43:13.990Z",
   "utterances": 45,
   "scoredDataset": {
     "utterancesSha256": "ad2929323517f7abbbb2e5bf304ed41101d4ea0d74815622d43492e668957d66",
     "termsSha256": "d2a6d2716997e272fa6c49f4915da3d4cda2b605448d5451b222596796acf14c"
   },
-  "datasetChangedSinceRun": true,
+  "datasetChangedSinceRun": false,
   "groups": [
     {
       "provider": "deepgram",
-      "condition": "baseline",
+      "condition": "boosted",
       "source": "human",
       "model": "nova-3",
       "requests": 132,
@@ -22,94 +22,54 @@
         "u037"
       ],
       "unknownIds": [],
-      "werPct": 11.74,
+      "werPct": 8.62,
       "termAccuracy": {
-        "hits": 108,
+        "hits": 156,
         "expected": 174,
-        "pct": 62.07
+        "pct": 89.66
       },
       "insertedTerms": {
-        "count": 0,
-        "items": []
+        "count": 3,
+        "items": [
+          {
+            "id": "u036",
+            "run": 1,
+            "term": "Axis",
+            "extra": 1,
+            "text": "We've quoted Avigilon for cameras and Mercury hardware for the Axis Control Panel."
+          },
+          {
+            "id": "u036",
+            "run": 2,
+            "term": "Axis",
+            "extra": 1,
+            "text": "We've quoted Avigilon for cameras and Mercury hardware for the Axis Control Panel."
+          },
+          {
+            "id": "u036",
+            "run": 3,
+            "term": "Axis",
+            "extra": 1,
+            "text": "We've quoted Avigilon for cameras and Mercury hardware for the Axis Control Panel."
+          }
+        ]
       },
       "latencyMs": {
-        "median": 119,
-        "p95": 598,
+        "median": 128,
+        "p95": 597,
         "n": 132
       },
       "inconsistentTranscripts": [],
       "perTerm": {
         "NVR": {
           "expected": 9,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u001",
-              "run": 1,
-              "heardAs": "mbr"
-            },
-            {
-              "id": "u001",
-              "run": 2,
-              "heardAs": "mbr"
-            },
-            {
-              "id": "u001",
-              "run": 3,
-              "heardAs": "mbr"
-            },
-            {
-              "id": "u007",
-              "run": 1,
-              "heardAs": "mvr"
-            },
-            {
-              "id": "u007",
-              "run": 2,
-              "heardAs": "mvr"
-            },
-            {
-              "id": "u007",
-              "run": 3,
-              "heardAs": "mvr"
-            },
-            {
-              "id": "u042",
-              "run": 1,
-              "heardAs": "mbr"
-            },
-            {
-              "id": "u042",
-              "run": 2,
-              "heardAs": "mbr"
-            },
-            {
-              "id": "u042",
-              "run": 3,
-              "heardAs": "mbr"
-            }
-          ]
+          "hits": 9,
+          "misses": []
         },
         "VMS": {
           "expected": 6,
-          "hits": 3,
-          "misses": [
-            {
-              "id": "u009",
-              "run": 1,
-              "heardAs": "bms"
-            },
-            {
-              "id": "u009",
-              "run": 2,
-              "heardAs": "bms"
-            },
-            {
-              "id": "u009",
-              "run": 3,
-              "heardAs": "bms"
-            }
-          ]
+          "hits": 6,
+          "misses": []
         },
         "PTZ": {
           "expected": 3,
@@ -118,24 +78,8 @@
         },
         "WDR": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u004",
-              "run": 1,
-              "heardAs": "wdor"
-            },
-            {
-              "id": "u004",
-              "run": 2,
-              "heardAs": "wdor"
-            },
-            {
-              "id": "u004",
-              "run": 3,
-              "heardAs": "wdor"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "fisheye": {
           "expected": 3,
@@ -144,81 +88,18 @@
         },
         "varifocal": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u006",
-              "run": 1,
-              "heardAs": "rear focal"
-            },
-            {
-              "id": "u006",
-              "run": 2,
-              "heardAs": "rear focal"
-            },
-            {
-              "id": "u006",
-              "run": 3,
-              "heardAs": "rear focal"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "ONVIF": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u007",
-              "run": 1,
-              "heardAs": "on vif"
-            },
-            {
-              "id": "u007",
-              "run": 2,
-              "heardAs": "on vif"
-            },
-            {
-              "id": "u007",
-              "run": 3,
-              "heardAs": "on vif"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Avigilon": {
           "expected": 6,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u008",
-              "run": 1,
-              "heardAs": "vigilant"
-            },
-            {
-              "id": "u008",
-              "run": 2,
-              "heardAs": "vigilant"
-            },
-            {
-              "id": "u008",
-              "run": 3,
-              "heardAs": "vigilant"
-            },
-            {
-              "id": "u036",
-              "run": 1,
-              "heardAs": "a digilon"
-            },
-            {
-              "id": "u036",
-              "run": 2,
-              "heardAs": "a digilon"
-            },
-            {
-              "id": "u036",
-              "run": 3,
-              "heardAs": "a digilon"
-            }
-          ]
+          "hits": 6,
+          "misses": []
         },
         "REX": {
           "expected": 6,
@@ -253,24 +134,8 @@
         },
         "electric strike": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u012",
-              "run": 1,
-              "heardAs": "electric stripe"
-            },
-            {
-              "id": "u012",
-              "run": 2,
-              "heardAs": "electric stripe"
-            },
-            {
-              "id": "u012",
-              "run": 3,
-              "heardAs": "electric stripe"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Wiegand": {
           "expected": 3,
@@ -330,17 +195,17 @@
             {
               "id": "u019",
               "run": 1,
-              "heardAs": "the puh"
+              "heardAs": "the poes"
             },
             {
               "id": "u019",
               "run": 2,
-              "heardAs": "the puh"
+              "heardAs": "the poes"
             },
             {
               "id": "u019",
               "run": 3,
-              "heardAs": "the puh"
+              "heardAs": "the poes"
             }
           ]
         },
@@ -351,24 +216,8 @@
         },
         "IDF": {
           "expected": 6,
-          "hits": 3,
-          "misses": [
-            {
-              "id": "u021",
-              "run": 1,
-              "heardAs": "ivf"
-            },
-            {
-              "id": "u021",
-              "run": 2,
-              "heardAs": "ivf"
-            },
-            {
-              "id": "u021",
-              "run": 3,
-              "heardAs": "ivf"
-            }
-          ]
+          "hits": 6,
+          "misses": []
         },
         "MDF": {
           "expected": 3,
@@ -407,24 +256,8 @@
         },
         "Verkada": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u028",
-              "run": 1,
-              "heardAs": "vricata"
-            },
-            {
-              "id": "u028",
-              "run": 2,
-              "heardAs": "vricata"
-            },
-            {
-              "id": "u028",
-              "run": 3,
-              "heardAs": "vricata"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Axis": {
           "expected": 3,
@@ -449,45 +282,13 @@
         },
         "Hanwha": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u029",
-              "run": 1,
-              "heardAs": "hot wall"
-            },
-            {
-              "id": "u029",
-              "run": 2,
-              "heardAs": "hot wall"
-            },
-            {
-              "id": "u029",
-              "run": 3,
-              "heardAs": "hot wall"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Genetec": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u030",
-              "run": 1,
-              "heardAs": "genitex"
-            },
-            {
-              "id": "u030",
-              "run": 2,
-              "heardAs": "genitex"
-            },
-            {
-              "id": "u030",
-              "run": 3,
-              "heardAs": "genitex"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Milestone": {
           "expected": 3,
@@ -506,45 +307,13 @@
         },
         "Lenel": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u033",
-              "run": 1,
-              "heardAs": "lonell"
-            },
-            {
-              "id": "u033",
-              "run": 2,
-              "heardAs": "lonell"
-            },
-            {
-              "id": "u033",
-              "run": 3,
-              "heardAs": "lonell"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Brivo": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u033",
-              "run": 1,
-              "heardAs": "maribo"
-            },
-            {
-              "id": "u033",
-              "run": 2,
-              "heardAs": "maribo"
-            },
-            {
-              "id": "u033",
-              "run": 3,
-              "heardAs": "maribo"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Openpath": {
           "expected": 3,
@@ -615,20 +384,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.15789473684210525,
-              "termHits": 0,
+              "wer": 0.10526315789473684,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.15789473684210525,
-              "termHits": 0,
+              "wer": 0.10526315789473684,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.15789473684210525,
-              "termHits": 0,
+              "wer": 0.10526315789473684,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -684,20 +453,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.4375,
-              "termHits": 0,
+              "wer": 0.375,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.4375,
-              "termHits": 0,
+              "wer": 0.375,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.4375,
-              "termHits": 0,
+              "wer": 0.375,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -730,20 +499,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.23529411764705882,
-              "termHits": 0,
+              "wer": 0.11764705882352941,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.23529411764705882,
-              "termHits": 0,
+              "wer": 0.11764705882352941,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.23529411764705882,
-              "termHits": 0,
+              "wer": 0.11764705882352941,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -753,20 +522,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.2,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.2,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.2,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -776,20 +545,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.0625,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.0625,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.0625,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -799,20 +568,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -845,19 +614,19 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.2631578947368421,
+              "wer": 0.10526315789473684,
               "termHits": 1,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.2631578947368421,
+              "wer": 0.10526315789473684,
               "termHits": 1,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.2631578947368421,
+              "wer": 0.10526315789473684,
               "termHits": 1,
               "termExpected": 2
             }
@@ -868,20 +637,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.14285714285714285,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -1075,20 +844,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.17647058823529413,
-              "termHits": 1,
+              "wer": 0.11764705882352941,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.17647058823529413,
-              "termHits": 1,
+              "wer": 0.11764705882352941,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.17647058823529413,
-              "termHits": 1,
+              "wer": 0.11764705882352941,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -1236,20 +1005,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.06666666666666667,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.06666666666666667,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.06666666666666667,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -1259,20 +1028,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 2
             }
           ]
@@ -1282,20 +1051,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -1351,20 +1120,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.25,
-              "termHits": 0,
+              "wer": 0.125,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.25,
-              "termHits": 0,
+              "wer": 0.125,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.25,
-              "termHits": 0,
+              "wer": 0.125,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -1421,19 +1190,19 @@
             {
               "run": 1,
               "wer": 0.23076923076923078,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
               "wer": 0.23076923076923078,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
               "wer": 0.23076923076923078,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -1535,20 +1304,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.16666666666666666,
-              "termHits": 0,
+              "wer": 0.08333333333333333,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.16666666666666666,
-              "termHits": 0,
+              "wer": 0.08333333333333333,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.16666666666666666,
-              "termHits": 0,
+              "wer": 0.08333333333333333,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -1624,15 +1393,15 @@
         }
       ],
       "estCost": {
-        "usd": 0.069813,
-        "perAudioHourUsd": 0.258,
+        "usd": 0.090919,
+        "perAudioHourUsd": 0.336,
         "pricesRetrievedOn": "2026-10-03",
         "source": "https://deepgram.com/pricing"
       }
     },
     {
       "provider": "elevenlabs",
-      "condition": "baseline",
+      "condition": "boosted",
       "source": "human",
       "model": "scribe_v2",
       "requests": 132,
@@ -1644,27 +1413,47 @@
         "u037"
       ],
       "unknownIds": [],
-      "werPct": 5.75,
+      "werPct": 3.47,
       "termAccuracy": {
-        "hits": 138,
+        "hits": 166,
         "expected": 174,
-        "pct": 79.31
+        "pct": 95.4
       },
       "insertedTerms": {
-        "count": 0,
-        "items": []
+        "count": 3,
+        "items": [
+          {
+            "id": "u013",
+            "run": 1,
+            "term": "supervisory",
+            "extra": 1,
+            "text": "The readers are still on Wiegand, so we should plan to move to OSDP for supervisory"
+          },
+          {
+            "id": "u013",
+            "run": 2,
+            "term": "supervisory",
+            "extra": 1,
+            "text": "The readers are still on Wiegand, so we should plan to move to OSDP for supervisory"
+          },
+          {
+            "id": "u013",
+            "run": 3,
+            "term": "supervisory",
+            "extra": 1,
+            "text": "The readers are still on Wiegand, so we should plan to move to OSDP for supervisory"
+          }
+        ]
       },
       "latencyMs": {
-        "median": 451,
-        "p95": 711,
+        "median": 471.5,
+        "p95": 703,
         "n": 132
       },
       "inconsistentTranscripts": [
+        "u016",
         "u019",
-        "u033",
-        "u035",
-        "u040",
-        "u041"
+        "u020"
       ],
       "perTerm": {
         "NVR": {
@@ -1704,24 +1493,8 @@
         },
         "Avigilon": {
           "expected": 6,
-          "hits": 3,
-          "misses": [
-            {
-              "id": "u008",
-              "run": 1,
-              "heardAs": "uh vigilant"
-            },
-            {
-              "id": "u008",
-              "run": 2,
-              "heardAs": "uh vigilant"
-            },
-            {
-              "id": "u008",
-              "run": 3,
-              "heardAs": "uh vigilant"
-            }
-          ]
+          "hits": 6,
+          "misses": []
         },
         "REX": {
           "expected": 6,
@@ -1735,66 +1508,18 @@
         },
         "fail safe": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u011",
-              "run": 1,
-              "heardAs": "and failed safe"
-            },
-            {
-              "id": "u011",
-              "run": 2,
-              "heardAs": "and failed safe"
-            },
-            {
-              "id": "u011",
-              "run": 3,
-              "heardAs": "and failed safe"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "electric strike": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u012",
-              "run": 1,
-              "heardAs": "electric stripe"
-            },
-            {
-              "id": "u012",
-              "run": 2,
-              "heardAs": "electric stripe"
-            },
-            {
-              "id": "u012",
-              "run": 3,
-              "heardAs": "electric stripe"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Wiegand": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u013",
-              "run": 1,
-              "heardAs": "weekend"
-            },
-            {
-              "id": "u013",
-              "run": 2,
-              "heardAs": "weekend"
-            },
-            {
-              "id": "u013",
-              "run": 3,
-              "heardAs": "weekend"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "OSDP": {
           "expected": 3,
@@ -1828,22 +1553,17 @@
         },
         "PoE": {
           "expected": 9,
-          "hits": 6,
+          "hits": 7,
           "misses": [
             {
               "id": "u019",
-              "run": 1,
-              "heardAs": "the poh"
-            },
-            {
-              "id": "u019",
               "run": 2,
-              "heardAs": "the qh"
+              "heardAs": "the poeh"
             },
             {
               "id": "u019",
               "run": 3,
-              "heardAs": "the peh"
+              "heardAs": "the poeh"
             }
           ]
         },
@@ -1899,66 +1619,18 @@
         },
         "Axis": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u029",
-              "run": 1,
-              "heardAs": "access"
-            },
-            {
-              "id": "u029",
-              "run": 2,
-              "heardAs": "access"
-            },
-            {
-              "id": "u029",
-              "run": 3,
-              "heardAs": "access"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Hanwha": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u029",
-              "run": 1,
-              "heardAs": "hall one"
-            },
-            {
-              "id": "u029",
-              "run": 2,
-              "heardAs": "hall one"
-            },
-            {
-              "id": "u029",
-              "run": 3,
-              "heardAs": "hall one"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Genetec": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u030",
-              "run": 1,
-              "heardAs": "genetech"
-            },
-            {
-              "id": "u030",
-              "run": 2,
-              "heardAs": "genetech"
-            },
-            {
-              "id": "u030",
-              "run": 3,
-              "heardAs": "genetech"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Milestone": {
           "expected": 3,
@@ -1977,45 +1649,13 @@
         },
         "Lenel": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u033",
-              "run": 1,
-              "heardAs": "linnell"
-            },
-            {
-              "id": "u033",
-              "run": 2,
-              "heardAs": "mynell"
-            },
-            {
-              "id": "u033",
-              "run": 3,
-              "heardAs": "linnell"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Brivo": {
           "expected": 3,
-          "hits": 0,
-          "misses": [
-            {
-              "id": "u033",
-              "run": 1,
-              "heardAs": "horiba"
-            },
-            {
-              "id": "u033",
-              "run": 2,
-              "heardAs": "horiba"
-            },
-            {
-              "id": "u033",
-              "run": 3,
-              "heardAs": "forebo"
-            }
-          ]
+          "hits": 3,
+          "misses": []
         },
         "Openpath": {
           "expected": 3,
@@ -2247,20 +1887,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.125,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.125,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.125,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -2316,20 +1956,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21052631578947367,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.21052631578947367,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.21052631578947367,
-              "termHits": 1,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -2339,20 +1979,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.14285714285714285,
-              "termHits": 0,
+              "wer": 0.07142857142857142,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -2363,19 +2003,19 @@
             {
               "run": 1,
               "wer": 0.125,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
               "wer": 0.125,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
               "wer": 0.125,
-              "termHits": 1,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -2437,7 +2077,7 @@
             },
             {
               "run": 2,
-              "wer": 0.06666666666666667,
+              "wer": 0,
               "termHits": 1,
               "termExpected": 1
             },
@@ -2500,8 +2140,8 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21428571428571427,
-              "termHits": 1,
+              "wer": 0.07142857142857142,
+              "termHits": 2,
               "termExpected": 2
             },
             {
@@ -2523,7 +2163,7 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0,
+              "wer": 0.06666666666666667,
               "termHits": 1,
               "termExpected": 1
             },
@@ -2730,20 +2370,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.21428571428571427,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -2753,20 +2393,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.07692307692307693,
-              "termHits": 0,
+              "wer": 0,
+              "termHits": 1,
               "termExpected": 1
             }
           ]
@@ -2822,20 +2462,20 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.25,
-              "termHits": 0,
+              "wer": 0.0625,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 2,
-              "wer": 0.1875,
-              "termHits": 0,
+              "wer": 0.0625,
+              "termHits": 2,
               "termExpected": 2
             },
             {
               "run": 3,
-              "wer": 0.1875,
-              "termHits": 0,
+              "wer": 0.0625,
+              "termHits": 2,
               "termExpected": 2
             }
           ]
@@ -2868,19 +2508,19 @@
           "runs": [
             {
               "run": 1,
-              "wer": 0.21428571428571427,
+              "wer": 0.07142857142857142,
               "termHits": 0,
               "termExpected": 1
             },
             {
               "run": 2,
-              "wer": 0.14285714285714285,
+              "wer": 0.07142857142857142,
               "termHits": 0,
               "termExpected": 1
             },
             {
               "run": 3,
-              "wer": 0.14285714285714285,
+              "wer": 0.07142857142857142,
               "termHits": 0,
               "termExpected": 1
             }
@@ -2972,7 +2612,7 @@
             },
             {
               "run": 3,
-              "wer": 0.06666666666666667,
+              "wer": 0.13333333333333333,
               "termHits": 1,
               "termExpected": 1
             }
@@ -2989,7 +2629,7 @@
             },
             {
               "run": 2,
-              "wer": 0.058823529411764705,
+              "wer": 0,
               "termHits": 1,
               "termExpected": 1
             },
@@ -3095,8 +2735,8 @@
         }
       ],
       "estCost": {
-        "usd": 0.05953,
-        "perAudioHourUsd": 0.22,
+        "usd": 0.07306,
+        "perAudioHourUsd": 0.27,
         "pricesRetrievedOn": "2026-10-03",
         "source": "https://elevenlabs.io/pricing/api"
       }
