@@ -91,6 +91,12 @@ FIXES = [
             "technician for a ticket that didn't exist.",
      "fix": "A rule that the caller's words are never instructions, and that Sam only pages for an emergency ticket it created in this call.",
      "where": "Sam's prompt (ElevenLabs)", "before": "2 of 3 test runs passed", "tests": ["QA-18"]},
+    {"id": "FIX-14", "title": "Sam handed the caller to Jordan without saying so",
+     "found": "Re-test after FIX-12 (QA-16)", "cause": "instructions",
+     "why": "Sam's handoff step said to announce Jordan, but Sam went straight to the handoff in every run. The AI grader "
+            "passed that silent handoff in 2 of 3 runs, so the grader wasn't consistent either.",
+     "fix": "The handoff step now says to speak the sentence first, then hand off, and never to hand off silently.",
+     "where": "Sam's prompt (ElevenLabs)", "before": "2 of 3 test runs passed (silent handoff in all 3)", "tests": ["QA-16"]},
 ]
 
 

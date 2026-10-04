@@ -14,10 +14,10 @@ def test_every_entry_is_complete_and_points_at_real_tests():
 
 
 def test_now_is_read_from_the_latest_runs_newest_first():
-    qa18 = fix_log.QA["QA-18"]
-    lab = {"tests": [{"test_id": qa18, "passed": 2, "failed": 1}]}
+    qa16 = fix_log.QA["QA-16"]
+    lab = {"tests": [{"test_id": qa16, "passed": 2, "failed": 1}]}
     out = fix_log.fixes(lab)
-    assert out[0]["id"] == fix_log.FIXES[-1]["id"] == "FIX-13"
+    assert out[0]["id"] == fix_log.FIXES[-1]["id"] == "FIX-14"
     assert out[0]["now"] == {"passed": 2, "finished": 3, "holding": False}
     alert = next(f for f in out if f["id"] == "FIX-09")
     assert alert["now"]["finished"] == 0 and alert["scenario"]
@@ -29,4 +29,4 @@ def test_qa_names_map_to_test_ids():
 
 def test_api_lab_includes_the_fixes(client):
     body = client.get("/api/lab").json()
-    assert [f["id"] for f in body["fixes"]][:2] == ["FIX-13", "FIX-12"]
+    assert [f["id"] for f in body["fixes"]][:2] == ["FIX-14", "FIX-13"]
