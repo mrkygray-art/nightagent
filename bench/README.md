@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 1 of 8).** The dataset and its validation are done. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
+> **Status: in progress (build step 2 of 8).** The dataset, its validation, and the scorer (with tests) are done. The scorer was written and tested before any provider was called. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -35,14 +35,26 @@ Each source is reported separately and never averaged together.
 
 **TTS bias caveat:** all TTS audio is generated with ElevenLabs voices. Audio from one vendor's TTS can score unusually well on the same vendor's speech-to-text, so `tts` results are labeled "ElevenLabs-generated" and are never used for the headline.
 
+## How it's scored
+
+All scoring is in [`score.js`](score.js), and every rule below has a unit test in [`test/score.test.js`](test/score.test.js).
+
+- **Normalization:** lowercase, punctuation removed, hyphens split words ("J-hook" becomes "j hook"). Digits in transcripts become spoken words ("port 12" becomes "port twelve", "Cat6" becomes "cat six", "2nd" becomes "second"), to match references, which are written as spoken.
+- **Jargon term accuracy (the headline):** every occurrence of a term in a reference counts. Aliases count, whole words only. If a reference says a term twice and the transcript has it once, that's 1 of 2.
+- **WER:** word error rate against the exact reference wording, counted over the whole set (total word errors / total reference words), not averaged per utterance. Aliases don't apply here, so "power over ethernet" in place of "PoE" is a word error even though the term is correct.
+- **Misses:** for every missed term, the scorer records what the provider wrote in its place. For example, if a transcript had "Burke Otto" where "Verkada" was said, the miss would show "burke otto". (That example is from the tests, not a real result.)
+- **Latency:** median and 95th percentile (nearest rank) over successful requests.
+- **Failures:** counted in the failure rate and listed, never dropped. Failed requests aren't scored for accuracy; the summary shows how many requests were scored. Utterances with no result are listed as missing, and transcripts that change between repeat runs are flagged.
+
 ## How to reproduce
 
 Requires Node 20 or later. No packages to install so far.
 
 ```bash
 cd bench
-npm test             # unit tests (no keys, no network)
-npm run dry-run      # validates the dataset; makes no API calls
+npm test                     # unit tests (no keys, no network)
+npm run dry-run              # validates the dataset; makes no API calls
+node score.js --run <run-id> # scores results/<run-id>/raw into summary.json
 ```
 
 Provider keys go in `bench/.env` (copy [`.env.example`](.env.example)); that file is git-ignored. Keys are only needed once provider runs exist (build step 3). Paid runs will print the request count and audio minutes and require `--confirm` before calling any API.

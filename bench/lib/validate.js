@@ -2,7 +2,7 @@
 // Errors stop the run; warnings are printed but allowed.
 const fs = require('fs');
 const path = require('path');
-const { normalize, countPhrase } = require('./normalize');
+const { normalize, countPhrases } = require('./normalize');
 
 const CATEGORIES = ['cctv', 'access_control', 'networking', 'vendors', 'dispatch'];
 const UTTERANCE_FIELDS = ['id', 'category', 'reference', 'terms'];
@@ -40,7 +40,7 @@ function validateTerms(terms, errors, warnings) {
   return aliases;
 }
 
-const occurrences = (ref, list) => Math.max(0, ...list.map((a) => countPhrase(ref, a)));
+const occurrences = (ref, list) => countPhrases(ref, list);
 
 function validateUtterances(utterances, aliases, errors, warnings) {
   const stats = { utterances: 0, byCategory: Object.fromEntries(CATEGORIES.map((c) => [c, 0])), termOccurrences: 0, termsUsed: new Set() };
