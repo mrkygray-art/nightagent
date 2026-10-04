@@ -12,6 +12,10 @@ LAB_HTML = r"""<!doctype html>
 <title>NightAgent: Evaluation Lab</title>
 <meta name="description" content="How NightAgent's voice agents are evaluated across scorecards, incidents, regression tests, failure injection, and known measurement gaps.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101a2e'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f5a524'/%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#101a2e">
+<meta name="apple-mobile-web-app-title" content="NightAgent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -522,6 +526,10 @@ async function runScenario(box) {
 }
 document.querySelectorAll(".inject").forEach((box) =>
   box.querySelector("button").addEventListener("click", () => runScenario(box)));
+</script>
+<script>
+// Home-screen app: the service worker lets NightAgent open from its icon (see app/pwa.py)
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 </script>
 </body>
 </html>

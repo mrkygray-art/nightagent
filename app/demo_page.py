@@ -13,6 +13,10 @@ DEMO_HTML = r"""<!doctype html>
 <title>NightAgent: AI service lifecycle demo</title>
 <meta name="description" content="Talk to Sam, the NightAgent voice, report a problem, and follow the service ticket from the first call through dispatch, repair, and follow-up.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101a2e'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f5a524'/%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#101a2e">
+<meta name="apple-mobile-web-app-title" content="NightAgent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -454,6 +458,9 @@ DEMO_HTML = r"""<!doctype html>
   .how p { margin: 0; color: var(--muted); font-size: 15px; }
 
   footer { border-top: 1px solid var(--line); margin-top: 32px; padding: 20px 0 32px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
+  .install { flex-basis: 100%; }
+  .install button { font: 500 14px var(--body); color: var(--sodium); background: transparent; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .install p { margin: 6px 0 0; color: var(--text); }
 
   @media (prefers-reduced-motion: reduce) {
     .lamp[data-state="speaking"], .ticket.fresh, .call[data-ring="true"], .advance.answer, .running::before,
@@ -628,7 +635,45 @@ DEMO_HTML = r"""<!doctype html>
   <footer>
     <span>NightAgent, built by Ky Gray with ElevenLabs Agents, Python and FastAPI, Supabase, and Vercel.</span>
     <a href="/">Open the full ticket log</a>
+    <div class="install" id="install" hidden>
+      <button type="button" id="install-btn" aria-expanded="false">Add NightAgent to your home screen</button>
+      <p id="install-help" hidden></p>
+    </div>
   </footer>
+<script>
+// Add to home screen. Chrome offers a real install (caught here, early, so we can show our own
+// link instead of its banner). Firefox, DuckDuckGo, and Safari don't, so the link shows the steps.
+(() => {
+  const box = document.getElementById("install"), btn = document.getElementById("install-btn"),
+        help = document.getElementById("install-help");
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const phone = matchMedia("(pointer: coarse)").matches;
+  const ua = navigator.userAgent;
+  const steps =
+    /DuckDuckGo/.test(ua) ? "Tap the ⋮ menu, then “Add to Home Screen.”" :
+    /iPhone|iPad/.test(ua) ? "Tap the Share button (the square with an arrow), then “Add to Home Screen.”" :
+    /Firefox|FxiOS/.test(ua) ? "Tap the ⋮ menu, then “Add app to Home screen” (it may say “Install”)." :
+    /SamsungBrowser/.test(ua) ? "Tap the ☰ menu, then “Add page to” and “Home screen.”" :
+    "Tap the ⋮ menu, then “Add to Home screen” or “Install app.”";
+  let offer = null;
+  const show = () => { box.hidden = installed || !(offer || phone); };
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); offer = e; show(); });
+  addEventListener("appinstalled", () => { offer = null; box.hidden = true; });
+  btn.addEventListener("click", async () => {
+    if (offer) {
+      const e = offer; offer = null;
+      e.prompt();
+      await e.userChoice.catch(() => null);
+      show();
+      return;
+    }
+    help.textContent = steps + " NightAgent then opens from its own icon, like an app.";
+    help.hidden = !help.hidden;
+    btn.setAttribute("aria-expanded", String(!help.hidden));
+  });
+  show();
+})();
+</script>
 </div>
 
 <script type="module">
@@ -2247,6 +2292,10 @@ schedulePoll(0);
     });
   }
 }
+</script>
+<script>
+// Home-screen app: the service worker lets NightAgent open from its icon (see app/pwa.py)
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 </script>
 </body>
 </html>

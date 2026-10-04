@@ -6,6 +6,7 @@ NightAgent is a portfolio demonstration of how an AI voice agent can support the
 
 **Live demo:** https://nightshift-dispatch.vercel.app/demo  
 **Evaluation Lab:** https://nightshift-dispatch.vercel.app/lab  
+**On your phone:** open the live demo and tap "Add NightAgent to your home screen" at the bottom. It then opens from its own icon, like an app (Chrome installs it in one tap; Firefox, DuckDuckGo, and Safari show the menu steps). Calls still need signal.  
 **How it's built:** [Architecture](#architecture) · [Run it locally](#run-it-locally) · [Jargon Bench](#jargon-bench-speech-to-text-on-security-vocabulary)
 
 > **Demo note:** The customer/AI interaction demonstrates the conversational experience. Dispatch, technician assignment, repair timing, and lifecycle progression are intentionally accelerated/simulated so a recruiter or reviewer can experience an hours-long service workflow in minutes. The UI labels simulated events accordingly.

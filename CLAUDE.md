@@ -22,6 +22,7 @@ NightAgent: an after-hours AI voice agent demo for a security integrator. Four E
 - Steer the model through tool results (`next_step`, `tell_the_caller`) rather than the prompt alone; that has proven more reliable with this model.
 - Business rules live in code (`app/triage.py`, `app/follow_up.py`, `app/lifecycle.py`); the model may raise a priority but never downgrade an emergency.
 - New Evaluation Lab tests: add the ElevenLabs test to `qa_lab.TESTS` with its `why`, and real fixes to `app/fix_log.py` (only things that really happened, with the commit or prompt that changed).
+- Add to home screen: `app/pwa.py` serves the manifest, the icons in `app/static/`, and `/sw.js` (keeps only `/demo`, `/lab`, and icons; never `/api/`). Bump `VERSION` there when the worker or icons change. Browser check: `e2e/na-pwa-test.js`.
 - Public pages never show real callers' words, full phone numbers, or the tool secret. (The voice tests show what the speech-to-text heard from their own recorded test lines, which use the fictional demo accounts.)
 
 ## Keeping the public README current
