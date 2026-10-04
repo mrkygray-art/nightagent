@@ -14,3 +14,4 @@ voicelab/out/
 bench/node_modules/
 bench/data/audio/
 bench/results/*/raw/
+bench/recordings/

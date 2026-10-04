@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { normalize, words, findPhrases } = require('./lib/normalize');
+const { estimateUsd, perAudioHourUsd } = require('./lib/cost');
 
 // ---------- WER with alignment ----------
 
@@ -115,7 +116,7 @@ const pct = (num, den) => (den ? Math.round((num / den) * 10000) / 100 : null);
 // files: parsed raw files for one (provider, condition, source) group
 function scoreGroup(files, utterances, aliases) {
   const byId = Object.fromEntries(utterances.map((u) => [u.id, u]));
-  const g = { requests: 0, failures: 0, scored: 0, edits: 0, refWords: 0, hits: 0, expected: 0, latencies: [], perTerm: {}, inconsistent: [], unknownIds: [], utterances: [] };
+  const g = { requests: 0, failures: 0, scored: 0, audioSeconds: 0, edits: 0, refWords: 0, hits: 0, expected: 0, latencies: [], perTerm: {}, inconsistent: [], unknownIds: [], utterances: [] };
   for (const f of files) {
     const u = byId[f.id];
     if (!u) { g.unknownIds.push(f.id); continue; }
@@ -125,6 +126,7 @@ function scoreGroup(files, utterances, aliases) {
       g.requests++;
       if (r.error) { g.failures++; runs.push({ run: r.run, error: r.error }); continue; }
       g.scored++;
+      g.audioSeconds += f.audioSeconds || 0;
       g.latencies.push(r.latencyMs);
       texts.add(normalize(r.text));
       const s = scoreUtterance(u, r.text, aliases);
@@ -150,6 +152,7 @@ function scoreGroup(files, utterances, aliases) {
     failures: g.failures,
     failureRate: pct(g.failures, g.requests),
     scoredRequests: g.scored,
+    scoredAudioSeconds: Math.round(g.audioSeconds * 100) / 100,
     missingIds: utterances.map((u) => u.id).filter((id) => !seen.has(id)),
     unknownIds: g.unknownIds,
     werPct: pct(g.edits, g.refWords),
@@ -181,9 +184,21 @@ function scoreRun(runDir, dataDir) {
   const utterances = JSON.parse(fs.readFileSync(path.join(dataDir, 'utterances.json'), 'utf8'));
   const aliases = aliasMap(JSON.parse(fs.readFileSync(path.join(dataDir, 'terms.json'), 'utf8')));
   const raw = readRaw(path.join(runDir, 'raw'));
-  const groups = Object.values(raw).map(({ provider, condition, source, files }) => ({
-    provider, condition, source, ...scoreGroup(files, utterances, aliases),
-  }));
+  // Prices come from the run's own config snapshot, so a later price change can't alter old results
+  const snapPath = path.join(runDir, 'config.snapshot.json');
+  const pricing = fs.existsSync(snapPath) ? JSON.parse(fs.readFileSync(snapPath, 'utf8')).config.pricing : null;
+  const groups = Object.values(raw).map(({ provider, condition, source, files }) => {
+    const g = { provider, condition, source, ...scoreGroup(files, utterances, aliases) };
+    if (pricing?.[provider]) {
+      g.estCost = {
+        usd: Math.round(estimateUsd(pricing, provider, condition, g.scoredAudioSeconds) * 1e6) / 1e6,
+        perAudioHourUsd: Math.round(perAudioHourUsd(pricing, provider, condition) * 1e4) / 1e4,
+        pricesRetrievedOn: pricing.retrieved_on,
+        source: pricing[provider].source,
+      };
+    }
+    return g;
+  });
   return { runId: path.basename(runDir), scoredAt: new Date().toISOString(), utterances: utterances.length, groups };
 }
 

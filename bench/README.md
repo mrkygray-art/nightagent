@@ -6,7 +6,7 @@ Field techs, sales engineers, and customers say things like "the Verkada cameras
 
 **The claim is narrow on purpose:** results apply to this dataset, these audio conditions, and the models and prices on the run date. This is not a general speech-to-text leaderboard.
 
-> **Status: in progress (build step 3 of 8).** The dataset, its validation, the scorer, and both provider adapters are done, all with tests. The scorer was written and tested before any provider was called, and the adapters are tested against a fake server. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
+> **Status: in progress (build step 4 of 8).** The dataset, its validation, the scorer, both provider adapters, and the runner are done, all with tests. The scorer was written and tested before any provider was called, and the adapters and runner are tested against fakes. Next: recording the human audio, then the first real run. No provider has been run yet, so there are no results. Every number that appears here later will come from a raw result file in `bench/results/`.
 
 Full spec: [`docs/jargon-bench-spec.md`](../docs/jargon-bench-spec.md).
 
@@ -67,16 +67,25 @@ All scoring is in [`score.js`](score.js), and every rule below has a unit test i
 
 ## How to reproduce
 
-Requires Node 20 or later. No packages to install so far.
+Requires Node 20 or later (no packages to install) and [ffmpeg](https://ffmpeg.org/) for audio conversion.
 
 ```bash
 cd bench
-npm test                     # unit tests (no keys, no network)
-npm run dry-run              # validates the dataset; makes no API calls
-node score.js --run <run-id> # scores results/<run-id>/raw into summary.json
+npm test                       # unit tests (no keys, no network)
+npm run dry-run                # validates the dataset; makes no API calls
+node scripts/prepare-audio.js  # converts recordings/human/* to mono 16 kHz WAV (see RECORDING.md)
+
+# Prints the plan and estimated cost; makes no API calls:
+node run.js --providers deepgram,elevenlabs --sources human --conditions baseline,boosted
+# Runs it, then scores it into results/<run-id>/summary.json:
+node run.js --providers deepgram,elevenlabs --sources human --conditions baseline,boosted --confirm
+
+node score.js --run <run-id>   # re-scores an existing run
 ```
 
-Provider keys go in `bench/.env` (copy [`.env.example`](.env.example)); that file is git-ignored. Keys are only needed once provider runs exist (build step 3). Paid runs will print the request count and audio minutes and require `--confirm` before calling any API.
+Provider keys go in `bench/.env` (copy [`.env.example`](.env.example)); that file is git-ignored. A paid run refuses to start unless `budget.max_usd_per_run` is set in `config.json`, the estimate is under it, and `--confirm` is given; it also stops before any request that would pass the cap. Requests run one at a time, so latency isn't distorted by the bench's own concurrency.
+
+Each run writes `results/<run-id>/config.snapshot.json` (models, settings, prices, keyterms, git commit, and SHA-256 hashes of the dataset files), one raw file per utterance under `raw/<provider>/<condition>/<source>/`, and `summary.json`. Raw files and audio are git-ignored; summaries are committed.
 
 ## Limitations (known in advance)
 
