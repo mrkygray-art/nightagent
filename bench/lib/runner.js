@@ -52,6 +52,9 @@ async function execute({ planned, config, adapters, keyterms, runDir, dataDir, l
     gitCommit: gitCommit(dataDir),
     dataset: { utterancesSha256: sha256(path.join(dataDir, 'utterances.json')), termsSha256: sha256(path.join(dataDir, 'terms.json')) },
     keyterms,
+    // Fingerprint of every audio file sent, so results can be tied to the exact audio
+    audioSha256: Object.fromEntries([...new Set(planned.jobs.map((j) => j.file))]
+      .map((f) => [path.relative(dataDir, f).replace(/\\/g, '/'), sha256(f)])),
     estimate: { requests: planned.jobs.length, audioMinutes: planned.audioMinutes, usd: planned.estUsd },
     config,
   }, null, 2)}\n`);

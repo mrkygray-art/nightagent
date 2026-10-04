@@ -25,6 +25,7 @@ fs.mkdirSync(outDir, { recursive: true });
 let converted = 0;
 const problems = [];
 for (const name of fs.readdirSync(inDir).sort()) {
+  if (/\.(json|txt|md)$/i.test(name)) continue; // manifests and notes, not audio
   const id = path.parse(name).name.toLowerCase();
   if (!ids.has(id)) { problems.push(`${name}: not an utterance id (expected u001 to u0${ids.size})`); continue; }
   const out = path.join(outDir, `${id}.wav`);

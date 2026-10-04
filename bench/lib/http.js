@@ -23,7 +23,8 @@ async function readBody(res) {
 
 // makeRequest() must return fresh fetch arguments each time ({ url, init }), since a body
 // stream can't be re-sent.
-async function requestWithRetry(makeRequest, retry, { fetch = globalThis.fetch, sleep = defaultSleep } = {}) {
+// binary: true returns a successful body as an ArrayBuffer (audio) instead of text/JSON.
+async function requestWithRetry(makeRequest, retry, { fetch = globalThis.fetch, sleep = defaultSleep, binary = false } = {}) {
   const maxRetries = retry.max_retries ?? 2;
   let attempts = 0;
   let last = null;
@@ -39,7 +40,7 @@ async function requestWithRetry(makeRequest, retry, { fetch = globalThis.fetch, 
       if (attempts <= maxRetries) await sleep(retry.backoff_ms?.[attempts - 1] ?? 1000);
       continue;
     }
-    const body = await readBody(res);
+    const body = binary && res.ok ? await res.arrayBuffer() : await readBody(res);
     const latencyMs = Math.round(performance.now() - started);
     if (res.ok) return { ok: true, status: res.status, body, latencyMs, attempts, error: null };
     const detail = typeof body === 'string' ? body : JSON.stringify(body);

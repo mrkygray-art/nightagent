@@ -20,6 +20,29 @@ function wavSeconds(file) {
   throw new Error(`${file}: no data chunk`);
 }
 
+// Samples of a mono 16 kHz 16-bit PCM WAV, found by walking the chunks (ffmpeg adds a LIST
+// chunk, so the data doesn't always start at byte 44).
+function readPcm16(file) {
+  const buf = fs.readFileSync(file);
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE') throw new Error(`${file}: not a WAV file`);
+  let fmt = null;
+  for (let off = 12; off + 8 <= buf.length;) {
+    const id = buf.toString('ascii', off, off + 4);
+    const size = buf.readUInt32LE(off + 4);
+    if (id === 'fmt ') fmt = { format: buf.readUInt16LE(off + 8), channels: buf.readUInt16LE(off + 10), rate: buf.readUInt32LE(off + 12), bits: buf.readUInt16LE(off + 22) };
+    if (id === 'data') {
+      if (!fmt || fmt.format !== 1 || fmt.channels !== 1 || fmt.rate !== 16000 || fmt.bits !== 16) {
+        throw new Error(`${file}: expected mono 16 kHz 16-bit PCM (run prepare-audio.js)`);
+      }
+      const start = off + 8;
+      const end = Math.min(start + size, buf.length);
+      return new Int16Array(buf.buffer.slice(buf.byteOffset + start, buf.byteOffset + end - ((end - start) % 2)));
+    }
+    off += 8 + size + (size % 2);
+  }
+  throw new Error(`${file}: no data chunk`);
+}
+
 // A silent mono 16 kHz 16-bit WAV of the given length (for tests).
 function silentWav(seconds, rate = 16000) {
   const data = Math.round(seconds * rate) * 2;
@@ -31,4 +54,4 @@ function silentWav(seconds, rate = 16000) {
   return b;
 }
 
-module.exports = { wavSeconds, silentWav };
+module.exports = { wavSeconds, readPcm16, silentWav };

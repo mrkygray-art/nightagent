@@ -1,0 +1,230 @@
+{
+  "from_source": "human",
+  "type": "pink",
+  "generator": "ffmpeg anoisesrc",
+  "snr_db": 10,
+  "base_seed": 20261003,
+  "ffmpeg": "ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\r",
+  "clips": {
+    "u001": {
+      "seed": 20261004,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u002": {
+      "seed": 20261005,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u003": {
+      "seed": 20261006,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u004": {
+      "seed": 20261007,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u005": {
+      "seed": 20261008,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u006": {
+      "seed": 20261009,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u007": {
+      "seed": 20261010,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u008": {
+      "seed": 20261011,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u009": {
+      "seed": 20261012,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u010": {
+      "seed": 20261013,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u011": {
+      "seed": 20261014,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u012": {
+      "seed": 20261015,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u013": {
+      "seed": 20261016,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u014": {
+      "seed": 20261017,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u015": {
+      "seed": 20261018,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u016": {
+      "seed": 20261019,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u017": {
+      "seed": 20261020,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u018": {
+      "seed": 20261021,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u019": {
+      "seed": 20261022,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u020": {
+      "seed": 20261023,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u021": {
+      "seed": 20261024,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u022": {
+      "seed": 20261025,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u023": {
+      "seed": 20261026,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u024": {
+      "seed": 20261027,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u025": {
+      "seed": 20261028,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u026": {
+      "seed": 20261029,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u027": {
+      "seed": 20261030,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u028": {
+      "seed": 20261031,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u029": {
+      "seed": 20261032,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u030": {
+      "seed": 20261033,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u031": {
+      "seed": 20261034,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u032": {
+      "seed": 20261035,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u033": {
+      "seed": 20261036,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u034": {
+      "seed": 20261037,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u035": {
+      "seed": 20261038,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u036": {
+      "seed": 20261039,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u038": {
+      "seed": 20261041,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u039": {
+      "seed": 20261042,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u040": {
+      "seed": 20261043,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u041": {
+      "seed": 20261044,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u042": {
+      "seed": 20261045,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u043": {
+      "seed": 20261046,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u044": {
+      "seed": 20261047,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    },
+    "u045": {
+      "seed": 20261048,
+      "measured_snr_db": 10,
+      "clipped_samples": 0
+    }
+  }
+}

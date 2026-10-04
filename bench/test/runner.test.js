@@ -45,6 +45,22 @@ test('wavSeconds reads the duration from the header', () => {
   assert.throws(() => wavSeconds(f), /not a WAV/);
 });
 
+test('readPcm16 finds the samples after a LIST chunk (as ffmpeg writes them)', () => {
+  const { readPcm16 } = require('../lib/wav');
+  const plain = silentWav(0.001); // 16 samples
+  const data = plain.subarray(36);
+  data.writeInt16LE(1234, 8); // first sample
+  const list = Buffer.alloc(34); list.write('LIST', 0); list.writeUInt32LE(26, 4);
+  const withList = Buffer.concat([plain.subarray(0, 36), list, data]);
+  withList.writeUInt32LE(withList.length - 8, 4);
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jb-')), 'l.wav');
+  fs.writeFileSync(f, withList);
+  const s = readPcm16(f);
+  assert.equal(s.length, 16);
+  assert.equal(s[0], 1234);
+  assert.equal(wavSeconds(f), 0.001);
+});
+
 test('cost uses config prices, including the boosting surcharge', () => {
   const p = realConfig.pricing;
   assert.equal(perMinute(p, 'deepgram', false), p.deepgram.per_minute);
