@@ -636,27 +636,22 @@ DEMO_HTML = r"""<!doctype html>
     <span>NightAgent, built by Ky Gray with ElevenLabs Agents, Python and FastAPI, Supabase, and Vercel.</span>
     <a href="/">Open the full ticket log</a>
     <div class="install" id="install" hidden>
-      <button type="button" id="install-btn" aria-expanded="false">Add NightAgent to your home screen</button>
-      <p id="install-help" hidden></p>
+      <button type="button" id="install-btn">Add NightAgent to your home screen</button>
     </div>
   </footer>
+<script src="/install-help.js"></script>
 <script>
 // Add to home screen. Chrome offers a real install (caught here, early, so we can show our own
-// link instead of its banner). Firefox, DuckDuckGo, and Safari don't, so the link shows the steps.
+// link instead of its banner). iPhones never offer one, and neither do Firefox, DuckDuckGo, or
+// Samsung Internet, so the link opens install-help.js: numbered steps with pictures of the real
+// buttons, matched to the browser (on an iPhone in Safari: ⋯, Share, Add to Home Screen, Add).
 (() => {
-  const box = document.getElementById("install"), btn = document.getElementById("install-btn"),
-        help = document.getElementById("install-help");
+  const box = document.getElementById("install"), btn = document.getElementById("install-btn");
+  const help = window.installHelp;
   const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  const phone = matchMedia("(pointer: coarse)").matches;
-  const ua = navigator.userAgent;
-  const steps =
-    /DuckDuckGo/.test(ua) ? "Tap the ⋮ menu, then “Add to Home Screen.”" :
-    /iPhone|iPad/.test(ua) ? "Tap the Share button (the square with an arrow), then “Add to Home Screen.”" :
-    /Firefox|FxiOS/.test(ua) ? "Tap the ⋮ menu, then “Add app to Home screen” (it may say “Install”)." :
-    /SamsungBrowser/.test(ua) ? "Tap the ☰ menu, then “Add page to” and “Home screen.”" :
-    "Tap the ⋮ menu, then “Add to Home screen” or “Install app.”";
+  const phone = matchMedia("(pointer: coarse)").matches, ios = !!(help && help.isIOS);
   let offer = null;
-  const show = () => { box.hidden = installed || !(offer || phone); };
+  const show = () => { box.hidden = installed || !(offer || phone || ios); };
   addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); offer = e; show(); });
   addEventListener("appinstalled", () => { offer = null; box.hidden = true; });
   btn.addEventListener("click", async () => {
@@ -667,9 +662,7 @@ DEMO_HTML = r"""<!doctype html>
       show();
       return;
     }
-    help.textContent = steps + " NightAgent then opens from its own icon, like an app.";
-    help.hidden = !help.hidden;
-    btn.setAttribute("aria-expanded", String(!help.hidden));
+    if (help) help.open("NightAgent", { accent: "#101a2e" });
   });
   show();
 })();

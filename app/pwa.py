@@ -86,6 +86,12 @@ self.addEventListener('fetch', (event) => {
 """.replace("__VERSION__", VERSION)
 
 
+@router.get("/install-help.js", include_in_schema=False)
+def install_help() -> FileResponse:
+    # The "Put NightAgent on your Home Screen" guide (a copy of Bluey's install-help.js; keep in sync)
+    return FileResponse(STATIC / "install-help.js", media_type="text/javascript", headers={"Cache-Control": "public, max-age=3600"})
+
+
 @router.get("/manifest.webmanifest")
 def manifest() -> JSONResponse:
     return JSONResponse(MANIFEST, media_type="application/manifest+json")

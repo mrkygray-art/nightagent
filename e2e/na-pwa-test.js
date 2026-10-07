@@ -9,7 +9,8 @@ const check = (ok, name, extra = '') => { if (!ok) fails++; console.log(`${ok ? 
 const UAS = {
   duckduckgo: ['Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0 Mobile DuckDuckGo/5 Safari/537.36', 'Add to Home Screen'],
   firefox: ['Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0', 'Add app to Home screen'],
-  iphone: ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', 'Share button'],
+  iphone: ['Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1', 'Open as Web App'],
+  'iphone-chrome': ['Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/140.0 Mobile/15E148 Safari/604.1', 'address bar'],
   chrome: ['Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36', 'Install app'],
 };
 
@@ -56,8 +57,10 @@ const UAS = {
     if (visible) {
       await p.$eval('#install-btn', (b) => b.scrollIntoView());
       await p.click('#install-btn');
-      const text = await p.$eval('#install-help', (el) => (el.hidden ? '' : el.textContent));
-      check(text.includes(expect), `${name}: steps say "${expect}"`, text);
+      // The steps open in install-help.js's guide, with pictures of the buttons
+      await new Promise((r) => setTimeout(r, 300));
+      const text = await p.$eval('.ih-sheet', (el) => el.innerText).catch(() => '');
+      check(text.includes(expect) && /Home Screen/i.test(text), `${name}: guide says "${expect}"`, text.replace(/\s+/g, ' ').slice(0, 120));
       const wide = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       check(!wide, `${name}: no sideways scroll`);
     }
