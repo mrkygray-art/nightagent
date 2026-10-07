@@ -409,7 +409,7 @@ function judgeSection(box, j) {
   }
   const s = el("div", "summary");
   s.append(stat(`${j.rate}%`, `agreement, ${j.agree} of ${j.n} verdicts`),
-    stat(j.kappa === null ? "–" : String(j.kappa), "kappa (chance-corrected)"),
+    stat(j.kappa === null ? "–" : String(j.kappa), j.kappa === null ? `kappa: needs ${j.kappa_min} verdicts (${j.n} so far)` : "kappa (chance-corrected)"),
     stat(String(j.calls), "calls scored by a person"));
   const rows = j.criteria.map((c) => [{ text: c.criterion }, { text: `${c.rate}%`, cls: "val" },
     { text: `${c.agree} of ${c.n}` }, { text: c.kappa === null ? "–" : String(c.kappa) }]);

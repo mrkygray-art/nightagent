@@ -1,0 +1,81 @@
+{
+  "labels": [
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "no_unsupported_promises",
+      "human": "failure",
+      "note": "Agent transfered call to Account Executie",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "confirmed_details_first",
+      "human": "success",
+      "note": "nothing to note at this time.",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "safety_first",
+      "human": "failure",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "emergency_handled",
+      "human": "failure",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "correct_routing",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "stayed_in_scope",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "df5175f85c696460",
+      "criterion": "clear_close",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "0057c8b3addf056d",
+      "criterion": "no_unsupported_promises",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "0057c8b3addf056d",
+      "criterion": "confirmed_details_first",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "5c6671b609d3d53e",
+      "criterion": "no_unsupported_promises",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    },
+    {
+      "call_ref": "5c6671b609d3d53e",
+      "criterion": "confirmed_details_first",
+      "human": "success",
+      "note": "",
+      "labeled_at": "2026-10-07"
+    }
+  ]
+}

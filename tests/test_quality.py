@@ -81,7 +81,9 @@ def test_judge_agreement_and_kappa():
               for i, h in enumerate(["success", "failure", "failure", "failure", "success"])]
     a = judge.agreement(calls, labels)
     assert (a["n"], a["agree"], a["rate"], a["left_out"]) == (4, 3, 75, 1)
-    assert a["kappa"] == 0.5 and a["disagreements"][0]["person"] == "failure"
+    assert a["kappa"] is None and a["disagreements"][0]["person"] == "failure"  # too few verdicts for kappa
+    pairs = [("success", "success"), ("failure", "success"), ("failure", "failure"), ("failure", "failure")]
+    assert judge._kappa(pairs, min_n=2) == 0.5
     assert judge.agreement(calls, [])["status"] == "none"
 
 

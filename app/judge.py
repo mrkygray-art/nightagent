@@ -16,6 +16,8 @@ from app.service import call_ref
 
 LABELS = Path(__file__).with_name("judge_labels.json")
 VERDICTS = ("success", "failure")
+# Below this many comparable verdicts, kappa swings wildly (one answer can move it from 0 to 1), so it's withheld.
+MIN_FOR_KAPPA = 20
 
 
 @lru_cache(maxsize=1)
@@ -26,10 +28,11 @@ def labels() -> list[dict]:
         return []
 
 
-def _kappa(pairs: list[tuple[str, str]]) -> float | None:
-    """Cohen's kappa: agreement beyond what chance would give. None when it can't be computed."""
+def _kappa(pairs: list[tuple[str, str]], min_n: int = MIN_FOR_KAPPA) -> float | None:
+    """Cohen's kappa: agreement beyond what chance would give. None when it can't be computed, or when there
+    are too few verdicts for it to mean anything."""
     n = len(pairs)
-    if n < 2:
+    if n < max(2, min_n):
         return None
     observed = sum(a == b for a, b in pairs) / n
     expected = sum((sum(a == v for a, _ in pairs) / n) * (sum(b == v for _, b in pairs) / n) for v in VERDICTS)
@@ -64,6 +67,7 @@ def agreement(calls: dict[str, dict], given: list[dict] | None = None) -> dict:
         "agree": sum(a == b for a, b in every),
         "rate": round(100 * sum(a == b for a, b in every) / len(every)) if every else None,
         "kappa": _kappa(every),
+        "kappa_min": MIN_FOR_KAPPA,
         "calls": len({lab["call_ref"] for lab in given}),
         "left_out": unknown,
         "criteria": [{"criterion": CRITERIA_NAMES.get(k, k), "n": len(v), "agree": sum(a == b for a, b in v),
