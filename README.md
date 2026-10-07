@@ -120,12 +120,12 @@ Two tables that are never blended, because tests are controlled and real calls a
 | On real calls | Priority matched the rules | AI-suggested priority vs. the final priority set by code |
 | On real calls | Tool calls worked / Handoffs worked | Errors in ElevenLabs' own call records |
 | On real calls | Calls completed | Calls that ended with a ticket, message, or sales lead |
-| On real calls | AI-judged checks: avoided unsupported promises, confirmed details first, safety instruction given first, emergency handled end to end, routed to the right place, didn't make anything up, stayed in scope and safe, clear close | Graded by ElevenLabs after each call against the written rubric in `app/analysis_spec.py`, labeled **AI-judged**. Each check says when it doesn't apply, and those calls are left out |
+| On real calls | AI-judged checks: avoided unsupported promises, confirmed details first, safety instruction given first, emergency handled end to end, routed to the right place, didn't make anything up, stayed in scope and safe, clear close; and for check-in calls: outcome confirmed and saved, new needs captured, avoided unsupported promises, clear close | Graded by ElevenLabs after each call against the written rubric in `app/analysis_spec.py`, labeled **AI-judged**. Each check says when it doesn't apply, and those calls are left out |
 | On real calls | Caller interruptions | Agent replies the caller talked over (a count, not a grade) |
 | On real calls | Response time | Caller stops talking → agent voice starts; typical and slowest 10% |
 | On real calls | Cost per call | ElevenLabs' own dollar price recorded on each call (`cost_fiat`), not the monthly plan |
 
-**Can we trust the AI judge?** A person scores real calls against the same rubric with `scripts/label_calls.py`, which asks for the person's verdict before showing the AI's. The lab shows how often the two agree, Cohen's kappa (agreement beyond chance), and each disagreement. Labels are keyed by a fingerprint of the call, never by conversation id, and until calls are labeled the section says "Not measured yet".
+**Can we trust the AI judge?** A person scores real calls against the same rubric with `scripts/label_calls.py`, which asks for the person's verdict before showing the AI's, only on checks the AI graded for that call. The lab shows how often the two agree, Cohen's kappa (agreement beyond chance), and each disagreement. Labels are keyed by a fingerprint of the call, never by conversation id, and until calls are labeled the section says "Not measured yet".
 
 Rules the scorecard follows: every number shows how many runs or calls it's based on; with nothing to count it says "No data yet" instead of 0%; made-up demo scenarios are excluded; and caller words are never shown. Per-call cost and timing are saved once, when a call is graded, and calls nobody has opened are graded a few at a time whenever the lab page loads.
 

@@ -63,7 +63,10 @@ def test_data_collection_reaches_impact_and_the_ticket(client, tool):
 def test_agent_payload_matches_what_the_code_reads():
     payload = analysis_spec.agent_payload()
     ids = [c["id"] for c in payload["evaluation"]["criteria"]]
-    assert ids == list(analysis_spec.CRITERIA_IDS) and len(ids) == len(set(ids)) == 8
+    assert len(ids) == len(set(ids)) == 8
+    follow = [c["id"] for c in analysis_spec.follow_up_payload()["evaluation"]["criteria"]]
+    assert all(i.startswith("checkin_") for i in follow) and not set(ids) & set(follow)
+    assert list(analysis_spec.CRITERIA_IDS) == ids + follow
     assert all(len(c["conversation_goal_prompt"]) <= 2000 and "Unknown" in c["conversation_goal_prompt"]
                for c in payload["evaluation"]["criteria"])
     assert set(payload["data_collection"]) == {"intent", "identity_verified", "identity_method",

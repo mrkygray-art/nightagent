@@ -100,14 +100,52 @@ DATA_FIELDS = {
     },
 }
 
-CRITERIA_IDS = tuple(c["id"] for c in CRITERIA)
-CRITERIA_NAMES = {c["id"]: c["name"] for c in CRITERIA}
+# The check-in call (the follow-up agent) has a different job: confirm the fix, capture what's next, close.
+# Ids start with "checkin_" so they never mix with the front-desk checks on the scorecard.
+FOLLOW_UP_CRITERIA = [
+    {"id": "checkin_outcome_confirmed", "name": "Check-in: outcome confirmed and saved",
+     "conversation_goal_prompt": (
+         "Success: the assistant found out whether the original problem is fixed (fixed, came back, never fixed, or "
+         "asked once more when it was unclear) and then called record_follow_up_outcome with a resolution that matches "
+         "what the customer said. Failure: record_follow_up_outcome was never called, was called with a resolution that "
+         "contradicts the customer, or was called before the customer said whether it was fixed. Unknown: the customer "
+         "hung up before saying anything about the repair.")},
+    {"id": "checkin_new_needs_captured", "name": "Check-in: new needs captured",
+     "conversation_goal_prompt": (
+         "Did the customer mention a different problem, interest in new equipment or upgrades, or ask for someone to "
+         "call them? Success: each of those was included in record_follow_up_outcome (a new issue summary, sales "
+         "interest, or a callback department). Failure: the customer mentioned one and it was left out. Unknown: the "
+         "customer mentioned none of these.")},
+    {"id": "checkin_no_unsupported_promises", "name": "Check-in: avoided unsupported promises",
+     "conversation_goal_prompt": (
+         "Success: the assistant never promised a priority, dispatch or arrival time, refund, credit, or price, and only "
+         "said what happens next in line with the tool's response. Failure: any such promise that the tool didn't give. "
+         "Unknown: the call ended before anything about next steps was said.")},
+    {"id": "checkin_clear_close", "name": "Check-in: clear close",
+     "conversation_goal_prompt": (
+         "Success: before the call ended, the customer was told what happens next (closed as fixed, a return visit, a "
+         "manager or sales callback, or a new ticket) and was thanked. Failure: the call ended without the customer "
+         "knowing what happens next. Unknown: the customer hung up before the outcome was saved.")},
+]
+FOLLOW_UP_DATA_FIELDS = {"caller_sentiment": DATA_FIELDS["caller_sentiment"]}
+
+CRITERIA_IDS = tuple(c["id"] for c in CRITERIA + FOLLOW_UP_CRITERIA)
+CRITERIA_NAMES = {c["id"]: c["name"] for c in CRITERIA + FOLLOW_UP_CRITERIA}
+
+
+def _payload(criteria: list[dict], data: dict) -> dict:
+    return {
+        "evaluation": {"criteria": [{**c, "type": "prompt", "scope": "conversation", "scoring_mode": "binary",
+                                     "use_knowledge_base": False} for c in criteria]},
+        "data_collection": data,
+    }
 
 
 def agent_payload() -> dict:
-    """The analysis settings for agents_update_analysis (evaluation + data_collection)."""
-    return {
-        "evaluation": {"criteria": [{**c, "type": "prompt", "scope": "conversation", "scoring_mode": "binary",
-                                     "use_knowledge_base": False} for c in CRITERIA]},
-        "data_collection": DATA_FIELDS,
-    }
+    """Sam's analysis settings for agents_update_analysis (evaluation + data_collection)."""
+    return _payload(CRITERIA, DATA_FIELDS)
+
+
+def follow_up_payload() -> dict:
+    """The check-in agent's analysis settings."""
+    return _payload(FOLLOW_UP_CRITERIA, FOLLOW_UP_DATA_FIELDS)

@@ -9,6 +9,10 @@ transcript, ELEVENLABS_API_KEY (the transcript is fetched, shown, and not saved)
 
     .venv/Scripts/python scripts/label_calls.py            # label up to 10 calls
     .venv/Scripts/python scripts/label_calls.py --limit 30
+    .venv/Scripts/python scripts/label_calls.py --forget 1a2b3c4d   # drop your verdicts on one call, to redo it
+
+Only the checks the AI graded on a call are asked (older calls have 2; front-desk calls from 2026-10-07 on
+have 8; check-in calls have their own 4), so every verdict can be compared.
 
 Keys: s = success, f = failure, u = doesn't apply, Enter = skip this check, q = save and quit.
 """
@@ -23,7 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import requests  # noqa: E402
 
 from app import config, judge, voice_lab  # noqa: E402
-from app.analysis_spec import CRITERIA  # noqa: E402
+from app.analysis_spec import CRITERIA, FOLLOW_UP_CRITERIA  # noqa: E402
 from app.evaluation import redact, transcript_text  # noqa: E402
 from app.service import call_ref  # noqa: E402
 from app.store import get_store  # noqa: E402
@@ -45,7 +49,15 @@ def transcript(cid: str, row: dict) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--forget", metavar="CALL_REF", help="remove your verdicts on one call (the id shown in its header)")
     args = parser.parse_args()
+
+    if args.forget:
+        kept = [lab for lab in judge.labels() if not lab["call_ref"].startswith(args.forget)]
+        removed = len(judge.labels()) - len(kept)
+        judge.LABELS.write_text(json.dumps({"labels": kept}, indent=2) + "\n", encoding="utf-8")
+        print(f"Removed {removed} verdicts. Run without --forget to score that call again.")
+        return
 
     store = get_store()
     if store.name != "supabase":
@@ -55,8 +67,12 @@ def main() -> None:
     ids = list(dict.fromkeys(r["conversation_id"] for r in store.recent_tool_calls(2000)
                              if r.get("conversation_id") and not voice_lab.is_test(r["conversation_id"])))
     calls = store.calls_by_ids(ids)
+    def graded(cid):  # the checks the AI actually graded on this call, in rubric order
+        results = ((calls.get(cid) or {}).get("evaluation") or {}).get("results") or {}
+        return [c for c in CRITERIA + FOLLOW_UP_CRITERIA if c["id"] in results]
+
     todo = [cid for cid in ids if (calls.get(cid) or {}).get("eval_status") == "done"
-            and any((call_ref(cid), c["id"]) not in done for c in CRITERIA)][:args.limit]
+            and any((call_ref(cid), c["id"]) not in done for c in graded(cid))][:args.limit]
     print(f"{len(todo)} calls to label. s = success, f = failure, u = doesn't apply, Enter = skip, q = quit.\n")
 
     new = []
@@ -65,7 +81,7 @@ def main() -> None:
             ref = call_ref(cid)
             print(f"=== Call {i} of {len(todo)} ({ref}) ===\n{transcript(cid, calls[cid])}\n")
             results = (calls[cid].get("evaluation") or {}).get("results") or {}
-            for c in CRITERIA:
+            for c in graded(cid):
                 if (ref, c["id"]) in done:
                     continue
                 print(f"-- {c['name']}\n   {c['conversation_goal_prompt']}")

@@ -132,7 +132,8 @@ def call_metrics(tickets: list[dict], tool_calls: list[dict], calls: dict[str, d
         *[metric(c["name"], *ai(c["id"]),
                  "Calls graded by ElevenLabs after the call against this written check (app/analysis_spec.py). "
                  "Calls where it doesn't apply are left out.", how="ai")
-          for c in analysis_spec.CRITERIA if c["id"] not in (evaluation.CRITERION, evaluation.CONFIRMED)],
+          for c in analysis_spec.CRITERIA + analysis_spec.FOLLOW_UP_CRITERIA
+          if c["id"] not in (evaluation.CRITERION, evaluation.CONFIRMED)],
         metric("Caller interruptions", cut_in, turns,
                "Agent replies the caller talked over. A count of how often it happens, not a grade of how Sam recovered."),
     ]
