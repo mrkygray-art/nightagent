@@ -341,6 +341,29 @@ DEMO_HTML = r"""<!doctype html>
   .action span { color: var(--muted); }
   .action button { justify-self: start; font: 600 14px var(--body); color: var(--sodium); background: transparent; border: 0; padding: 2px 0; cursor: pointer; text-decoration: underline; }
 
+  .sect { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+  .sect[hidden] { display: none; }
+  .sect h3 { margin: 0; font-size: 15px; }
+  .sect dl { margin: 0; display: grid; grid-template-columns: minmax(118px, 32%) 1fr; gap: 6px 14px; font-size: 14px; }
+  .sect dt { color: var(--muted); }
+  .sect dd { margin: 0; overflow-wrap: anywhere; }
+  .sect-note { margin: 0; color: var(--muted); font-size: 14px; }
+  .sect .acts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+  .sect .acts li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; }
+  .sect .acts time { color: var(--muted); font-size: 13px; text-align: right; }
+  .sect .linkish { font: inherit; color: var(--sodium); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .sect.transcript-box summary { cursor: pointer; font-weight: 600; }
+  .sect.transcript-box pre { margin: 8px 0 0; white-space: pre-wrap; font: 13px/1.5 var(--body); color: var(--muted); }
+  @media (max-width: 560px) { .sect dl { grid-template-columns: 1fr; gap: 0; } .sect dd { margin-bottom: 8px; } }
+  .handoff { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; border: 1px dashed rgba(245,165,36,.55); border-radius: 10px; padding: 8px 12px; }
+  .handoff b { color: var(--sodium); font-size: 14px; }
+  .handoff ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); }
+  .handoff li.have { color: var(--text); }
+  .chip.outcome { border-color: #3b5288; color: var(--text); }
+  .chip.src.synthetic { border-style: dashed; border-color: var(--sodium); color: var(--sodium); }
+  .chip.src.live { border-color: var(--clear); color: var(--clear); }
+  .ev-when { margin-left: auto; color: var(--muted); font-size: 14px; }
+
   .impact { margin-top: 28px; }
   .impact-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 6px; }
   .impact-note { margin: 0 0 16px; color: var(--muted); font-size: 14px; max-width: 80ch; }
@@ -351,13 +374,36 @@ DEMO_HTML = r"""<!doctype html>
   .metric small { color: var(--muted); font-size: 13px; }
   .metric.key { border-color: rgba(245,165,36,.55); }
   .metric.key b { color: var(--sodium); }
+  .metric b.word { font-size: 24px; color: var(--muted); }
+  .metric.wide { grid-column: span 2; }
+  .impact-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 16px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 18px; padding: 3px; background: var(--night); }
+  .seg button { font: 500 14px var(--body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--sodium); color: #1a1200; font-weight: 600; }
+  .metric-groups { display: grid; gap: 18px; }
+  .metric-groups .metrics { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .metric-group h3 { margin: 0 0 8px; font-family: var(--display); font-size: 20px; letter-spacing: .02em; color: var(--muted); font-weight: 600; }
+  .bars { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 5px; }
+  .bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: 13px; }
+  .bars li span { color: var(--muted); }
+  .metric .bars b { font-family: var(--body); font-size: 14px; color: var(--text); }
+  .bars li i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bars li i::before { content: ""; display: block; height: 100%; width: var(--w); background: var(--sodium); }
+  .how-counted { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .how-counted summary { cursor: pointer; padding: 10px 14px; font-weight: 600; color: var(--muted); }
+  .how-counted[open] summary { color: var(--text); border-bottom: 1px solid var(--line); }
+  .how-counted dl { margin: 0; padding: 12px 14px; display: grid; grid-template-columns: minmax(150px, 26%) 1fr; gap: 8px 16px; font-size: 14px; }
+  .how-counted dt { font-weight: 600; }
+  .how-counted dd { margin: 0; color: var(--muted); }
+  @media (max-width: 560px) { .how-counted dl { grid-template-columns: 1fr; gap: 0; } .how-counted dd { margin-bottom: 10px; } }
   @media (max-width: 560px) {
     .metrics { grid-template-columns: 1fr 1fr; gap: 8px; }
     .metric { padding: 12px; }
     .metric b { font-size: 28px; }
     .metric span { font-size: 13px; }
     .metric small { font-size: 12px; }
-    .metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .metric-groups .metrics { grid-template-columns: 1fr 1fr; }
+    .metric:last-child:nth-child(odd), .metric.wide { grid-column: 1 / -1; }
   }
 
   /* ---------- Friendly call panel: big status circle, start over, options ---------- */
@@ -619,7 +665,19 @@ DEMO_HTML = r"""<!doctype html>
       <span class="live" id="impact-status">Demo metrics</span>
     </div>
     <p class="impact-note">Counted live from this demo's own records: every visitor's calls, scenarios, and follow-ups. Demo data, not customer data, and no revenue figures.</p>
-    <ol class="metrics" id="metrics"></ol>
+    <div class="impact-controls">
+      <div class="seg" role="group" aria-label="Which contacts to count" id="impact-view">
+        <button type="button" data-v="live" aria-pressed="true">Live</button>
+        <button type="button" data-v="synthetic" aria-pressed="false">Synthetic customers: scripted scenarios</button>
+        <button type="button" data-v="all" aria-pressed="false">All</button>
+      </div>
+      <span class="chip" id="synthetic-chip" hidden></span>
+    </div>
+    <div class="metric-groups" id="metrics"></div>
+    <details class="how-counted">
+      <summary>How these are counted</summary>
+      <dl id="definitions"></dl>
+    </details>
   </section>
 
   <section class="how" aria-labelledby="how-title">
@@ -679,6 +737,7 @@ const els = {
   modeButtons: document.querySelectorAll(".mode button"),
   micRow: $("mic-row"), mic: $("mic"), micNames: $("mic-names"), sound: $("sound"),
   scenarios: $("scenarios"), panel: $("event-panel"), metrics: $("metrics"), impactStatus: $("impact-status"),
+  impactView: $("impact-view"), syntheticChip: $("synthetic-chip"), definitions: $("definitions"),
   orb: $("orb"), orbLabel: $("orb-label"), incall: $("incall"), restart: $("restart"), repeat: $("repeat"),
   hint: $("hint"), calm: $("calm"), options: $("options"),
   prefSlow: $("pref-slow"), prefBig: $("pref-big"), prefTech: $("pref-tech"), tech: $("tech"), techLog: $("tech-log"),
@@ -1657,7 +1716,15 @@ function renderPanel(detail, message) {
   head.appendChild(el("span", "id", t.ticket_id));
   head.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
   head.appendChild(el("span", "chip stage", t.status_label));
+  const v = detail.view || {};
+  if (v.outcome) head.appendChild(el("span", "chip outcome", v.outcome_label));
+  if (v.source) head.appendChild(el("span", `chip src ${v.source}`, v.source === "synthetic" ? "Synthetic" : "Live"));
   if (isMine(t)) head.appendChild(el("span", "chip mine", "Your call"));
+  if (t.created_at) {
+    const when = el("time", "ev-when", new Date(t.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
+    when.dateTime = t.created_at;
+    head.appendChild(when);
+  }
   p.appendChild(head);
   p.appendChild(el("p", "ev-issue", t.issue_summary || ""));
   const meta = el("div", "ev-meta");
@@ -1665,7 +1732,11 @@ function renderPanel(detail, message) {
   if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
   if (t.technician_name) meta.appendChild(el("span", "", `Technician: ${t.technician_name} (demo)`));
   p.appendChild(meta);
-  p.appendChild(el("span", "tech-line", `status=${t.status} · priority=${t.priority} · category=${t.category || "-"} · GET /api/tickets/${t.ticket_id}`));
+  p.appendChild(el("span", "tech-line", `status=${t.status} · priority=${t.priority} · category=${t.category || "-"} · outcome=${v.outcome || "-"} · source=${v.source || "-"} · GET /api/tickets/${t.ticket_id}`));
+  if (v.handoff) p.appendChild(handoffMeter(v.handoff));
+  if (v.summary) p.appendChild(summarySection(v.summary));
+  const intent = intentSection(v.intent);
+  if (intent) p.appendChild(intent);
 
   // Where the ticket is now
   const stage = OUTCOME_STATES.includes(t.status) ? "outcome" : t.status;
@@ -1754,10 +1825,130 @@ function renderPanel(detail, message) {
     tl.appendChild(li);
   });
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
-  const acts = businessActions(detail, key);
-  if (acts) p.appendChild(acts);
+  if (detail.view) {
+    p.appendChild(actionsSection(detail));
+    p.appendChild(sect("Identity", [["Verified", "Not captured"]], "NightAgent doesn't store an identity check yet."));
+    if (v.account) p.appendChild(accountSection(v.account));
+    if (v.whisper) p.appendChild(sect("Whisper message", [["To the specialist", "Not captured"]],
+      "The private summary a specialist hears before the caller connects isn't stored."));
+  }
+  const fu = followUpSection(detail, key);
+  if (fu) p.appendChild(fu);
+  const evaluation = el("section", "sect");  // reserved for the Agent Quality Scorecard (Step 2)
+  evaluation.id = "ticket-evaluation";
+  evaluation.hidden = true;
+  p.appendChild(evaluation);
   if (detail.report) p.appendChild(callReport(t.ticket_id, detail.report, detail.check));
   p.appendChild(tl);
+  if (v.transcript) {
+    const d = el("details", "sect transcript-box");
+    d.appendChild(el("summary", "", "Transcript (scripted scenario)"));
+    d.appendChild(el("pre", "", v.transcript));
+    p.appendChild(d);
+  }
+}
+
+// ---------- Ticket handoff sections (data from app/ticket_view.py) ----------
+
+function sect(title, rows, note) {
+  const box = el("section", "sect");
+  box.appendChild(el("h3", "", title));
+  if (rows && rows.length) {
+    const dl = el("dl");
+    for (const [label, value] of rows) {
+      dl.appendChild(el("dt", "", label));
+      dl.appendChild(el("dd", "", value));
+    }
+    box.appendChild(dl);
+  }
+  if (note) box.appendChild(el("p", "sect-note", note));
+  return box;
+}
+
+function handoffMeter(h) {
+  const box = el("div", "handoff");
+  box.setAttribute("aria-label", `Handoff context: ${h.count} of ${h.total} items handed over`);
+  box.appendChild(el("b", "", `Handoff context ${h.count}/${h.total}`));
+  const ul = el("ul");
+  for (const i of h.items) ul.appendChild(el("li", i.present ? "have" : "", `${i.present ? "✓" : "–"} ${i.label}`));
+  box.appendChild(ul);
+  return box;
+}
+
+function summarySection(s) {
+  const text = s.status === "ok" ? s.text
+    : s.status === "no_call" ? "Scripted scenario: there was no call to summarize."
+    : "Summary pending";
+  return sect("AI summary", [["Call", text], ["Still open", s.open]]);
+}
+
+function intentSection(i) {
+  if (!i) return null;
+  const rows = [];
+  if (i.problem_type) rows.push(["Problem type", i.problem_type]);
+  for (const e of i.escalation || []) rows.push([e.label, e.detail]);
+  if ((i.specialists || []).length) rows.push(["Handed to", i.specialists.join(", ")]);
+  if (i.next_step) rows.push(["Recommended next step", i.next_step]);
+  return rows.length ? sect("Intent and escalation", rows) : null;
+}
+
+function actionsSection(detail) {
+  const v = detail.view;
+  const box = sect("Actions taken");
+  const own = (detail.tool_calls || []).filter((c) => c.tool !== "record_follow_up_outcome");
+  if (v.actions_status !== "ok" || !own.length) {
+    box.appendChild(el("p", "sect-note", v.actions_status === "no_call"
+      ? "Not captured: a scripted scenario skips the call, so no tools ran."
+      : "Not captured"));
+    return box;
+  }
+  const ol = el("ol", "acts");
+  for (const c of own) {
+    const li = el("li");
+    const time = el("time", "", clock(c.called_at));
+    time.dateTime = c.called_at || "";
+    li.appendChild(time);
+    li.appendChild(el("span", "", `${c.label}${c.outcome ? ` · ${c.outcome}` : ""}`));
+    ol.appendChild(li);
+  }
+  box.appendChild(ol);
+  return box;
+}
+
+function accountSection(a) {
+  const rows = [["Account", `${a.business_name} (${a.customer_id})`]];
+  if (a.contact_name) rows.push(["Contact", a.contact_name]);
+  rows.push(["Phone on file", a.phone]);
+  if (a.site_address) rows.push(["Site", a.site_address]);
+  if (a.systems) rows.push(["Systems", a.systems]);
+  if (a.service_plan) rows.push(["Plan", `${a.service_plan}${a.after_hours_coverage ? "" : " · after-hours billed separately"}`]);
+  return sect("Account record", rows);
+}
+
+function followUpSection(detail, key) {
+  const f = (detail.view || {}).follow_up || {};
+  const rows = [];
+  if (f.check_in) {
+    let result = f.check_in.result;
+    if (f.check_in.csat) result += `, rated the visit ${f.check_in.csat} out of 5`;
+    rows.push(["Check-in call", result]);
+    if (f.check_in.words) rows.push(["Customer's words", `“${f.check_in.words}”`]);
+  }
+  if (f.repeat_calls) rows.push(["Repeat contacts", `${f.repeat_calls} more call${f.repeat_calls === 1 ? "" : "s"} about this problem`]);
+  const acts = businessActions(detail, key);
+  if (!rows.length && !f.original_ticket && !acts) return null;
+  const box = sect("Follow-up", rows);
+  if (f.original_ticket) {
+    const n = el("p", "sect-note");
+    n.appendChild(document.createTextNode("Raised on the check-in call for "));
+    n.appendChild(button("linkish", f.original_ticket, () => loadTicket(f.original_ticket)));
+    box.appendChild(n);
+  }
+  if (acts) {
+    acts.querySelector("h3")?.remove();
+    box.appendChild(acts);
+  }
+  return box;
 }
 
 // A call that ended in a message for a department or a person, not a service ticket
@@ -2240,29 +2431,118 @@ function metric(value, label, note, key) {
   return li;
 }
 
+// Every number comes from /api/impact; its definitions live in app/metrics.py and show in "How these are counted".
 let impactAt = 0;
+let impactData = null;
+let impactView = null;
+
+function pct(p) { return p === null || p === undefined ? "—" : `${p}%`; }
+function plural(n, word) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
+
+function metricGroup(title, tiles) {
+  const g = el("section", "metric-group");
+  g.appendChild(el("h3", "", title));
+  const ol = el("ol", "metrics");
+  tiles.filter(Boolean).forEach((t) => ol.appendChild(t));
+  g.appendChild(ol);
+  return g;
+}
+
+function outcomeTile(v, labels) {
+  const li = el("li", "metric wide");
+  li.appendChild(el("span", "", "Outcome of each contact"));
+  li.appendChild(el("small", "", `One outcome per contact; together they add up to ${v.contacts}`));
+  const ul = el("ul", "bars");
+  for (const [key, label] of Object.entries(labels)) {
+    const n = v.outcomes[key] || 0;
+    const row = el("li");
+    row.appendChild(el("span", "", label));
+    row.appendChild(el("b", "", String(n)));
+    const bar = el("i");
+    bar.style.setProperty("--w", `${v.contacts ? (100 * n) / v.contacts : 0}%`);
+    row.appendChild(bar);
+    ul.appendChild(row);
+  }
+  li.appendChild(ul);
+  return li;
+}
+
+function renderImpact() {
+  const m = impactData;
+  if (!m) return;
+  const view = impactView || m.default_view;
+  const v = m.views[view];
+  const lo = m.live_only;
+  const a = m.assumptions;
+  els.impactView.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
+  els.syntheticChip.hidden = false;
+  els.syntheticChip.textContent = plural(m.synthetic_scenarios, "synthetic scenario");
+
+  const who = view === "all" ? `${v.live} live, ${v.synthetic} synthetic` : view === "live" ? "Live calls" : "Scripted scenarios";
+  const hours = lo.acw_minutes >= 120 ? `${(lo.acw_minutes / 60).toFixed(1)} hr` : `${lo.acw_minutes} min`;
+  const aht = lo.aht_seconds === null ? null : `${Math.floor(lo.aht_seconds / 60)}:${String(lo.aht_seconds % 60).padStart(2, "0")}`;
+  const noPage = view !== "live" && v.synthetic ? " · Scripted scenarios never page anyone" : "";
+  const more = v.tickets_from_check_ins ? ` · ${v.tickets_from_check_ins} more raised on check-in calls` : "";
+  const resolvedTile = v.check_ins_answered
+    ? metric(`${v.confirmed_resolved} of ${v.check_ins_answered}`, "Customer-confirmed resolution", `${pct(v.confirmed_rate)} of check-in calls answered`)
+    : metric("—", "Customer-confirmed resolution", "No check-in calls answered yet");
+  const ahtTile = aht
+    ? metric(aht, "Average handle time (AHT)", `Live calls only · ${lo.aht_timed} of ${lo.aht_calls} calls timed`)
+    : metric("Collecting", "Average handle time (AHT)", "Live calls only · no call lengths stored yet");
+  if (!aht) ahtTile.querySelector("b").classList.add("word");
+
+  els.metrics.replaceChildren(
+    metricGroup("Volume", [
+      metric(v.contacts, "Contacts handled", who, true),
+      outcomeTile(v, m.outcome_labels),
+    ]),
+    metricGroup("Automation", [
+      metric(pct(v.containment_rate), "Containment rate", `${v.contained} of ${v.contacts} resolved on the call`, true),
+      metric(v.messages_taken, "Messages taken", "Never counted as contained"),
+      metric(v.emergencies, "Emergencies escalated by rule", `${pct(v.emergency_share)} of contacts · Set by rules in code, not the AI`),
+    ]),
+    metricGroup("Escalation and handoff", [
+      metric(v.transfers, "Warm transfers", `Jordan (billing) or Riley (sales), mid-call · Transfer rate ${pct(v.transfer_rate)}`, true),
+      metric(v.supervisor_escalations, "Supervisor escalations", "Passed to the service manager"),
+      metric(v.dispatches, "After-hours dispatches", `${v.deferred} deferred to the next business day${noPage}`),
+    ]),
+    metricGroup("Resolution quality", [
+      metric(v.follow_up_calls, "Proactive follow-up calls", "Outbound check-in calls", true),
+      resolvedTile,
+      metric(`${v.repeat_contacts} of ${v.contacts}`, "Repeat contacts",
+        `Same problem within ${a.repeat_contact_window_hours} hr · ${v.came_back} came back after the repair`),
+    ]),
+    metricGroup("Efficiency", [
+      metric(hours, "After-call work (ACW) saved", `Estimate · Live calls only: ${a.minutes_per_intake_call} min per intake call, ${a.minutes_per_follow_up} min per check-in`, true),
+      ahtTile,
+    ]),
+    metricGroup("Revenue and operations", [
+      metric(v.opportunities, "Service-to-sales opportunities", "Value not guessed; sales works it out", true),
+      metric(pct(v.ticket_rate), "Ticket creation rate", `${v.tickets_created} tickets from ${v.contacts} contacts${more}`),
+      metric(v.follow_up_tasks, "Follow-up tasks created", "Messages, callbacks, return visits, escalations"),
+    ]),
+  );
+  if (!els.definitions.childNodes.length) {
+    for (const d of m.definitions) {
+      els.definitions.appendChild(el("dt", "", d.label));
+      els.definitions.appendChild(el("dd", "", d.how));
+    }
+  }
+}
+
+els.impactView.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-v]");
+  if (!b) return;
+  impactView = b.dataset.v;
+  renderImpact();
+});
+
 async function loadImpact(force) {
   if (!force && Date.now() - impactAt < 30000) return;
   impactAt = Date.now();
   try {
-    const m = await api("/api/impact");
-    const hours = m.minutes_saved >= 120 ? `${(m.minutes_saved / 60).toFixed(1)} hr` : `${m.minutes_saved} min`;
-    const a = m.assumptions;
-    els.metrics.replaceChildren(
-      metric(m.calls_handled, "Calls handled", `${m.live_calls} live, ${m.scenario_calls} demo scenario${m.scenario_calls === 1 ? "" : "s"}`, true),
-      metric(m.emergencies, "Emergencies handled", "Set by our rules, not the AI"),
-      metric(m.tickets, "Tickets created"),
-      metric(m.calls_without_ticket, "Handled without a ticket", "A message taken, or answered right on the call"),
-      metric(m.specialist_calls, "Handed to a specialist", "Jordan (billing) or Riley (sales), mid-call", true),
-      metric(m.needed_a_person, "Night calls that woke a technician", `${m.handled_without_waking_anyone} handled without waking anyone`),
-      metric(m.follow_ups, "Check-in calls made", "", true),
-      metric(m.resolved, "Customers who said it's fixed", "Heard on the check-in call"),
-      metric(m.reopened, "Problems that came back"),
-      metric(m.escalated, "Passed to a manager"),
-      metric(m.opportunities, "Upgrade leads for sales", "Value not guessed; sales works it out", true),
-      metric(m.tasks, "Follow-ups for staff"),
-      metric(hours, "Estimated admin time saved", `Real conversations only: ${a.minutes_per_intake_call} min per intake call, ${a.minutes_per_follow_up} min per follow-up`),
-    );
+    impactData = await api("/api/impact");
+    renderImpact();
     els.impactStatus.textContent = "Demo metrics · updates live";
   } catch {
     els.impactStatus.textContent = "Demo metrics · reconnecting…";

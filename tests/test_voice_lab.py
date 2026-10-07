@@ -52,7 +52,7 @@ def test_test_calls_stay_out_of_real_call_numbers(client, monkeypatch):
 
     calls = client.get("/api/calls").json()
     assert [c["customer"] for c in calls] == ["Westside Self Storage"]
-    assert client.get("/api/impact").json()["calls_without_ticket"] == 1
+    assert client.get("/api/impact").json()["views"]["live"]["contacts"] == 1
 
     scorecard._cache.update(at=0.0, data=None)
     m = {x["label"]: x for x in scorecard.scorecard({"status": "unavailable"})["calls"]}

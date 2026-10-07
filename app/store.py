@@ -51,6 +51,14 @@ SEED_CUSTOMERS = [
 
 CLOSED_STATES = ("resolved", "closed")
 
+# What Business Impact reads (see impact_rows and app/metrics.py)
+IMPACT_TICKET_FIELDS = ("ticket_id", "conversation_id", "repeat_conversation_ids", "follow_up_conversation_id",
+                        "scenario", "source_ticket_id", "paged_at", "priority")
+IMPACT_EVENTS = ("follow_up_completed", "resolution_confirmed", "ticket_reopened")
+IMPACT_TASK_FIELDS = ("task_id", "destination", "source_ticket_id", "source_conversation_id")
+IMPACT_OPP_FIELDS = ("opportunity_id", "source_ticket_id", "source_conversation_id")
+IMPACT_ROW_LIMIT = 5000  # the server may cap a read lower (Supabase's default is 1000 rows)
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -219,30 +227,20 @@ class MemoryStore:
                 or (r.get("conversation_id") and r["conversation_id"] in conversation_ids)]
         return sorted(rows, key=lambda r: (r["called_at"], r["id"]))
 
-    def impact_counts(self) -> dict:
-        def events(kind, source=None):
-            return sum(1 for e in self.events if e["event_type"] == kind and (source is None or e["source"] == source))
-        tickets = list(self.tickets.values())
+    def impact_rows(self) -> dict:
+        def metrics(c):
+            ev = c.get("evaluation")
+            return ev.get("metrics") if isinstance(ev, dict) else None
         return {
-            "tickets": len(tickets),
-            "emergencies": sum(1 for t in tickets if t.get("priority") == "emergency"),
-            "paged": sum(1 for t in tickets if t.get("paged_at")),
-            "live_calls": events("call_received", "call") + events("caller_called_again", "call"),
-            "scenario_calls": events("call_received", "scenario"),
-            "follow_ups": events("follow_up_completed"),
-            "resolved": events("resolution_confirmed"),
-            "reopened": events("ticket_reopened"),
-            "escalated": events("ticket_escalated"),
-            "new_from_follow_up": sum(1 for t in tickets if t.get("source_ticket_id")),
-            "opportunities": len(self.opportunities),
-            "tasks": len(self.tasks),
-            "calls_without_ticket": len({r["conversation_id"] for r in self.tool_calls
-                                         if r.get("conversation_id") and r["tool"] != "record_follow_up_outcome"}
-                                        - {t.get("conversation_id") for t in tickets}
-                                        - {t.get("follow_up_conversation_id") for t in tickets}
-                                        - {r["conversation_id"] for r in self.tool_calls if r.get("ticket_id")}),
-            "specialist_calls": len({r["conversation_id"] for r in self.tool_calls if r["tool"] in
-                                     ("billing_lookup", "request_billing_review", "record_sales_interest")}),
+            "tickets": [{k: t.get(k) for k in IMPACT_TICKET_FIELDS} for t in self.tickets.values()],
+            "events": [{k: e.get(k) for k in ("ticket_id", "event_type")} for e in self.events
+                       if e["event_type"] in IMPACT_EVENTS],
+            "tool_calls": [{k: r.get(k) for k in ("conversation_id", "ticket_id", "tool")} for r in self.tool_calls
+                           if r.get("conversation_id")],
+            "tasks": [{k: t.get(k) for k in IMPACT_TASK_FIELDS} for t in self.tasks.values()],
+            "opportunities": [{k: o.get(k) for k in IMPACT_OPP_FIELDS} for o in self.opportunities.values()],
+            "calls": [{"conversation_id": c["conversation_id"], "duration_secs": c.get("duration_secs"),
+                       "metrics": metrics(c)} for c in self.calls.values()],
         }
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
@@ -266,7 +264,6 @@ class SupabaseStore:
         self.events_table = f"{prefix}ticket_events"
         self.tasks_table = f"{prefix}routing_tasks"
         self.opportunities_table = f"{prefix}opportunities"
-        self.impact_function = f"{prefix}impact"
         self.tool_calls_table = f"{prefix}tool_calls"
 
     def find_customers(self, query: str) -> list[dict]:
@@ -407,8 +404,19 @@ class SupabaseStore:
         row = {"status": "new", **opp, "opportunity_id": new_record_id("OPP")}
         return self.db.table(self.opportunities_table).insert(row).execute().data[0]
 
-    def impact_counts(self) -> dict:
-        return self.db.rpc(self.impact_function).execute().data
+    def impact_rows(self) -> dict:
+        """The few columns Business Impact counts from (app/metrics.py). Small tables, so read them whole."""
+        def rows(table, cols, query=lambda q: q):
+            return query(self.db.table(table).select(cols)).limit(IMPACT_ROW_LIMIT).execute().data
+        return {
+            "tickets": rows(self.tickets_table, ",".join(IMPACT_TICKET_FIELDS)),
+            "events": rows(self.events_table, "ticket_id,event_type", lambda q: q.in_("event_type", list(IMPACT_EVENTS))),
+            "tool_calls": rows(self.tool_calls_table, "conversation_id,ticket_id,tool",
+                               lambda q: q.not_.is_("conversation_id", "null")),
+            "tasks": rows(self.tasks_table, ",".join(IMPACT_TASK_FIELDS)),
+            "opportunities": rows(self.opportunities_table, ",".join(IMPACT_OPP_FIELDS)),
+            "calls": rows(self.calls_table, "conversation_id,duration_secs,metrics:evaluation->metrics"),
+        }
 
     def add_tool_call(self, row: dict) -> None:
         self.db.table(self.tool_calls_table).insert(row).execute()

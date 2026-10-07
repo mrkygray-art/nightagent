@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 import logging
 
-from app import config, demo, evaluation, lifecycle, report, voice_lab
+from app import config, demo, evaluation, lifecycle, metrics, report, ticket_view, voice_lab
 from app.follow_up import follow_up_variables
 from app.service import (call_ref, move_ticket, public_event, public_message, public_opportunity, public_task,
                          public_ticket, record_event, shift)
@@ -70,6 +70,17 @@ def _owned_demo_ticket(req: DemoKeyRequest) -> dict:
     return ticket
 
 
+def _source(ticket: dict) -> str:
+    """Live or synthetic, by the one rule in app/metrics.py, following the ticket it was raised from."""
+    store, by_id, t = get_store(), {ticket["ticket_id"]: ticket}, ticket
+    while t.get("source_ticket_id") and t["source_ticket_id"] not in by_id:
+        t = store.get_ticket(t["source_ticket_id"]) or {}
+        if not t:
+            break
+        by_id[t["ticket_id"]] = t
+    return metrics.source_of_ticket(ticket, by_id)
+
+
 def _detail(ticket: dict) -> dict:
     store = get_store()
     tid = ticket["ticket_id"]
@@ -84,15 +95,22 @@ def _detail(ticket: dict) -> dict:
         logging.getLogger("nightshift").exception("Could not load tool calls for %s", tid)
         tool_calls = []
     check = None
+    own = [t for t in tool_calls if t.get("conversation_id") == ticket.get("conversation_id") or t.get("ticket_id") == tid]
     if tool_calls and not ticket.get("scenario"):
-        own = [t for t in tool_calls if t.get("conversation_id") == ticket.get("conversation_id") or t.get("ticket_id") == tid]
         check = evaluation.build("ticket", own, evaluation.fetch_grade(ticket.get("conversation_id")), ticket=ticket)
+    conv = ticket.get("conversation_id")
+    sections = ticket_view.build(
+        ticket, source=_source(ticket), call=store.calls_by_ids([conv]).get(conv) if conv else None,
+        customer=store.get_customer(ticket["customer_id"]) if ticket.get("customer_id") else None,
+        own_tool_calls=[t for t in own if t.get("conversation_id") == conv or not t.get("conversation_id")],
+        tasks=tasks, events=events)
     return {
         "ticket": public_ticket(ticket),
         "events": [public_event(e) for e in events],
         "tool_calls": [report.public_tool_call(t) for t in tool_calls],
         "report": report.build(ticket, events, tool_calls, tasks, opportunities),
         "check": check,
+        "view": sections,
         "next_step": lifecycle.STATE_LABELS[nxt[0]] if nxt else None,
         "follow_up_ready": lifecycle.normalize_state(ticket.get("status")) == "follow_up_pending",
         "actions": {

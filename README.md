@@ -486,6 +486,16 @@ The live agents only accept browser calls from the approved websites, so voice c
 
 ## Business Value
 
+### Business Impact panel
+
+The `/demo` page counts what NightAgent did from its own records, grouped the way a contact center reports: volume, automation (containment rate, messages taken, emergencies escalated by rule), escalation and handoff (warm transfers, supervisor escalations, after-hours dispatches), resolution quality (check-in calls, customer-confirmed resolution, repeat contacts), efficiency (after-call work saved, average handle time), and revenue and operations (service-to-sales opportunities, ticket creation rate, follow-up tasks).
+
+- **Live, Synthetic, All.** Scripted scenarios are synthetic customers and never count as live calls unless All is picked. Live is the default.
+- **Every contact has one outcome:** dispatched, deferred to the next business day, transferred, message taken, or resolved on the call. The five always add up to contacts handled, and a test checks it in every view.
+- **One definition per metric,** in `app/metrics.py`, shown on the page under "How these are counted". After-call work saved is the only estimate, labeled as one, from two named assumptions. Average handle time says "Collecting" until call lengths are stored.
+
+The ticket view is laid out for the next person to pick up the call without asking the caller again: AI summary, intent and escalation reason, the actions Sam took, identity, the account record (phone masked), follow-up, and a "handoff context" count of how many of five items were handed over. Fields that aren't stored say "Not captured" instead of being filled in.
+
 NightAgent explores how an integrator could reduce after-hours response friction while improving the quality of information handed to technicians. The same workflow can also improve customer communication and preserve sales opportunities discovered during service interactions.
 
 The evaluation layer addresses a second business problem: conversational agents change as prompts, tools, and workflows evolve. Regression testing provides a way to verify that important behaviors—identity confirmation, emergency handling, billing language, escalation order, and agent identity—continue to work after those changes.

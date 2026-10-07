@@ -28,8 +28,9 @@ def test_repeat_call_is_on_the_ticket_not_the_phone_only_list(client, tool):
     tool("lookup-customer", {"query": "3105550178", "conversation_id": "conv_dup_4"})
     _ticket(tool, "conv_dup_4")
     assert client.get("/api/calls").json() == []
-    counts = get_store().impact_counts()
-    assert counts["live_calls"] == 2 and counts["calls_without_ticket"] == 0
+    live = client.get("/api/impact").json()["views"]["live"]
+    assert live["contacts"] == 2 and live["outcomes"]["resolved_on_call"] == 0  # both calls are on the ticket
+    assert live["repeat_contacts"] == 1
     assert first["ticket_id"] in {t["ticket_id"] for t in get_store().tickets.values()}
 
 
