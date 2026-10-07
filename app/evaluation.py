@@ -202,18 +202,39 @@ def transcript_text(turns: list[dict] | None) -> str:
     return "\n".join(lines)
 
 
-_LONG_NUMBER = re.compile(r"\(?(?<!\d)(?:\d[\s().-]{0,2}){6,}(\d{4})(?!\d)")
+_DIGIT_WORDS = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+                "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+_TOKEN = r"\b(?:\d+|zero|oh|one|two|three|four|five|six|seven|eight|nine|double|triple)\b"
+_TOKEN_RE = re.compile(_TOKEN, re.IGNORECASE)
+# A run of digits and spoken digits ("310-555-0142", "three one oh, five five five, oh one four two")
+_NUMBER_RUN = re.compile(rf"\(?{_TOKEN}(?:[\s,.()-]+{_TOKEN})*", re.IGNORECASE)
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+PHONE_DIGITS = 10  # runs this long are phone or account numbers; shorter ones (dates, counts, ticket numbers) stay
+
+
+def _trim(m: re.Match) -> str:
+    """Within one run, every stretch that adds up to 10 digits becomes •••last4; the rest is kept as said."""
+    run, out, start, digits, repeat = m.group(0), "", 0, "", 1
+    for tok in _TOKEN_RE.finditer(run):
+        word = tok.group(0).lower()
+        if word in ("double", "triple"):
+            repeat = 2 if word == "double" else 3
+            continue
+        digits += (word if word.isdigit() else _DIGIT_WORDS[word]) * repeat
+        repeat = 1
+        if len(digits) >= PHONE_DIGITS:
+            out += "•••" + digits[-4:]
+            start, digits = tok.end(), ""
+    return out + run[start:] if out else run
 
 
 def redact(text: str | None) -> str | None:
-    """Stored transcripts keep only the last four digits of any phone or account number, and no email
-    addresses. Names and addresses on the fictional demo accounts stay; a real deployment would also
-    redact those."""
+    """Stored transcripts keep only the last four digits of any phone or account number, whether it was
+    said as digits or read out as words, and no email addresses. Names and addresses on the fictional
+    demo accounts stay; a real deployment would also redact those."""
     if not text:
         return None
-    text = _LONG_NUMBER.sub(lambda m: "•••" + m.group(1), text)
-    return _EMAIL.sub("[email]", text)
+    return _EMAIL.sub("[email]", _NUMBER_RUN.sub(_trim, text))
 
 
 def _remember(conversation_id: str, fields: dict) -> None:

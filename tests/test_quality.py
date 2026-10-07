@@ -97,3 +97,16 @@ def test_watchdog_flags_an_emergency_that_was_never_alerted(client, tool):
     assert w["missed"][0]["reason"] == "Sam never asked for an alert"
     assert w["ticket_to_page"]["n"] == 1
     assert client.get("/api/lab").json()["watchdog"]["emergencies"] == 2
+
+
+def test_redaction_catches_numbers_read_out_as_words():
+    from app.evaluation import redact
+    said = ("Agent: Just to confirm, I have you as Maria at three one oh, five five five, oh one four two. "
+            "Caller: Yes. My other line is 424-555-0119, or (310) 555 0178, double five times. "
+            "Agent: Ticket NS-1234 for one door, opened 2026-10-07. Email me at a.b@x.com")
+    out = redact(said)
+    for full in ("three one oh, five five five", "424-555-0119", "555 0178", "a.b@x.com"):
+        assert full not in out
+    assert out.count("•••") == 3 and "•••0142" in out and "•••0119" in out and "•••0178" in out
+    # Short numbers stay: ticket numbers, counts, dates
+    assert "NS-1234" in out and "one door" in out and "2026-10-07" in out
