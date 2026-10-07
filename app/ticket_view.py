@@ -19,6 +19,13 @@ HANDOFF_ITEMS = {
     "identity": "Identity check",
 }
 
+IDENTITY_METHODS = {
+    "account_lookup_and_readback": "Account found, name and number read back and confirmed",
+    "readback_only": "No account match; callback number read back and confirmed",
+    "none": "Not read back",
+}
+SENTIMENTS = {"calm": "Calm", "stressed": "Stressed", "frustrated": "Frustrated", "upset": "Upset"}
+
 # What the dispatcher should do next, by the ticket's state. Plain rules, not AI.
 NEXT_STEP = {
     "new": "Confirm the details and queue the ticket",
@@ -89,6 +96,12 @@ def build(ticket: dict, *, source: str, call: dict | None, customer: dict | None
         if who and who not in specialists:
             specialists.append(who)
 
+    collected = metrics.call_data(call)
+    verified = collected.get("identity_verified")
+    identity = {"status": "not_captured"} if verified is None else {
+        "status": "ok", "verified": bool(verified),
+        "method": IDENTITY_METHODS.get(collected.get("identity_method"), collected.get("identity_method"))}
+
     category = ticket.get("category")
     intent = CATEGORY_POLICY[category][1] if category in CATEGORY_POLICY else None
 
@@ -111,10 +124,11 @@ def build(ticket: dict, *, source: str, call: dict | None, customer: dict | None
         "transferred": transferred,
         "summary": {"text": summary, "open": lifecycle.STATE_LABELS[status],
                     "status": "ok" if summary else "no_call" if no_call else "pending"},
-        "intent": {"problem_type": intent, "escalation": escalation, "specialists": specialists,
-                   "next_step": NEXT_STEP.get(status)},
+        "intent": {"detected": metrics.INTENT_LABELS.get(collected.get("intent")), "problem_type": intent,
+                   "escalation": escalation, "specialists": specialists, "next_step": NEXT_STEP.get(status)},
+        "sentiment": SENTIMENTS.get(collected.get("caller_sentiment")),
         "actions_status": "ok" if own_tool_calls else "no_call" if no_call else "not_captured",
-        "identity": {"status": "not_captured"},
+        "identity": identity,
         "account": account,
         "whisper": {"status": "not_captured"} if transferred else None,
         "follow_up": {"check_in": check_in, "original_ticket": ticket.get("source_ticket_id"),
@@ -122,6 +136,6 @@ def build(ticket: dict, *, source: str, call: dict | None, customer: dict | None
         # Live callers' words never reach a public page
         "transcript": transcript if synthetic else None,
         "handoff": handoff_context(summary=bool(summary), transcript=bool(transcript), account=bool(account),
-                                   actions=bool(own_tool_calls), identity=False)
+                                   actions=bool(own_tool_calls), identity=verified is not None)
                    if outcome == "dispatched" or transferred else None,
     }

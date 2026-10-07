@@ -1,26 +1,18 @@
-"""Post-call webhook: ElevenLabs sends the transcript and analysis after each call ends."""
+"""Post-call webhook: ElevenLabs sends the transcript and analysis after each call ends.
+
+Attach it to each agent in ElevenLabs (Agent > Advanced > Post-call webhook), pointed at
+/webhooks/elevenlabs/post-call, with its signing secret in ELEVENLABS_WEBHOOK_SECRET."""
 import json
 import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app import config
+from app import config, evaluation
 from app.security import verify_elevenlabs_signature
 from app.store import get_store
 
 router = APIRouter(prefix="/webhooks")
 log = logging.getLogger("nightshift")
-
-
-def _transcript_text(turns: list[dict] | None) -> str:
-    lines = []
-    for turn in turns or []:
-        message = (turn.get("message") or "").strip()
-        if not message:
-            continue  # tool-call turns can have an empty message
-        speaker = "Agent" if turn.get("role") == "agent" else "Caller"
-        lines.append(f"{speaker}: {message}")
-    return "\n".join(lines)
 
 
 @router.post("/elevenlabs/post-call")
@@ -46,15 +38,8 @@ async def post_call(request: Request) -> dict:
     if not conversation_id:
         raise HTTPException(status_code=400, detail="Missing conversation_id")
 
-    analysis = data.get("analysis") or {}
-    metadata = data.get("metadata") or {}
-    get_store().upsert_call({
-        "conversation_id": conversation_id,
-        "agent_id": data.get("agent_id"),
-        "summary": analysis.get("transcript_summary"),
-        "call_successful": analysis.get("call_successful"),
-        "duration_secs": metadata.get("call_duration_secs"),
-        "transcript": _transcript_text(data.get("transcript")),
-    })
+    # Same parsing as the on-demand fetch (app/evaluation.py): grades, data collection, metrics, the
+    # call length, and the transcript with phone numbers cut to the last four digits.
+    get_store().merge_call(conversation_id, evaluation.record_fields(evaluation.analyze(data)))
     log.info("Stored post-call data for %s", conversation_id)
     return {"status": "ok"}

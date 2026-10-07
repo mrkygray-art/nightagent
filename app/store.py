@@ -228,9 +228,9 @@ class MemoryStore:
         return sorted(rows, key=lambda r: (r["called_at"], r["id"]))
 
     def impact_rows(self) -> dict:
-        def metrics(c):
+        def part(c, key):
             ev = c.get("evaluation")
-            return ev.get("metrics") if isinstance(ev, dict) else None
+            return ev.get(key) if isinstance(ev, dict) else None
         return {
             "tickets": [{k: t.get(k) for k in IMPACT_TICKET_FIELDS} for t in self.tickets.values()],
             "events": [{k: e.get(k) for k in ("ticket_id", "event_type")} for e in self.events
@@ -240,7 +240,7 @@ class MemoryStore:
             "tasks": [{k: t.get(k) for k in IMPACT_TASK_FIELDS} for t in self.tasks.values()],
             "opportunities": [{k: o.get(k) for k in IMPACT_OPP_FIELDS} for o in self.opportunities.values()],
             "calls": [{"conversation_id": c["conversation_id"], "duration_secs": c.get("duration_secs"),
-                       "metrics": metrics(c)} for c in self.calls.values()],
+                       "metrics": part(c, "metrics"), "data": part(c, "data")} for c in self.calls.values()],
         }
 
     def recent_tickets(self, limit: int = 25) -> list[dict]:
@@ -415,7 +415,7 @@ class SupabaseStore:
                                lambda q: q.not_.is_("conversation_id", "null")),
             "tasks": rows(self.tasks_table, ",".join(IMPACT_TASK_FIELDS)),
             "opportunities": rows(self.opportunities_table, ",".join(IMPACT_OPP_FIELDS)),
-            "calls": rows(self.calls_table, "conversation_id,duration_secs,metrics:evaluation->metrics"),
+            "calls": rows(self.calls_table, "conversation_id,duration_secs,metrics:evaluation->metrics,data:evaluation->data"),
         }
 
     def add_tool_call(self, row: dict) -> None:

@@ -11,7 +11,7 @@ import logging
 import statistics
 import time
 
-from app import config, evaluation, qa_lab, voice_lab
+from app import analysis_spec, config, evaluation, judge, qa_lab, voice_lab
 from app.store import get_store
 
 log = logging.getLogger("nightshift")
@@ -129,6 +129,10 @@ def call_metrics(tickets: list[dict], tool_calls: list[dict], calls: dict[str, d
         metric("Confirmed details first", confirmed, confirmed_n,
                "Calls graded by ElevenLabs: name and number read back before any ticket, message, or handoff. "
                "A caller who declines to give a name can still count as a miss here.", how="ai"),
+        *[metric(c["name"], *ai(c["id"]),
+                 "Calls graded by ElevenLabs after the call against this written check (app/analysis_spec.py). "
+                 "Calls where it doesn't apply are left out.", how="ai")
+          for c in analysis_spec.CRITERIA if c["id"] not in (evaluation.CRITERION, evaluation.CONFIRMED)],
         metric("Caller interruptions", cut_in, turns,
                "Agent replies the caller talked over. A count of how often it happens, not a grade of how Sam recovered."),
     ]
@@ -168,7 +172,7 @@ def scorecard(lab: dict | None = None) -> dict:
     if _cache["data"] and time.time() - _cache["at"] < CACHE_SECONDS:
         return _cache["data"]
     lab = lab if lab is not None else qa_lab.lab_results()
-    data = {"tests": test_metrics(lab) if lab.get("status") == "ok" else [], "calls": []}
+    data = {"tests": test_metrics(lab) if lab.get("status") == "ok" else [], "calls": [], "judge": {"status": "none"}}
     data["tests"] += voice_metrics(voice_lab.summary())
     try:
         store = get_store()
@@ -180,6 +184,7 @@ def scorecard(lab: dict | None = None) -> dict:
         calls = store.calls_by_ids(ids)
         _backfill(ids, calls)
         data["calls"] = call_metrics(tickets, tool_calls, calls)
+        data["judge"] = judge.agreement(calls)
     except Exception:  # noqa: BLE001 - the lab page should still load
         log.exception("Could not build the Evaluation Lab scorecard")
     _cache.update(at=time.time(), data=data)

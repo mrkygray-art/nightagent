@@ -1827,7 +1827,12 @@ function renderPanel(detail, message) {
   if (!detail.events.length) tl.appendChild(el("li", "ev-note", "No history was recorded for this ticket. It was created before NightAgent kept a timeline."));
   if (detail.view) {
     p.appendChild(actionsSection(detail));
-    p.appendChild(sect("Identity", [["Verified", "Not captured"]], "NightAgent doesn't store an identity check yet."));
+    const id = v.identity || {};
+    p.appendChild(id.status === "ok"
+      ? sect("Identity", [["Verified", id.verified ? "Yes" : "No"], ...(id.method ? [["Method", id.method]] : [])],
+        "Judged by ElevenLabs from the call (AI-judged).")
+      : sect("Identity", [["Verified", "Not captured"]], v.source === "synthetic" ? "Scripted scenario: there was no call." : null));
+    if (v.sentiment) p.appendChild(sect("Sentiment", [["Caller at the end of the call", `${v.sentiment} (Estimated)`]]));
     if (v.account) p.appendChild(accountSection(v.account));
     if (v.whisper) p.appendChild(sect("Whisper message", [["To the specialist", "Not captured"]],
       "The private summary a specialist hears before the caller connects isn't stored."));
@@ -1885,6 +1890,7 @@ function summarySection(s) {
 function intentSection(i) {
   if (!i) return null;
   const rows = [];
+  if (i.detected) rows.push(["Detected intent", `${i.detected} (AI-judged)`]);
   if (i.problem_type) rows.push(["Problem type", i.problem_type]);
   for (const e of i.escalation || []) rows.push([e.label, e.detail]);
   if ((i.specialists || []).length) rows.push(["Handed to", i.specialists.join(", ")]);
@@ -2448,6 +2454,26 @@ function metricGroup(title, tiles) {
   return g;
 }
 
+// Left out until calls carry an intent (ElevenLabs data collection)
+function reasonsTile(v) {
+  if (!v.classified) return null;
+  const li = el("li", "metric");
+  li.appendChild(el("span", "", "Top contact reasons"));
+  li.appendChild(el("small", "", `${v.classified} of ${v.live} live contacts classified`));
+  const ul = el("ul", "bars");
+  for (const r of v.top_reasons) {
+    const row = el("li");
+    row.appendChild(el("span", "", r.label));
+    row.appendChild(el("b", "", String(r.count)));
+    const bar = el("i");
+    bar.style.setProperty("--w", `${(100 * r.count) / v.classified}%`);
+    row.appendChild(bar);
+    ul.appendChild(row);
+  }
+  li.appendChild(ul);
+  return li;
+}
+
 function outcomeTile(v, labels) {
   const li = el("li", "metric wide");
   li.appendChild(el("span", "", "Outcome of each contact"));
@@ -2494,6 +2520,7 @@ function renderImpact() {
   els.metrics.replaceChildren(
     metricGroup("Volume", [
       metric(v.contacts, "Contacts handled", who, true),
+      reasonsTile(v),
       outcomeTile(v, m.outcome_labels),
     ]),
     metricGroup("Automation", [

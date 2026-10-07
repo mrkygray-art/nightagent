@@ -71,7 +71,8 @@ The staff behind the agents (billing contact, account executive, service manager
 
 The **Evaluation Lab** measures how well the agents do, from what really happened. The page opens with a card for each section, a short note on what it's for, and a button that jumps to it:
 
-- **Scorecard:** plain tables of how the agents perform in tests and on real calls, each number with the sample it's based on.
+- **Scorecard:** plain tables of how the agents perform in tests and on real calls, each number with the sample it's based on, plus how often the AI judge agrees with a person.
+- **Safety watchdog:** every live emergency checked for an alert to the on-call technician, the time from ticket to alert, and the recorded reason for any that weren't alerted within 5 minutes.
 - **Fixes log** ("What broke & how we fixed it"): every real problem, why it happened, what changed, and whether the fix still holds in the latest runs.
 - **Regression tests:** problems found in live calls (and a few unclear situations) turned into repeatable tests that run against the live ElevenLabs agents using ElevenLabs Agent Testing.
 - **Voice tests:** real recorded speech sent to the live agent: phone numbers and names in noise and over a phone line, talking over Sam, going quiet, and how long the caller waits.
@@ -119,10 +120,12 @@ Two tables that are never blended, because tests are controlled and real calls a
 | On real calls | Priority matched the rules | AI-suggested priority vs. the final priority set by code |
 | On real calls | Tool calls worked / Handoffs worked | Errors in ElevenLabs' own call records |
 | On real calls | Calls completed | Calls that ended with a ticket, message, or sales lead |
-| On real calls | Avoided unsupported promises, Confirmed details first | Graded by ElevenLabs after each call, labeled **AI-judged** |
+| On real calls | AI-judged checks: avoided unsupported promises, confirmed details first, safety instruction given first, emergency handled end to end, routed to the right place, didn't make anything up, stayed in scope and safe, clear close | Graded by ElevenLabs after each call against the written rubric in `app/analysis_spec.py`, labeled **AI-judged**. Each check says when it doesn't apply, and those calls are left out |
 | On real calls | Caller interruptions | Agent replies the caller talked over (a count, not a grade) |
 | On real calls | Response time | Caller stops talking → agent voice starts; typical and slowest 10% |
 | On real calls | Cost per call | ElevenLabs' own dollar price recorded on each call (`cost_fiat`), not the monthly plan |
+
+**Can we trust the AI judge?** A person scores real calls against the same rubric with `scripts/label_calls.py`, which asks for the person's verdict before showing the AI's. The lab shows how often the two agree, Cohen's kappa (agreement beyond chance), and each disagreement. Labels are keyed by a fingerprint of the call, never by conversation id, and until calls are labeled the section says "Not measured yet".
 
 Rules the scorecard follows: every number shows how many runs or calls it's based on; with nothing to count it says "No data yet" instead of 0%; made-up demo scenarios are excluded; and caller words are never shown. Per-call cost and timing are saved once, when a call is graded, and calls nobody has opened are graded a few at a time whenever the lab page loads.
 
@@ -228,7 +231,7 @@ The page says what it can't measure instead of showing a perfect-looking dashboa
 - **Interruptions and silence on real calls.** The voice tests check both with recorded callers; on real calls they're only counted, not graded.
 - **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn. The voice tests check instead whether numbers and names come through exactly.
 - **Real accents and real phones.** The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.
-- **Hallucination in general.** One specific kind is measured, promises the tools didn't back up, and it's named that.
+- **Hallucination in general.** Two kinds are graded by the AI judge, promises the tools didn't back up and facts no tool returned, and they're named that. How far to trust those grades is the judge-agreement number above.
 
 ## Jargon Bench (speech-to-text on security vocabulary)
 
@@ -337,6 +340,7 @@ The final ticket view connects the service outcome with next actions, including 
 - **Code sets the priority.** The agent suggests a priority, but rules in Python decide. The model can raise a ticket's priority; it can never downgrade an emergency.
 - **Locked-down tools.** Every tool endpoint requires a shared secret sent by the agent. The agents only accept browser calls from approved websites (the per-agent caps below are what limit everything else).
 - **Caps on the public demo.** Calls end after 5 minutes, each agent takes at most 3 calls at once and 40 a day, and scenarios and follow-up calls are capped per hour. Paging the technician is simulated.
+- **Transcripts are trimmed before they're stored.** The post-call webhook keeps only the last four digits of any phone or account number and drops email addresses, and live callers' transcripts never reach a public page.
 - **Nothing private on public pages.** Phone numbers on the ticket board are masked, Engineering Mode shows word counts instead of the caller's words, and the Evaluation Lab strips the tool secret that ElevenLabs returns with test results.
 - **Made-up data.** Demo customers, invoices, and staff are fictional. Please don't share real names, numbers, or alarm codes on the demo.
 

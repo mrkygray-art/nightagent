@@ -173,6 +173,12 @@ LAB_HTML = r"""<!doctype html>
       <a class="go" href="#scorecard">View Scorecard ↓</a>
     </article>
     <article class="nav-card">
+      <h2>Safety Watchdog</h2>
+      <p>Check that every real emergency alerted the on-call technician, how fast it happened, and what the records
+        say about any that didn't.</p>
+      <a class="go" href="#watchdog">View Safety Watchdog ↓</a>
+    </article>
+    <article class="nav-card">
       <h2>What Broke &amp; How We Fixed It</h2>
       <p>Review real problems uncovered by live calls, tests, or deliberate breakage. See what caused each issue, what
         changed, and whether the fix is still holding today.</p>
@@ -219,6 +225,20 @@ LAB_HTML = r"""<!doctype html>
     <div id="sc-tests" aria-live="polite"><p class="fine">Loading…</p></div>
     <h3 class="group">On real calls</h3>
     <div id="sc-calls" aria-live="polite"><p class="fine">Loading…</p></div>
+    <h3 class="group">Can we trust the AI judge?</h3>
+    <p class="fine">A person scores real calls against the same written checks, without seeing the AI's verdict first
+      (scripts/label_calls.py). Agreement is how often the two match; kappa discounts the matches chance alone would give
+      (1 is perfect, 0 is no better than chance).</p>
+    <div id="judge" aria-live="polite"><p class="fine">Loading…</p></div>
+  </section>
+
+  <section class="section-block" id="watchdog">
+    <div class="section-head"><h2 class="section">Safety Watchdog</h2><a href="#top">Back to lab menu ↑</a></div>
+    <p class="intro">Every real emergency should wake the on-call technician, fast. This checks every live emergency
+      ticket: was the technician alerted, how long after the ticket was saved, and, if not, what the records say went
+      wrong. Scripted scenarios never alert anyone, so they're left out.</p>
+    <p class="question">Engineering question: Did any emergency slip through?</p>
+    <div id="watchdog-box" aria-live="polite"><p class="fine">Loading…</p></div>
   </section>
 
   <section class="section-block" id="incidents">
@@ -288,7 +308,7 @@ LAB_HTML = r"""<!doctype html>
       <li><b>Interruptions and silence on real calls.</b> The voice tests check both with recorded callers. On real calls they're only counted, not graded.</li>
       <li><b>Speech-to-text confidence.</b> ElevenLabs doesn't give a confidence score for each thing the caller says. The voice tests check instead whether phone numbers and names come through exactly.</li>
       <li><b>Real accents and real phones.</b> The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.</li>
-      <li><b>Hallucination in general.</b> One specific kind is measured—promises the tools didn't back up—and it's called that.</li>
+      <li><b>Hallucination in general.</b> Two kinds are graded by the AI judge, promises the tools didn't back up and facts no tool returned, and they're called that. How far to trust those grades is the judge-agreement number in the Scorecard.</li>
     </ul>
     <p class="fine">Results are read from ElevenLabs. Tools aren't really called during an agent test, so tests never put
       tickets or messages on the live board. A reply check is judged by an AI grader against a written pass condition; a
@@ -382,6 +402,44 @@ function fixTable(box, fixes) {
   }
   t.append(thead, body); box.replaceChildren(t);
 }
+function judgeSection(box, j) {
+  if (!j || j.status !== "ok") {
+    box.replaceChildren(el("p", "fine", "Not measured yet: no calls have been scored by a person."));
+    return;
+  }
+  const s = el("div", "summary");
+  s.append(stat(`${j.rate}%`, `agreement, ${j.agree} of ${j.n} verdicts`),
+    stat(j.kappa === null ? "–" : String(j.kappa), "kappa (chance-corrected)"),
+    stat(String(j.calls), "calls scored by a person"));
+  const rows = j.criteria.map((c) => [{ text: c.criterion }, { text: `${c.rate}%`, cls: "val" },
+    { text: `${c.agree} of ${c.n}` }, { text: c.kappa === null ? "–" : String(c.kappa) }]);
+  const parts = [s, gridTable("score", ["Check", "Agreement", "Based on", "Kappa"], rows)];
+  if (j.disagreements.length) {
+    parts.push(el("p", "fine", "Where they disagreed (the person's verdict is treated as right):"));
+    parts.push(gridTable("score", ["Call", "Check", "Person", "AI"], j.disagreements.map((d) =>
+      [{ text: d.call_ref.slice(0, 8) }, { text: d.criterion }, { text: d.person }, { text: d.ai }])));
+  }
+  if (j.left_out) parts.push(el("p", "fine", `${j.left_out} verdicts left out because one side said it didn't apply.`));
+  box.replaceChildren(...parts);
+}
+function watchdogSection(box, w) {
+  if (!w || w.status === "unavailable") { box.replaceChildren(el("p", "fine", "Not available right now.")); return; }
+  const t = w.ticket_to_page;
+  const s = el("div", "summary");
+  s.append(stat(`${w.paged} of ${w.emergencies}`, "live emergencies alerted"),
+    stat(String(w.missed.length), `not alerted after ${w.deadline_minutes} min`),
+    stat(t.n ? `${t.typical_s} s` : "–", t.n ? `ticket to alert, typical · slowest 10%: ${t.slow_s} s` : "ticket to alert"));
+  const parts = [s];
+  if (w.waiting) parts.push(el("p", "fine", `${w.waiting} new emergency still inside the ${w.deadline_minutes}-minute window.`));
+  if (w.missed.length) {
+    parts.push(gridTable("score", ["Ticket", "Saved", "What the records show"], w.missed.map((m) =>
+      [{ text: m.ticket_id }, { text: new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) },
+       { text: m.reason }])));
+  } else {
+    parts.push(el("p", "fine", "Every live emergency was alerted."));
+  }
+  box.replaceChildren(...parts);
+}
 function secs(ms) { return ms === null || ms === undefined ? "–" : `${(ms / 1000).toFixed(1)} s`; }
 function gridTable(cls, heads, rows) {
   const t = el("table", `grid ${cls}`), head = el("tr");
@@ -459,6 +517,8 @@ async function load() {
   scoreTable(document.getElementById("sc-calls"), sc.calls);
   fixTable(document.getElementById("fixes"), data.fixes);
   voiceSection(document.getElementById("voice-box"), data.voice);
+  judgeSection(document.getElementById("judge"), sc.judge);
+  watchdogSection(document.getElementById("watchdog-box"), data.watchdog);
   if (data.status !== "ok") {
     summary.replaceChildren(stat("–", data.reason || "Results aren't available right now."));
     return;

@@ -7,18 +7,19 @@ a criterion set on the agent; it's labeled as AI-judged. Checks that don't apply
 recorded, the check says so.
 """
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 import requests
 
-from app import config, lifecycle
+from app import analysis_spec, config, lifecycle
 from app.store import get_store, now_iso
 
 log = logging.getLogger("nightshift")
 
 CRITERION = "no_unsupported_promises"
 CONFIRMED = "confirmed_details_first"
-CRITERIA = (CRITERION, CONFIRMED)
+CRITERIA = analysis_spec.CRITERIA_IDS  # every AI-judged check set on the agent
 RECHECK_SECONDS = 20  # while ElevenLabs is still analyzing, ask at most this often per call
 SPECIALIST_TOOLS = {"billing_lookup", "request_billing_review", "record_sales_interest"}
 
@@ -119,7 +120,8 @@ def fetch_grade(conversation_id: str | None, want_trace: bool = False, want_metr
         if "results" in saved:
             if "trace" in saved and (not want_metrics or "metrics" in saved):
                 return {"status": "done", "results": saved["results"], "trace": saved["trace"],
-                        "metrics": saved.get("metrics"), "summary": cached.get("summary")}
+                        "metrics": saved.get("metrics"), "summary": cached.get("summary"),
+                        "data": saved.get("data") or {}}
         else:  # saved before the trace was kept
             results = {CRITERION: saved} if "result" in saved else saved
             if not want_trace and not want_metrics:
@@ -140,20 +142,78 @@ def fetch_grade(conversation_id: str | None, want_trace: bool = False, want_metr
         log.exception("Could not read the ElevenLabs analysis for %s", conversation_id)
         _remember(conversation_id, {"eval_status": "pending", "evaluated_at": now_iso()})
         return {"status": "pending"}
-    analysis = data.get("analysis") or {}
     if data.get("status") != "done":
         _remember(conversation_id, {"eval_status": "pending", "evaluated_at": now_iso()})
         return {"status": "pending"}
+    found = analyze(data)
+    _remember(conversation_id, record_fields(found))
+    return {"status": "done", **{k: found[k] for k in ("results", "trace", "metrics", "summary", "data")}}
+
+
+def analyze(data: dict) -> dict:
+    """Everything NightAgent keeps from one finished ElevenLabs conversation, whether it came from the
+    post-call webhook or from asking the API. Same shape both ways."""
+    analysis = data.get("analysis") or {}
     graded = analysis.get("evaluation_criteria_results") or {}
     results = {c: {"result": (graded.get(c) or {}).get("result"),
                    "rationale": ((graded.get(c) or {}).get("rationale") or "")[:400]}
                for c in CRITERIA if c in graded}
-    summary = (analysis.get("transcript_summary") or "")[:500] or None
-    trace = turn_trace(data.get("transcript") or [])
-    metrics = call_metrics(data)
-    _remember(conversation_id, {"eval_status": "done", "evaluation": {"results": results, "trace": trace, "metrics": metrics},
-                                "summary": summary, "evaluated_at": now_iso()})
-    return {"status": "done", "results": results, "trace": trace, "metrics": metrics, "summary": summary}
+    collected = analysis.get("data_collection_results") or {}
+    fields = {}
+    for key in analysis_spec.DATA_FIELDS:
+        value = (collected.get(key) or {}).get("value")
+        if value is not None and value != "":
+            fields[key] = value
+    meta = data.get("metadata") or {}
+    return {
+        "results": results,
+        "trace": turn_trace(data.get("transcript") or []),
+        "metrics": call_metrics(data),
+        "data": fields,
+        "summary": (analysis.get("transcript_summary") or "")[:500] or None,
+        "call_successful": analysis.get("call_successful"),
+        "duration_secs": meta.get("call_duration_secs"),
+        "agent_id": data.get("agent_id"),
+        "transcript": redact(transcript_text(data.get("transcript"))),
+    }
+
+
+def record_fields(found: dict) -> dict:
+    """The ns_calls columns for an analyzed call."""
+    return {
+        "eval_status": "done",
+        "evaluation": {k: found[k] for k in ("results", "trace", "metrics", "data")},
+        "summary": found["summary"],
+        "call_successful": found.get("call_successful"),
+        "duration_secs": found.get("duration_secs"),
+        "agent_id": found.get("agent_id"),
+        "transcript": found.get("transcript"),
+        "evaluated_at": now_iso(),
+    }
+
+
+def transcript_text(turns: list[dict] | None) -> str:
+    lines = []
+    for turn in turns or []:
+        message = (turn.get("message") or "").strip()
+        if not message:
+            continue  # tool-call turns can have an empty message
+        lines.append(f"{'Agent' if turn.get('role') == 'agent' else 'Caller'}: {message}")
+    return "\n".join(lines)
+
+
+_LONG_NUMBER = re.compile(r"\(?(?<!\d)(?:\d[\s().-]{0,2}){6,}(\d{4})(?!\d)")
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+
+
+def redact(text: str | None) -> str | None:
+    """Stored transcripts keep only the last four digits of any phone or account number, and no email
+    addresses. Names and addresses on the fictional demo accounts stay; a real deployment would also
+    redact those."""
+    if not text:
+        return None
+    text = _LONG_NUMBER.sub(lambda m: "•••" + m.group(1), text)
+    return _EMAIL.sub("[email]", text)
 
 
 def _remember(conversation_id: str, fields: dict) -> None:

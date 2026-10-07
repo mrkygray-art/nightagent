@@ -1,8 +1,10 @@
 """Serves the public /demo and /lab pages."""
+import logging
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from app import config, fix_log, injection, qa_lab, scorecard, voice_lab
+from app import config, fix_log, injection, qa_lab, scorecard, voice_lab, watchdog
 from app.demo_page import DEMO_HTML
 from app.lab_page import LAB_HTML
 
@@ -24,7 +26,15 @@ def lab_results() -> dict:
     """Evaluation Lab: the latest regression-test results from ElevenLabs Agent Testing, plus the scorecard and the fixes log."""
     data = qa_lab.lab_results()
     return {**data, "scorecard": scorecard.scorecard(data), "fixes": fix_log.fixes(data),
-            "voice": voice_lab.summary()}
+            "voice": voice_lab.summary(), "watchdog": _watchdog()}
+
+
+def _watchdog() -> dict:
+    try:
+        return watchdog.watchdog()
+    except Exception:  # noqa: BLE001 - the lab page should still load
+        logging.getLogger("nightshift").exception("Could not run the safety watchdog")
+        return {"status": "unavailable"}
 
 
 @router.post("/api/lab/inject/{name}")

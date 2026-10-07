@@ -35,12 +35,28 @@ OUTCOMES = {
     "resolved_on_call": "Resolved on the call",
 }
 
+# The caller's reason for calling, from ElevenLabs data collection (app/analysis_spec.py)
+INTENT_LABELS = {
+    "service_problem": "Something isn't working",
+    "billing": "Billing",
+    "sales": "Buying or upgrading",
+    "message_for_person": "Wants a person or department",
+    "how_to": "How-to question",
+    "complaint": "Complaint",
+    "off_topic": "Off-topic",
+    "unclear": "Unclear",
+}
+TOP_REASONS = 4
+
 SPECIALIST_TOOLS = {"billing_lookup", "request_billing_review", "record_sales_interest"}
 FOLLOW_UP_TOOL = "record_follow_up_outcome"
 
 DEFINITIONS = [
     ("Contacts handled", "Every inbound call Sam answered (live) plus every scripted scenario started (synthetic). "
      "A call counts once, however many tools it used. Voice-test calls are left out."),
+    ("Top contact reasons", "Live contacts by the caller's main reason, as ElevenLabs classified it after the call "
+     "(data collection on the agent). Calls from before this was switched on aren't classified; the subtitle says how "
+     "many are. Scripted scenarios have no call, so they have no reason."),
     ("Outcome of each contact", "Each contact gets one primary outcome, the first that applies: dispatched (a ticket "
      "whose on-call technician was paged), deferred (a ticket for the next business day), transferred (handed to "
      "Jordan or Riley), message taken, or resolved on the call. A repeat call added to an open ticket takes that "
@@ -92,6 +108,14 @@ def call_metric(call: dict | None, key: str):
     evaluation = call.get("evaluation")
     m = call.get("metrics") or (evaluation.get("metrics") if isinstance(evaluation, dict) else None) or {}
     return m.get(key) if isinstance(m, dict) else None
+
+
+def call_data(call: dict | None) -> dict:
+    """Facts ElevenLabs pulled from the call (data collection), as cached by the webhook or the call check."""
+    call = call or {}
+    evaluation = call.get("evaluation")
+    d = call.get("data") or (evaluation.get("data") if isinstance(evaluation, dict) else None)
+    return d if isinstance(d, dict) else {}
 
 
 def call_duration(call: dict | None) -> float | None:
@@ -166,19 +190,20 @@ def contacts(rows: dict) -> list[dict]:
             "transferred": transferred,
             "repeat": conv in repeat_convs,
             "duration": call_duration(calls.get(conv)),
+            "intent": call_data(calls.get(conv)).get("intent"),
         })
     # Live tickets with no conversation id at all still came from a call
     for t in tickets:
         if not t.get("conversation_id") and not t.get("scenario") and not t.get("source_ticket_id"):
             out.append({"source": LIVE, "key": f"ticket:{t['ticket_id']}", "outcome": outcome_for([t], False, False),
                         "tickets_created": 1, "emergency": t.get("priority") == "emergency",
-                        "transferred": False, "repeat": False, "duration": None})
+                        "transferred": False, "repeat": False, "duration": None, "intent": None})
     # Synthetic: one contact per scripted scenario
     for t in tickets:
         if t.get("scenario") and not t.get("source_ticket_id"):
             out.append({"source": SYNTHETIC, "key": f"scenario:{t['ticket_id']}", "outcome": outcome_for([t], False, False),
                         "tickets_created": 1, "emergency": t.get("priority") == "emergency",
-                        "transferred": False, "repeat": False, "duration": None})
+                        "transferred": False, "repeat": False, "duration": None, "intent": None})
     return out
 
 
@@ -220,7 +245,14 @@ def view_metrics(rows: dict, view: str, people: list[dict] | None = None) -> dic
     transfers = sum(1 for c in cs if c["transferred"])
     repeats = sum(1 for c in cs if c["repeat"])
     check_ins, confirmed = count("follow_up_completed"), count("resolution_confirmed")
+    reasons: dict[str, int] = {}
+    for c in cs:
+        if c.get("intent") in INTENT_LABELS:
+            reasons[c["intent"]] = reasons.get(c["intent"], 0) + 1
+    top = sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP_REASONS]
     return {
+        "top_reasons": [{"intent": k, "label": INTENT_LABELS[k], "count": n} for k, n in top],
+        "classified": sum(reasons.values()),
         "contacts": n,
         "live": sum(1 for c in cs if c["source"] == LIVE),
         "synthetic": sum(1 for c in cs if c["source"] == SYNTHETIC),
