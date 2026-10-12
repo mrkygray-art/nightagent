@@ -2,6 +2,9 @@
 -- "Contrator Companies" (sufyfmhqpdarlqtotjla).
 -- Reconstructed 2026-10-01 from the live database catalog after the original file was lost.
 --
+-- This file is the base schema only. Run it first, then every file in supabase/migrations/ in
+-- filename order. docs/supabase.md describes the full set of tables.
+--
 -- Access model: RLS is on with NO policies and no anon/authenticated grants, so only the
 -- service role (the FastAPI backend) can read or write. The browser never talks to Supabase.
 
@@ -47,6 +50,9 @@ create table if not exists public.ns_calls (
 alter table public.ns_customers enable row level security;
 alter table public.ns_tickets   enable row level security;
 alter table public.ns_calls     enable row level security;
+revoke all on public.ns_customers from anon, authenticated;
+revoke all on public.ns_tickets   from anon, authenticated;
+revoke all on public.ns_calls     from anon, authenticated;
 
 -- Demo customers (same as SEED_CUSTOMERS in app/store.py)
 insert into public.ns_customers
