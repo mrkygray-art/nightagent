@@ -124,6 +124,7 @@
           "type": "webhook",
           "request_id": "req_ticket_5",
           "tool_name": "create_ticket",
+          "tool_id": null,
           "params_as_json": "{\"customer_id\": \"C-1003\", \"caller_name\": \"Priya Shah\", \"callback_number\": \"4245550119\", \"issue_summary\": \"Main entrance won't unlock; staff can't get in.\", \"category\": \"entry_blocked\", \"suggested_priority\": \"emergency\"}",
           "tool_has_been_called": true,
           "tool_details": null
@@ -203,6 +204,7 @@
           "type": "webhook",
           "request_id": "req_page_5",
           "tool_name": "page_on_call_tech",
+          "tool_id": null,
           "params_as_json": "{\"ticket_id\": \"NS-5060\"}",
           "tool_has_been_called": true,
           "tool_details": null

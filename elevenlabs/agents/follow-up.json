@@ -13,14 +13,23 @@
       "initial_wait_time": null,
       "silence_end_call_timeout": -1.0,
       "mode": "turn",
-      "turn_eagerness": "normal",
+      "turn_eagerness": "patient",
       "spelling_patience": "auto",
-      "speculative_turn": true,
+      "speculative_turn": false,
       "retranscribe_on_turn_timeout": false,
       "turn_model": "turn_v3",
-      "interruption_ignore_terms": [],
-      "interruption_ignore_term_languages": [],
-      "merge_with_default_ignore_terms": false,
+      "interruption_ignore_terms": [
+        "uh-huh",
+        "mm-hmm",
+        "okay",
+        "yeah",
+        "right",
+        "mhm"
+      ],
+      "interruption_ignore_term_languages": [
+        "en"
+      ],
+      "merge_with_default_ignore_terms": true,
       "transcribe_on_disabled_interruptions": false,
       "soft_timeout_config": {
         "timeout_seconds": -1.0,
@@ -31,7 +40,9 @@
         "max_soft_timeouts_per_generation": 1,
         "llm_generated_message_prompt_override": null,
         "disable_until_first_user_message": false
-      }
+      },
+      "noisy_environment_detection": false,
+      "noisy_environment_message": "Uhh ... sorry, I'm picking up some noise in the background. Could you move somewhere quieter?"
     },
     "tts": {
       "model_id": "eleven_v4_turbo",
@@ -44,6 +55,7 @@
       "stability": 0.5,
       "speed": 1.0,
       "similarity_boost": 0.75,
+      "clone_strength": 0.0,
       "text_normalisation_type": "system_prompt",
       "pronunciation_dictionary_locators": [],
       "enable_phoneme_tags": true,
@@ -91,7 +103,7 @@
     },
     "language_presets": {},
     "vad": {
-      "background_voice_detection": false
+      "background_voice_detection": true
     },
     "realtime_model": null,
     "agent": {
@@ -112,6 +124,7 @@
       },
       "disable_first_message_interruptions": false,
       "max_conversation_duration_message": "",
+      "silence_end_call_message": "",
       "text_behavior_overrides": {
         "whatsapp": {
           "verbosity": null,
@@ -120,7 +133,10 @@
           "disable_max_duration": true
         }
       },
-      "subagents": [],
+      "subagent_config": {
+        "agents": [],
+        "self_subagent": null
+      },
       "prompt": {
         "prompt": "# Personality\nYou are Sam from NightAgent, calling on behalf of Demo Security Integrators, a company that installs and services security systems. You are warm, brief, and genuinely interested in whether the customer is happy. This is an outbound follow-up call, not a sales call.\n\n# Context for this call\n- Customer: {{customer_first_name}} at {{business_name}}\n- Ticket: {{ticket_id}} (say it as {{ticket_number_spoken}})\n- Original problem: {{original_issue}}\n- Systems on site: {{systems_on_site}}\n- Technician who did the work: {{technician_name}}\nYou only know this context and what the customer tells you. Never invent repair details, parts, prices, or times.\n\n# Tone\nShort, natural sentences: one or two at a time. One question at a time. Never read IDs, lists, or JSON aloud.\n\n# Goal\n1. Find out whether the original problem is fixed. Listen for one of these:\n   - Fixed and working (resolved).\n   - It was fixed but the problem came back (problem_returned). Ask one question about how it is affecting them right now, so the priority can be re-checked.\n   - It never really worked after the visit (never_fixed). Acknowledge it sincerely and briefly.\n   - You can't tell (unclear). Ask once more; if still unclear, use unclear.\n2. If it fits naturally, ask how they would rate the visit from 1 to 5. Do not push if they don't want to.\n3. Ask: \"Is there anything else we can help with?\" Listen for:\n   - A different service problem: get one sentence describing it.\n   - Interest in new equipment, upgrades, or expansion: this is not a service ticket. Ask at most two short questions about scope (how many doors, cameras, or devices) and timeline. Only record a budget if they state one; never estimate a value.\n   - A request for a person to call them: find out whether it's about repairs (service), buying or contracts (account_executive), a complaint (service_manager), or how-to help (support).\n4. Call record_follow_up_outcome exactly once with everything they told you.\n5. Tell the customer what happens next using the tell_the_customer text from the tool, in your own words, in one or two sentences. Then thank them and close the call warmly.\n\n# Guardrails\n- Never decide or promise priorities, dispatch times, refunds, or prices yourself. The tool's response says what happens next.\n- Never ask for or repeat alarm codes or passwords, and never give instructions for bypassing or disarming a system.\n- If the tool says it couldn't save, tell the customer the service desk will call them to confirm everything, then close politely.\n- If the person asks whether this is real or who built it: this is a portfolio demo with made-up data, built by Ky Gray on ElevenLabs Agents with a Python FastAPI backend.\n",
         "llm": "qwen35-397b-a17b",
@@ -134,6 +150,7 @@
         "tool_ids": [
           "tool_5301m3x8ecrnf2esg62jrnf59mba"
         ],
+        "tool_ids_strict": false,
         "built_in_tools": {
           "transfer_to_agent": null,
           "update_state": null,
@@ -146,6 +163,7 @@
           "skip_turn": null,
           "play_keypad_touch_tone": null,
           "voicemail_detection": null,
+          "identity_challenge": null,
           "transfer_to_genesys": null,
           "transfer_to_genesys_chat": null,
           "transfer_to_genesys_bot": null
@@ -479,11 +497,68 @@
   },
   "metadata": {
     "created_at_unix_secs": 1790909580,
-    "updated_at_unix_secs": 1790978812
+    "updated_at_unix_secs": 1792515534
   },
   "platform_settings": {
     "evaluation": {
-      "criteria": []
+      "criteria": [
+        {
+          "id": "checkin_outcome_confirmed",
+          "name": "Check-in: outcome confirmed and saved",
+          "type": "prompt",
+          "conversation_goal_prompt": "Success: the assistant found out whether the original problem is fixed (fixed, came back, never fixed, or asked once more when it was unclear) and then called record_follow_up_outcome with a resolution that matches what the customer said. Failure: record_follow_up_outcome was never called, was called with a resolution that contradicts the customer, or was called before the customer said whether it was fixed. Unknown: the customer hung up before saying anything about the repair.",
+          "use_knowledge_base": false,
+          "scope": "conversation",
+          "llm": null,
+          "llm_billed": false,
+          "analysis_schedule": null,
+          "scoring_mode": "binary",
+          "max_score": 100,
+          "score_instructions": null
+        },
+        {
+          "id": "checkin_new_needs_captured",
+          "name": "Check-in: new needs captured",
+          "type": "prompt",
+          "conversation_goal_prompt": "Did the customer mention a different problem, interest in new equipment or upgrades, or ask for someone to call them? Success: each of those was included in record_follow_up_outcome (a new issue summary, sales interest, or a callback department). Failure: the customer mentioned one and it was left out. Unknown: the customer mentioned none of these.",
+          "use_knowledge_base": false,
+          "scope": "conversation",
+          "llm": null,
+          "llm_billed": false,
+          "analysis_schedule": null,
+          "scoring_mode": "binary",
+          "max_score": 100,
+          "score_instructions": null
+        },
+        {
+          "id": "checkin_no_unsupported_promises",
+          "name": "Check-in: avoided unsupported promises",
+          "type": "prompt",
+          "conversation_goal_prompt": "Success: the assistant never promised a priority, dispatch or arrival time, refund, credit, or price, and only said what happens next in line with the tool's response. Failure: any such promise that the tool didn't give. Unknown: the call ended before anything about next steps was said.",
+          "use_knowledge_base": false,
+          "scope": "conversation",
+          "llm": null,
+          "llm_billed": false,
+          "analysis_schedule": null,
+          "scoring_mode": "binary",
+          "max_score": 100,
+          "score_instructions": null
+        },
+        {
+          "id": "checkin_clear_close",
+          "name": "Check-in: clear close",
+          "type": "prompt",
+          "conversation_goal_prompt": "Success: before the call ended, the customer was told what happens next (closed as fixed, a return visit, a manager or sales callback, or a new ticket) and was thanked. Failure: the call ended without the customer knowing what happens next. Unknown: the customer hung up before the outcome was saved.",
+          "use_knowledge_base": false,
+          "scope": "conversation",
+          "llm": null,
+          "llm_billed": false,
+          "analysis_schedule": null,
+          "scoring_mode": "binary",
+          "max_score": 100,
+          "score_instructions": null
+        }
+      ]
     },
     "widget": {
       "variant": "full",
@@ -613,17 +688,79 @@
         "dropdown_sheet_radius": null
       },
       "show_resize_button": true,
+      "end_confirmation_enabled": false,
       "language_selector": false,
       "supports_text_only": true,
       "custom_avatar_path": null,
       "language_presets": {},
       "first_message_quick_replies": []
     },
-    "data_collection": {},
+    "data_collection": {
+      "caller_sentiment": {
+        "type": "string",
+        "description": "The caller's mood at the end of the call, judged from their words.",
+        "enum": [
+          "calm",
+          "stressed",
+          "frustrated",
+          "upset"
+        ],
+        "is_system_provided": false,
+        "dynamic_variable": "",
+        "allowed_values": null,
+        "allowed_values_dynamic_variable": "",
+        "constant_value": "",
+        "is_omitted": false,
+        "name": null,
+        "llm": null,
+        "llm_billed": false,
+        "analysis_schedule": null
+      }
+    },
     "data_collection_scopes": {},
     "analysis_items": {
-      "evaluation_criteria": [],
-      "data_collection": []
+      "evaluation_criteria": [
+        {
+          "source": "user",
+          "analysis_item_id": "aitem_7001m4cbkh7eev5rvknm4w433d9e",
+          "version_id": null,
+          "additional_version_ids": [],
+          "scope": "conversation",
+          "weight": null
+        },
+        {
+          "source": "user",
+          "analysis_item_id": "aitem_0901m4cbkh7tehwv7rwp108t359r",
+          "version_id": null,
+          "additional_version_ids": [],
+          "scope": "conversation",
+          "weight": null
+        },
+        {
+          "source": "user",
+          "analysis_item_id": "aitem_1901m4cbkh80e4pa4dd5kxmq1xr8",
+          "version_id": null,
+          "additional_version_ids": [],
+          "scope": "conversation",
+          "weight": null
+        },
+        {
+          "source": "user",
+          "analysis_item_id": "aitem_4701m4cbkh89exnaepwamcev1smn",
+          "version_id": null,
+          "additional_version_ids": [],
+          "scope": "conversation",
+          "weight": null
+        }
+      ],
+      "data_collection": [
+        {
+          "source": "user",
+          "analysis_item_id": "aitem_3101m4cbkh8ff7daypw88nsr8gsp",
+          "version_id": null,
+          "scope": "conversation"
+        }
+      ]
     },
     "overrides": {
       "conversation_config_override": {
@@ -634,7 +771,8 @@
           "soft_timeout_config": {
             "message": false,
             "additional_soft_timeout_messages": false
-          }
+          },
+          "noisy_environment_message": false
         },
         "tts": {
           "model_id": false,
@@ -643,6 +781,7 @@
           "stability": false,
           "speed": true,
           "similarity_boost": false,
+          "clone_strength": false,
           "pronunciation_dictionary_locators": false
         },
         "conversation": {
@@ -653,10 +792,12 @@
           "first_message": false,
           "language": false,
           "max_conversation_duration_message": false,
+          "silence_end_call_message": false,
           "prompt": {
             "prompt": false,
             "llm": false,
             "tool_ids": false,
+            "tool_ids_strict": false,
             "native_mcp_server_ids": false,
             "knowledge_base": false
           }
@@ -837,7 +978,7 @@
     "portfolio",
     "demo"
   ],
-  "version_id": "agtvrsn_2101m3zaftwbe8faq3396h2843y7",
+  "version_id": "agtvrsn_4401m5d40w4teef9gr133ngwr1c0",
   "branch_id": "agtbrch_0601m3x8f0saeet8hv5yqsyg5qk2",
   "main_branch_id": "agtbrch_0601m3x8f0saeet8hv5yqsyg5qk2",
   "procedures": {},

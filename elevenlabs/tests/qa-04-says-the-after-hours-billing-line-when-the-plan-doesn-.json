@@ -124,6 +124,7 @@
           "type": "webhook",
           "request_id": "req_ticket_4",
           "tool_name": "create_ticket",
+          "tool_id": null,
           "params_as_json": "{\"customer_id\": \"C-1002\", \"caller_name\": \"James Carter\", \"callback_number\": \"3105550178\", \"issue_summary\": \"Front gate stuck open and won't close.\", \"category\": \"cannot_secure_site\", \"suggested_priority\": \"emergency\"}",
           "tool_has_been_called": true,
           "tool_details": null
@@ -203,6 +204,7 @@
           "type": "webhook",
           "request_id": "req_page_4",
           "tool_name": "page_on_call_tech",
+          "tool_id": null,
           "params_as_json": "{\"ticket_id\": \"NS-5057\"}",
           "tool_has_been_called": true,
           "tool_details": null

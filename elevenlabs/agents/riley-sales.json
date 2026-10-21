@@ -13,14 +13,23 @@
       "initial_wait_time": null,
       "silence_end_call_timeout": -1.0,
       "mode": "turn",
-      "turn_eagerness": "normal",
+      "turn_eagerness": "patient",
       "spelling_patience": "auto",
-      "speculative_turn": true,
+      "speculative_turn": false,
       "retranscribe_on_turn_timeout": false,
       "turn_model": "turn_v3",
-      "interruption_ignore_terms": [],
-      "interruption_ignore_term_languages": [],
-      "merge_with_default_ignore_terms": false,
+      "interruption_ignore_terms": [
+        "uh-huh",
+        "mm-hmm",
+        "okay",
+        "yeah",
+        "right",
+        "mhm"
+      ],
+      "interruption_ignore_term_languages": [
+        "en"
+      ],
+      "merge_with_default_ignore_terms": true,
       "transcribe_on_disabled_interruptions": false,
       "soft_timeout_config": {
         "timeout_seconds": -1.0,
@@ -31,7 +40,9 @@
         "max_soft_timeouts_per_generation": 1,
         "llm_generated_message_prompt_override": null,
         "disable_until_first_user_message": false
-      }
+      },
+      "noisy_environment_detection": false,
+      "noisy_environment_message": "Uhh ... sorry, I'm picking up some noise in the background. Could you move somewhere quieter?"
     },
     "tts": {
       "model_id": "eleven_v4_turbo",
@@ -44,6 +55,7 @@
       "stability": 0.5,
       "speed": 1.0,
       "similarity_boost": 0.75,
+      "clone_strength": 0.0,
       "text_normalisation_type": "system_prompt",
       "pronunciation_dictionary_locators": [],
       "enable_phoneme_tags": true,
@@ -91,7 +103,7 @@
     },
     "language_presets": {},
     "vad": {
-      "background_voice_detection": false
+      "background_voice_detection": true
     },
     "realtime_model": null,
     "agent": {
@@ -103,6 +115,7 @@
       },
       "disable_first_message_interruptions": false,
       "max_conversation_duration_message": "",
+      "silence_end_call_message": "",
       "text_behavior_overrides": {
         "whatsapp": {
           "verbosity": null,
@@ -111,7 +124,10 @@
           "disable_max_duration": true
         }
       },
-      "subagents": [],
+      "subagent_config": {
+        "agents": [],
+        "self_subagent": null
+      },
       "prompt": {
         "prompt": "# Who you are\nYou are Riley, the AI sales assistant for Demo Security Integrators, a company that installs and services security systems: cameras, access control, alarm panels, and intercoms. Sam, the front desk assistant, just handed this caller to you. You can see everything said so far. Never make the caller repeat themselves.\n\n# How you sound\nFriendly, curious, and brief. Short natural sentences, one question at a time. Never read out IDs, lists, or JSON. Not pushy: you're helping them get a good quote, not closing a sale.\n\n# What to do\n1. Your very first sentence: introduce yourself in the first person and pick up where Sam left off, for example: \"Hi James, I'm Riley, the sales assistant. I'm an AI assistant, and Sam mentioned you're looking at more cameras for the lot.\" Never talk about yourself in the third person.\n2. Ask at most two short questions to understand what they want, only what you don't already know: roughly how many cameras, doors, or devices, and their timeline. Only note a budget if they bring it up.\n3. Use the name and callback number the caller already confirmed with Sam. If they weren't confirmed, read them back and wait for a yes. Ask once if there's a good time for Sarah Johnson, their account executive, to call.\n4. Call record_sales_interest, then tell the caller what tell_the_caller says, in your own words.\n5. Ask if there's anything else. If they need something that isn't sales (a repair, billing, a complaint), call take_message for the right department instead of handling it yourself.\n\n# Rules\n- Never quote prices, discounts, or estimates, and never promise availability or install dates. Sarah Johnson handles that.\n- Only use what the caller and tools tell you.\n- If asked, say plainly that you're an AI assistant and this is a portfolio demo with made-up data, built by Ky Gray on ElevenLabs Agents.",
         "llm": "qwen35-397b-a17b",
@@ -126,6 +142,7 @@
           "tool_2201m3zg0zy7ew4t6pdpjaq5jmad",
           "tool_2401m3zf05tee2gr0gpxcnrk5cvs"
         ],
+        "tool_ids_strict": false,
         "built_in_tools": {
           "transfer_to_agent": null,
           "update_state": null,
@@ -138,6 +155,7 @@
           "skip_turn": null,
           "play_keypad_touch_tone": null,
           "voicemail_detection": null,
+          "identity_challenge": null,
           "transfer_to_genesys": null,
           "transfer_to_genesys_chat": null,
           "transfer_to_genesys_bot": null
@@ -502,7 +520,7 @@
   },
   "metadata": {
     "created_at_unix_secs": 1790984658,
-    "updated_at_unix_secs": 1790984669
+    "updated_at_unix_secs": 1792515541
   },
   "platform_settings": {
     "evaluation": {
@@ -636,6 +654,7 @@
         "dropdown_sheet_radius": null
       },
       "show_resize_button": true,
+      "end_confirmation_enabled": false,
       "language_selector": false,
       "supports_text_only": true,
       "custom_avatar_path": null,
@@ -657,7 +676,8 @@
           "soft_timeout_config": {
             "message": false,
             "additional_soft_timeout_messages": false
-          }
+          },
+          "noisy_environment_message": false
         },
         "tts": {
           "model_id": false,
@@ -666,6 +686,7 @@
           "stability": false,
           "speed": true,
           "similarity_boost": false,
+          "clone_strength": false,
           "pronunciation_dictionary_locators": false
         },
         "conversation": {
@@ -676,10 +697,12 @@
           "first_message": false,
           "language": false,
           "max_conversation_duration_message": false,
+          "silence_end_call_message": false,
           "prompt": {
             "prompt": false,
             "llm": false,
             "tool_ids": false,
+            "tool_ids_strict": false,
             "native_mcp_server_ids": false,
             "knowledge_base": false
           }
@@ -860,7 +883,7 @@
     "portfolio",
     "demo"
   ],
-  "version_id": "agtvrsn_0901m3zg2j5yeamv8vtsmnwrhh9v",
+  "version_id": "agtvrsn_2101m5d412hvfmm83rje6qws5xw0",
   "branch_id": "agtbrch_4501m3zg27x9fvxa0rz5zx62f8hb",
   "main_branch_id": "agtbrch_4501m3zg27x9fvxa0rz5zx62f8hb",
   "procedures": {},
