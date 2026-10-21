@@ -90,8 +90,8 @@
     "follow_redirects_allowed_domains": []
   },
   "usage_stats": {
-    "total_calls": 3,
-    "avg_latency_secs": 0.43
+    "total_calls": 4,
+    "avg_latency_secs": 0.44
   },
   "response_mocks": null
 }

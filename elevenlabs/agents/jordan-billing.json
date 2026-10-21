@@ -129,7 +129,7 @@
         "self_subagent": null
       },
       "prompt": {
-        "prompt": "# Who you are\nYou are Jordan, the AI billing assistant for Demo Security Integrators, a company that installs and services security systems. Sam, the front desk assistant, just handed this caller to you. You can see everything said so far. Never make the caller repeat themselves.\n\n# How you sound\nWarm, clear, and brief. Short natural sentences, one question at a time. Never read out IDs, lists, or JSON. Say amounts naturally, for example one hundred eighty-nine dollars.\n\n# What to do\n1. Your very first sentence: introduce yourself in the first person and pick up where Sam left off, for example: \"Hi Priya, I'm Jordan, the billing assistant. I'm an AI assistant, and Sam filled me in on the September invoice.\" Never talk about yourself in the third person.\n2. Call billing_lookup with the customer_id from the account lookup earlier in the conversation.\n3. Explain only what's relevant to their question, in plain words. If the result lists a possible duplicate, say exactly what it shows, for example that the monitoring charge of one hundred eighty-nine dollars appears twice on the September invoice.\n4. If something needs a person to fix (a duplicate, a wrong charge, a payment question you can't answer from the invoices), offer a billing review by Morgan Lee. If they agree:\n   - Use the name and callback number the caller already confirmed with Sam. If they weren't confirmed, read them back and wait for a yes.\n   - Ask once if there's a good time for Morgan to call back.\n   - Call request_billing_review, then tell the caller what tell_the_caller says, in your own words.\n5. Ask if there's anything else. If they need something that isn't billing (a repair, sales, a complaint), call take_message for the right department instead of handling it yourself.\n\n# Rules\n- Never promise a refund, a credit, an amount, or a date. Only Morgan Lee in billing decides that.\n- Only use what tools return. Never invent invoices, charges, or payment details.\n- Never ask for card numbers, bank details, or passwords.\n- If asked, say plainly that you're an AI assistant and this is a portfolio demo with made-up data, built by Ky Gray on ElevenLabs Agents.",
+        "prompt": "# Who you are\nYou are Jordan, the AI billing assistant for Demo Security Integrators, a company that installs and services security systems. Sam, the front desk assistant, just handed this caller to you. You can see everything said so far. Never make the caller repeat themselves.\n# How you sound\nWarm, clear, and brief. Short natural sentences, one question at a time. Never read out IDs, lists, or JSON. Say amounts naturally, for example one hundred eighty-nine dollars.\n# What to do\n1. Your very first sentence: introduce yourself in the first person and pick up where Sam left off, for example: \"Hi Priya, I'm Jordan, the billing assistant. I'm an AI assistant, and Sam filled me in on the September invoice.\" Never talk about yourself in the third person.\n2. Call billing_lookup with the customer_id from the account lookup earlier in the conversation.\n3. Explain only what's relevant to their question, in plain words. If the result lists a possible duplicate, say exactly what it shows, for example that the monitoring charge of one hundred eighty-nine dollars appears twice on the September invoice.\n4. If something needs a person to fix (a duplicate, a wrong charge, a payment question you can't answer from the invoices), offer a billing review by Morgan Lee. If they agree:\n   - Use the name and callback number the caller already confirmed with Sam. If they weren't confirmed, read them back and wait for a yes.\n   - Ask once if there's a good time for Morgan to call back.\n   - Call request_billing_review, then tell the caller what tell_the_caller says, in your own words.\n5. Ask if there's anything else. If the caller asks about a repair ticket they already have, call check_ticket_status (or add_ticket_note, only when they tell you something new) instead of taking a message. Never say anyone will call or be in touch unless a tool says so. If they need something else that isn't billing (a new repair, sales, a complaint), call take_message for the right department instead of handling it yourself.\n# Rules\n- Never promise a refund, a credit, an amount, or a date. Only Morgan Lee in billing decides that.\n- Only use what tools return. Never invent invoices, charges, or payment details.\n- Never ask for card numbers, bank details, or passwords.\n- If asked, say plainly that you're an AI assistant and this is a portfolio demo with made-up data, built by Ky Gray on ElevenLabs Agents.",
         "llm": "qwen35-397b-a17b",
         "reasoning_effort": null,
         "service_tier": "standard",
@@ -141,7 +141,9 @@
         "tool_ids": [
           "tool_1401m3zg0yg3ext9mfmvc5r6qyy9",
           "tool_9901m3zg0z7de0yrnweycxc6kvfj",
-          "tool_2401m3zf05tee2gr0gpxcnrk5cvs"
+          "tool_2401m3zf05tee2gr0gpxcnrk5cvs",
+          "tool_0701m5g5a68ef28vjavapvwaem27",
+          "tool_6601m5g6e9ewetjvfm0ta8xbgene"
         ],
         "tool_ids_strict": false,
         "built_in_tools": {
@@ -537,6 +539,198 @@
             },
             "follow_redirects": false,
             "follow_redirects_allowed_domains": []
+          },
+          {
+            "type": "webhook",
+            "name": "check_ticket_status",
+            "description": "Look up a ticket the caller already has, before telling them anything about it. Only works for the caller's own tickets. Returns the status in plain words and what to say.",
+            "response_timeout_secs": 20,
+            "disable_interruptions": false,
+            "interruption_mode": "allow",
+            "force_pre_tool_speech": false,
+            "pre_tool_speech": "auto",
+            "assignments": [],
+            "tool_call_sound": null,
+            "tool_call_sound_behavior": "auto",
+            "tool_error_handling_mode": "auto",
+            "dynamic_variables": {
+              "dynamic_variable_placeholders": {}
+            },
+            "execution_mode": "immediate",
+            "api_schema": {
+              "request_headers": {
+                "x-tool-secret": "<REDACTED>"
+              },
+              "kind": "webhook",
+              "url": "https://nightshift-dispatch.vercel.app/tools/ticket-status",
+              "method": "POST",
+              "path_params_schema": {},
+              "query_params_schema": null,
+              "request_body_schema": {
+                "description": "Look up a ticket the caller already has, before telling them anything about it. Only works for the caller's own tickets.",
+                "dynamic_variable": "",
+                "is_omitted": false,
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "ticket_id": {
+                    "type": "string",
+                    "description": "The ticket number the caller gives, for example NS-4821. Leave empty if they don't know it.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "description": "The customer_id returned by lookup_customer earlier in this conversation, for example C-1003.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "callback_number": {
+                    "type": "string",
+                    "description": "The callback number the caller confirmed. Needed when there's no customer_id.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "conversation_id": {
+                    "type": "string",
+                    "description": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "system__conversation_id",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  }
+                }
+              },
+              "response_body_schema": null,
+              "response_filter": null,
+              "content_type": "application/json",
+              "auth_resolved_params": [],
+              "auth_connection": null,
+              "mtls_auth_connection": null
+            },
+            "follow_redirects": false,
+            "follow_redirects_allowed_domains": []
+          },
+          {
+            "type": "webhook",
+            "name": "add_ticket_note",
+            "description": "Add what the caller wants the team to know to a ticket they already have, for example that the gate code changed or when someone will be on site. Only call it when the caller tells you something new for the team, never to record that they called or had nothing to add. Only works for the caller's own tickets.",
+            "response_timeout_secs": 20,
+            "disable_interruptions": false,
+            "interruption_mode": "allow",
+            "force_pre_tool_speech": false,
+            "pre_tool_speech": "auto",
+            "assignments": [],
+            "tool_call_sound": null,
+            "tool_call_sound_behavior": "auto",
+            "tool_error_handling_mode": "auto",
+            "dynamic_variables": {
+              "dynamic_variable_placeholders": {}
+            },
+            "execution_mode": "immediate",
+            "api_schema": {
+              "request_headers": {
+                "x-tool-secret": "<REDACTED>"
+              },
+              "kind": "webhook",
+              "url": "https://nightshift-dispatch.vercel.app/tools/ticket-note",
+              "method": "POST",
+              "path_params_schema": {},
+              "query_params_schema": null,
+              "request_body_schema": {
+                "description": "Add what the caller wants the team to know to a ticket they already have, for example that the gate code changed or when someone will be on site. Only works for the caller's own tickets.",
+                "dynamic_variable": "",
+                "is_omitted": false,
+                "type": "object",
+                "required": [
+                  "ticket_id",
+                  "note"
+                ],
+                "properties": {
+                  "ticket_id": {
+                    "type": "string",
+                    "description": "The ticket number, for example NS-4821.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "What the caller wants added, in one or two plain sentences. Never include alarm codes or passwords.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "customer_id": {
+                    "type": "string",
+                    "description": "The customer_id returned by lookup_customer earlier in this conversation, for example C-1003.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "callback_number": {
+                    "type": "string",
+                    "description": "The callback number the caller confirmed. Needed when there's no customer_id.",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  },
+                  "conversation_id": {
+                    "type": "string",
+                    "description": "",
+                    "enum": null,
+                    "is_system_provided": false,
+                    "dynamic_variable": "system__conversation_id",
+                    "allowed_values": null,
+                    "allowed_values_dynamic_variable": "",
+                    "constant_value": "",
+                    "is_omitted": false
+                  }
+                }
+              },
+              "response_body_schema": null,
+              "response_filter": null,
+              "content_type": "application/json",
+              "auth_resolved_params": [],
+              "auth_connection": null,
+              "mtls_auth_connection": null
+            },
+            "follow_redirects": false,
+            "follow_redirects_allowed_domains": []
           }
         ]
       }
@@ -544,7 +738,7 @@
   },
   "metadata": {
     "created_at_unix_secs": 1790984084,
-    "updated_at_unix_secs": 1792515538
+    "updated_at_unix_secs": 1792625616
   },
   "platform_settings": {
     "evaluation": {
@@ -907,7 +1101,7 @@
     "portfolio",
     "demo"
   ],
-  "version_id": "agtvrsn_2301m5d40za5ftr9f8x3axnjwzfg",
+  "version_id": "agtvrsn_7101m5gd0a3yemxbfgymvcm76ndv",
   "branch_id": "agtbrch_3101m3zfgq62fzmafqcva6ny44zp",
   "main_branch_id": "agtbrch_3101m3zfgq62fzmafqcva6ny44zp",
   "procedures": {},

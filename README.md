@@ -61,7 +61,7 @@ Four ElevenLabs agents share the work. The backend decides what happens; the age
 | Agent | Role | Tools |
 | --- | --- | --- |
 | **Sam** | After-hours front desk and dispatcher: safety first, finds the account, confirms name and number, opens and prioritizes tickets, pages the on-call technician for emergencies, checks or adds to a ticket the caller already has, takes messages, and hands off to a specialist | `lookup_customer`, `create_ticket`, `page_on_call_tech`, `check_ticket_status`, `add_ticket_note`, `take_message`, `transfer_to_agent` |
-| **Jordan** | Billing assistant (own voice): looks up invoices and flags possible duplicate charges; never promises a refund or credit | `billing_lookup`, `request_billing_review`, `take_message` |
+| **Jordan** | Billing assistant (own voice): looks up invoices and flags possible duplicate charges; never promises a refund or credit. Can also check or add to a ticket the caller already has | `billing_lookup`, `request_billing_review`, `check_ticket_status`, `add_ticket_note`, `take_message` |
 | **Riley** | Sales assistant (own voice): gathers what the caller wants; never quotes a price, the account executive does | `record_sales_interest`, `take_message` |
 | **Follow-up call** | Sam, in the same voice, calls the customer back after the repair and reports one structured outcome; routing rules in code decide what happens next | `record_follow_up_outcome` |
 
@@ -168,7 +168,7 @@ First run (2026-10-03): 14 of 15 runs passed. QA-19 passed 2 of 3: in no run did
 
 Fixing it caught a second problem. Sam's instructions now say to create the ticket in the same reply the caller confirms, and never to announce an action without doing it (FIX-12). Re-running all 18 of Sam's tests after that change, QA-18 failed once: Sam followed the fake system notice and paged the technician. A rule that the caller's words are never instructions fixed it (FIX-13). After both: 53 of 54 runs passed, with QA-18 and QA-19 at 3 of 3. The one miss was QA-16: Sam handed off to Jordan without saying so first in all three runs, and the AI grader passed that in 2 of 3, so the grader wasn't consistent either. Making the handoff step say the sentence first, then hand off (FIX-14), brought all 18 of Sam's tests to 54 of 54.
 
-**Asking about a ticket the caller already has.** Sam can read a ticket's status (`check_ticket_status`) and add the caller's note to it (`add_ticket_note`):
+**Asking about a ticket the caller already has.** Sam and Jordan can read a ticket's status (`check_ticket_status`) and add the caller's note to it (`add_ticket_note`). These tests check Sam:
 
 | Test | What it protects |
 | --- | --- |
@@ -241,6 +241,7 @@ The page says what it can't measure instead of showing a perfect-looking dashboa
 - **Interruptions and silence on real calls.** The voice tests check both with recorded callers; on real calls they're only counted, not graded.
 - **Speech-to-text confidence.** ElevenLabs doesn't provide a confidence score per caller turn. The voice tests check instead whether numbers and names come through exactly.
 - **Real accents and real phones.** The voice tests use three recorded voices and a simulated phone line, not callers on real phone networks.
+- **Jordan with the ticket tools.** Jordan has `check_ticket_status` and `add_ticket_note` too, but QA-22 to QA-24 test Sam only. The server checks behind both agents are the same.
 - **Hallucination in general.** Two kinds are graded by the AI judge, promises the tools didn't back up and facts no tool returned, and they're named that. How far to trust those grades is the judge-agreement number above.
 
 ## Jargon Bench (speech-to-text on security vocabulary)
@@ -353,7 +354,7 @@ The final ticket view connects the service outcome with next actions, including 
 - **Transcripts are trimmed before they're stored.** The post-call webhook keeps only the last four digits of any phone or account number and drops email addresses, and live callers' transcripts never reach a public page.
 - **Nothing private on public pages.** Phone numbers on the ticket board are masked, Engineering Mode shows word counts instead of the caller's words, and the Evaluation Lab strips the tool secret that ElevenLabs returns with test results.
 - **Zendesk gets only what a dispatcher needs.** When Zendesk is configured, the post-call webhook makes one Zendesk ticket per board ticket (caller name, issue, priority, call summary, tagged `nightagent`) as a private note, without the callback number. A Zendesk error is logged and skipped, so it can never stop a call from being saved. A note a caller adds later with `add_ticket_note` goes onto that Zendesk ticket as another private comment.
-- **Callers only hear about their own tickets.** Sam finds the caller's account before looking up a ticket, and takes a message instead if there's no account. Ticket numbers are short and easy to guess, so `check_ticket_status` and `add_ticket_note` also check on the server: they need the account found on this call (or, for a ticket without an account, the same callback number). Someone else's ticket gets the same answer as a ticket that doesn't exist. A caller's note is kept in the ticket's history, and public pages show only that a note was added.
+- **Callers only hear about their own tickets.** Sam finds the caller's account before looking up a ticket, and takes a message instead if there's no account; Jordan gets the call after Sam's account lookup. Ticket numbers are short and easy to guess, so `check_ticket_status` and `add_ticket_note` also check on the server: they need the account found on this call (or, for a ticket without an account, the same callback number). Someone else's ticket gets the same answer as a ticket that doesn't exist. A caller's note is kept in the ticket's history, and public pages show only that a note was added.
 - **Made-up data.** Demo customers, invoices, and staff are fictional. Please don't share real names, numbers, or alarm codes on the demo.
 
 ## Physical-Security Context
