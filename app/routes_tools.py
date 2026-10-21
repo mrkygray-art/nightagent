@@ -11,7 +11,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 
-from app import billing, config, lifecycle
+from app import billing, config, lifecycle, zendesk
 from app.follow_up import DEPARTMENT_LABELS, DESTINATIONS, VALUE_TBD, apply_outcome
 from app.notify import page_on_call
 from app.security import require_tool_secret
@@ -77,6 +77,21 @@ class SalesInterestRequest(BaseModel):
     caller_name: str = Field(..., max_length=100)
     callback_number: str = Field(..., max_length=40)
     best_time: str | None = Field(None, max_length=120)
+    conversation_id: str | None = Field(None, max_length=120)
+
+
+class TicketStatusRequest(BaseModel):
+    ticket_id: str | None = Field(None, max_length=30)
+    customer_id: str | None = Field(None, max_length=20)
+    callback_number: str | None = Field(None, max_length=40)
+    conversation_id: str | None = Field(None, max_length=120)
+
+
+class TicketNoteRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=30)
+    note: str = Field(..., max_length=1000)
+    customer_id: str | None = Field(None, max_length=20)
+    callback_number: str | None = Field(None, max_length=40)
     conversation_id: str | None = Field(None, max_length=120)
 
 
@@ -469,6 +484,135 @@ def _message_reply(task_id: str, dept: str, who: str, best_time: str | None) -> 
                      "department and the new details: it updates this same message, it doesn't send a "
                      "second one. Never say you've noted something without calling the tool. "
                      "Then ask if there's anything else.",
+    }
+
+
+def _ticket_id(spoken: str | None) -> str | None:
+    """"NS-4821", "N S 4 8 2 1" or just "4821" all mean NS-4821."""
+    digits = phone_digits(spoken or "")
+    return f"NS-{digits}" if len(digits) == 4 else None
+
+
+def _callers_ticket(ticket_id: str | None, customer_id: str | None, callback_number: str | None) -> dict | None:
+    """The ticket, only if it belongs to this caller: the account found on this call, or, for a ticket
+    without an account, the same callback number. Ticket numbers are short and easy to guess, so the
+    number alone is never enough. Someone else's ticket looks exactly like no ticket."""
+    tid = _ticket_id(ticket_id)
+    ticket = get_store().get_ticket(tid) if tid else None
+    if not ticket or ticket.get("scenario"):
+        return None
+    if ticket.get("customer_id"):
+        return ticket if customer_id and customer_id.strip().upper() == ticket["customer_id"].upper() else None
+    callback = phone_digits(callback_number or "")
+    return ticket if len(callback) == 10 and callback == ticket.get("callback_number") else None
+
+
+def _ago(iso: str | None) -> str | None:
+    if not iso:
+        return None
+    minutes = int((datetime.now(timezone.utc) - datetime.fromisoformat(iso)).total_seconds() // 60)
+    if minutes < 2:
+        return "just now"
+    if minutes < 90:
+        return f"about {minutes} minutes ago"
+    if minutes < 36 * 60:
+        return f"about {round(minutes / 60)} hours ago"
+    return f"about {round(minutes / 1440)} days ago"
+
+
+def _status_of(ticket: dict) -> dict:
+    """What the caller may hear about their own ticket. Status words come from the lifecycle, not the model."""
+    state = lifecycle.normalize_state(ticket.get("status"))
+    events = [e for e in get_store().list_events(ticket["ticket_id"]) if e["event_type"] != "caller_added_note"]
+    last = events[-1] if events else None
+    say = (f"Ticket {_spoken(ticket['ticket_id'])}, for {ticket.get('issue_summary') or 'your service request'}: "
+           f"{lifecycle.STATE_LABELS[state].lower()}.")
+    if last:
+        say += (f" Last update: {lifecycle.EVENT_LABELS.get(last['event_type'], 'an update').lower()}, "
+                f"{_ago(last.get('occurred_at'))}.")
+    return {
+        "ticket_id": ticket["ticket_id"],
+        "ticket_number_spoken": _spoken(ticket["ticket_id"]),
+        "status": lifecycle.STATE_LABELS[state],
+        "priority": lifecycle.PRIORITY_LABELS.get(ticket.get("priority"), ticket.get("priority")),
+        "opened": _ago(ticket.get("created_at")),
+        "open": state not in ("resolved", "closed"),
+        "tell_the_caller": say,
+    }
+
+
+NOT_FOUND = ("That ticket wasn't found on this caller's account. Ask them to check the ticket number once. "
+             "If it still isn't found, offer to take a message for the service desk with take_message. Never say "
+             "whether a ticket with that number exists.")
+STATUS_NEXT = ("Tell the caller this in your own words, in one or two sentences. Never guess an arrival time, a "
+               "technician's name, or anything else that isn't here. If they want to add something to the ticket, "
+               "call add_ticket_note. If the problem is worse now, or it came back after being fixed, treat it as a "
+               "service report: confirm the details and call create_ticket.")
+
+
+@router.post("/ticket-status")
+def ticket_status(req: TicketStatusRequest) -> dict:
+    """A caller asks about a ticket they already have. Only their own tickets: see _callers_ticket."""
+    started = now_iso()
+    store = get_store()
+    if not _ticket_id(req.ticket_id):
+        # No number: a known account can hear about its recent tickets; anyone else needs the number.
+        customer = store.get_customer(req.customer_id.strip().upper()) if req.customer_id else None
+        tickets = store.tickets_for_customer(customer["customer_id"], 3) if customer else []
+        log_tool_call("check_ticket_status", f"{len(tickets)} tickets on the account" if customer else "No ticket number",
+                      conversation_id=req.conversation_id, called_at=started)
+        if not customer:
+            return {"found": False, "message": "Ask the caller for their ticket number (N S, then four digits). If they "
+                                               "don't have it, find their account with lookup_customer first."}
+        if not tickets:
+            return {"found": False, "message": "This account has no tickets. Ask what's happening; if it's a problem "
+                                               "with their system, handle it as a new service report."}
+        if len(tickets) == 1:
+            return {"found": True, **_status_of(tickets[0]), "next_step": STATUS_NEXT}
+        return {"found": True,
+                "tickets": [{"ticket_id": t["ticket_id"], "issue": t.get("issue_summary"), "opened": _ago(t.get("created_at"))}
+                            for t in tickets],
+                "next_step": "This account has more than one recent ticket. Ask which problem they're calling about, "
+                             "by the issue, not the ticket numbers, then call check_ticket_status again with that ticket_id."}
+    ticket = _callers_ticket(req.ticket_id, req.customer_id, req.callback_number)
+    if not ticket:
+        log_tool_call("check_ticket_status", "Not found on this caller's account",
+                      conversation_id=req.conversation_id, called_at=started)
+        return {"found": False, "message": NOT_FOUND}
+    status = _status_of(ticket)
+    log_tool_call("check_ticket_status", f"{ticket['ticket_id']}: {status['status'].lower()}",
+                  conversation_id=req.conversation_id, ticket_id=ticket["ticket_id"], called_at=started)
+    return {"found": True, **status, "next_step": STATUS_NEXT}
+
+
+@router.post("/ticket-note")
+def ticket_note(req: TicketNoteRequest) -> dict:
+    """The caller adds something to a ticket they already have (the gate code changed, they'll be on site at 7).
+    The note goes on the ticket's history and, if the ticket is in Zendesk, onto it as a private comment.
+    Public pages show only that a note was added: the words go in the event's metadata, not its description."""
+    started = now_iso()
+    ticket = _callers_ticket(req.ticket_id, req.customer_id, req.callback_number)
+    if not ticket:
+        log_tool_call("add_ticket_note", "Not found on this caller's account",
+                      conversation_id=req.conversation_id, called_at=started)
+        return {"saved": False, "message": NOT_FOUND}
+    note = given(req.note, 600)
+    if not note:
+        return {"saved": False, "message": "The note was empty. Ask the caller what they'd like added, then call "
+                                           "add_ticket_note again."}
+    tid = ticket["ticket_id"]
+    record_event(tid, "caller_added_note", "The caller added details on a call.", conversation_id=req.conversation_id,
+                 actor_type="customer", metadata={"note": note})
+    in_zendesk = bool(ticket.get("zendesk_ticket_id")) and zendesk.add_note(ticket["zendesk_ticket_id"], note)
+    log_tool_call("add_ticket_note", f"Note added to {tid}" + (", and to Zendesk" if in_zendesk else ""),
+                  conversation_id=req.conversation_id, ticket_id=tid, called_at=started)
+    return {
+        "saved": True,
+        "ticket_id": tid,
+        "tell_the_caller": f"That's added to ticket {_spoken(tid)}, so the team will see it.",
+        "next_step": "Tell the caller it's added, in one sentence. Don't promise anyone will act on it by a certain "
+                     "time. If what they added means the problem is worse or is now an emergency, treat it as a "
+                     "service report: confirm the details and call create_ticket. Then ask if there's anything else.",
     }
 
 

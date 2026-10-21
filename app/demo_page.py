@@ -867,6 +867,10 @@ const TOOL_WORDS = {
                            "Server saved the review and wrote what Jordan tells the caller"],
   record_sales_interest: ["Riley sends the upgrade details",
                           "Server opened a sales opportunity and a callback for Sarah Johnson"],
+  check_ticket_status: ["The assistant asks the server about the caller's existing ticket",
+                        "Server checked the ticket is on this caller's account and returned its status"],
+  add_ticket_note: ["The assistant sends a note for the caller's existing ticket",
+                    "Server checked the ticket is the caller's and added the note (and to Zendesk, if it's there)"],
   end_call: ["Sam ends the call", "Call ended by Sam"],
 };
 

@@ -29,6 +29,8 @@ TOOL_NAMES["take_message"] = "Took a message"
 TOOL_NAMES["billing_lookup"] = "Jordan looked up the invoices"
 TOOL_NAMES["request_billing_review"] = "Jordan opened a billing review"
 TOOL_NAMES["record_sales_interest"] = "Riley recorded the upgrade interest"
+TOOL_NAMES["check_ticket_status"] = "Checked an existing ticket"
+TOOL_NAMES["add_ticket_note"] = "Added a note to an existing ticket"
 
 # Which specialist made which tool call, so the report can show who was on the call
 SPECIALISTS = {
