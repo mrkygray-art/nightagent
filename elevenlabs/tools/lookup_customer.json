@@ -70,7 +70,7 @@
     "follow_redirects_allowed_domains": []
   },
   "usage_stats": {
-    "total_calls": 86,
+    "total_calls": 87,
     "avg_latency_secs": 0.4
   },
   "response_mocks": null

@@ -3,7 +3,7 @@
 The backend endpoints are `/tools/ticket-status` and `/tools/ticket-note`. The agents live in ElevenLabs, so the two
 tools and the prompt lines below are added there by hand, then backed up with `scripts/export_elevenlabs.py`.
 
-## Tools (Sam only)
+## Tools (Sam and Jordan)
 
 Both are webhook tools: `POST`, header `x-tool-secret` set to the tool secret, response timeout 20 seconds, the same as
 `billing_lookup`.
@@ -41,8 +41,13 @@ Existing ticket (the caller asks about a ticket they already have, or wants to a
 6. Only if the caller tells you something new for the team, call add_ticket_note with their words in one or two sentences. Never add a note just to record the call or that they had nothing to add. If what they say means the problem is worse or is now an emergency, handle it as a service report too.
 ```
 
-Jordan doesn't have these tools: a billing caller who asks about a repair ticket gets a message for the service
-desk (`take_message`), as before.
+Jordan, in `# What to do`, step 5 (as published; from `elevenlabs/agents/jordan-billing.json`):
+
+```
+5. Ask if there's anything else. If the caller asks about a repair ticket they already have, call check_ticket_status (or add_ticket_note, only when they tell you something new) instead of taking a message. Never say anyone will call or be in touch unless a tool says so. If they need something else that isn't billing (a new repair, sales, a complaint), call take_message for the right department instead of handling it yourself.
+```
+
+QA-22 to QA-24 test Sam only; there's no Evaluation Lab test of Jordan with these tools yet.
 
 ## Evaluation Lab tests
 
