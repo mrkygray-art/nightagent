@@ -25,8 +25,14 @@ def configured() -> bool:
     return all([config.ZENDESK_SUBDOMAIN, config.ZENDESK_CLIENT_ID, config.ZENDESK_CLIENT_SECRET])
 
 
+def subdomain() -> str:
+    """Accepts "acme", "acme.zendesk.com" or "https://acme.zendesk.com/", since all three get pasted in."""
+    value = config.ZENDESK_SUBDOMAIN.strip().lower().removeprefix("https://").removeprefix("http://")
+    return value.split("/")[0].removesuffix(".zendesk.com")
+
+
 def _base_url() -> str:
-    return f"https://{config.ZENDESK_SUBDOMAIN}.zendesk.com"
+    return f"https://{subdomain()}.zendesk.com"
 
 
 def _access_token() -> str:
