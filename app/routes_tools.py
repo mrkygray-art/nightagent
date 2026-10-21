@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 import hashlib
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from app import billing, config, lifecycle, zendesk
@@ -544,10 +545,17 @@ def _status_of(ticket: dict) -> dict:
 NOT_FOUND = ("That ticket wasn't found on this caller's account. Ask them to check the ticket number once. "
              "If it still isn't found, offer to take a message for the service desk with take_message. Never say "
              "whether a ticket with that number exists.")
-STATUS_NEXT = ("Tell the caller this in your own words, in one or two sentences. Never guess an arrival time, a "
-               "technician's name, or anything else that isn't here. If they want to add something to the ticket, "
-               "call add_ticket_note. If the problem is worse now, or it came back after being fixed, treat it as a "
-               "service report: confirm the details and call create_ticket.")
+STATUS_NEXT = ("Tell the caller this in your own words, in one or two sentences. Only the status is known: don't say "
+               "anyone will call, visit, arrive, or be in touch, and don't give or guess any time or a technician's "
+               "name. If they ask when, say you don't have a time on the ticket and offer to add a note asking for "
+               "an update. Call add_ticket_note only if the caller tells you something new for the team; never to "
+               "record that they called or had nothing to add. If the problem is worse now, or it came back after "
+               "being fixed, treat it as a service report: confirm the details and call create_ticket.")
+# Notes that only say nothing was added. Seen on a test call: "No additional information provided."
+_NOTHING_NEW = re.compile(
+    r"(the )?(caller )?(has |had |gave |provided )?(no|nothing|none)( additional| new| further| more| other| else)?"
+    r"( information| info| details?| notes?| updates?| changes?)?( to add| added| provided| given| from (the )?caller)?",
+    re.I)
 
 
 @router.post("/ticket-status")
@@ -597,9 +605,12 @@ def ticket_note(req: TicketNoteRequest) -> dict:
                       conversation_id=req.conversation_id, called_at=started)
         return {"saved": False, "message": NOT_FOUND}
     note = given(req.note, 600)
-    if not note:
-        return {"saved": False, "message": "The note was empty. Ask the caller what they'd like added, then call "
-                                           "add_ticket_note again."}
+    if not note or _NOTHING_NEW.fullmatch(note.strip(" .!")):
+        log_tool_call("add_ticket_note", "Not saved: nothing new to add", conversation_id=req.conversation_id,
+                      ticket_id=ticket["ticket_id"], called_at=started)
+        return {"saved": False, "message": "No note was saved: it had nothing new in it. Don't mention a note to the "
+                                           "caller. Only call add_ticket_note when the caller tells you something new "
+                                           "for the team."}
     tid = ticket["ticket_id"]
     record_event(tid, "caller_added_note", "The caller added details on a call.", conversation_id=req.conversation_id,
                  actor_type="customer", metadata={"note": note})
@@ -610,8 +621,8 @@ def ticket_note(req: TicketNoteRequest) -> dict:
         "saved": True,
         "ticket_id": tid,
         "tell_the_caller": f"That's added to ticket {_spoken(tid)}, so the team will see it.",
-        "next_step": "Tell the caller it's added, in one sentence. Don't promise anyone will act on it by a certain "
-                     "time. If what they added means the problem is worse or is now an emergency, treat it as a "
+        "next_step": "Tell the caller it's added, in one sentence. Don't say anyone will call, visit, or be in touch, "
+                     "or act on it by any time. If what they added means the problem is worse or is now an emergency, treat it as a "
                      "service report: confirm the details and call create_ticket. Then ask if there's anything else.",
     }
 
