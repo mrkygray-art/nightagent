@@ -22,8 +22,8 @@ Both are webhook tools: `POST`, header `x-tool-secret` set to the tool secret, r
 ### `add_ticket_note`
 
 - URL: `https://nightshift-dispatch.vercel.app/tools/ticket-note`
-- Description: "Add what the caller wants the team to know to a ticket they already have, for example a new gate code
-  time or when someone will be on site. Only works for the caller's own tickets."
+- Description: "Add what the caller wants the team to know to a ticket they already have, for example that the gate code
+  changed or when someone will be on site. Only works for the caller's own tickets."
 - Body (`ticket_id` and `note` required):
   - `ticket_id` (string): "The ticket number, for example NS-4821."
   - `note` (string): "What the caller wants added, in one or two plain sentences. Never include alarm codes or passwords."
