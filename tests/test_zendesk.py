@@ -120,6 +120,12 @@ def test_call_without_a_board_ticket_makes_nothing(client, zd):
     assert zd["calls"] == []
 
 
+@pytest.mark.parametrize("value", ["acme", "acme.zendesk.com", "https://acme.zendesk.com/", " ACME.zendesk.com "])
+def test_subdomain_accepts_the_full_address_too(monkeypatch, value):
+    monkeypatch.setattr(config, "ZENDESK_SUBDOMAIN", value)
+    assert zendesk._base_url() == "https://acme.zendesk.com"
+
+
 def test_off_unless_configured(client, tool, zd, monkeypatch):
     monkeypatch.setattr(config, "ZENDESK_CLIENT_SECRET", "")
     _ticket(tool)
