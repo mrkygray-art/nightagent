@@ -138,7 +138,7 @@ def main():
     if "add_ticket_note" not in tool_ids:
         sys.exit("No add_ticket_note tool found in ElevenLabs. Add it first (docs/ticket-tools-setup.md).")
 
-    existing = call(s, "GET", "/agent-testing", parent_folder_id=QA_FOLDER, page_size=100)
+    existing = call(s, "GET", "/agent-testing", params={"parent_folder_id": QA_FOLDER, "page_size": 100})
     by_name = {t["name"]: t["id"] for t in existing.get("tests") or existing.get("results") or []}
     made = {}
     for test in tests(tool_ids):
