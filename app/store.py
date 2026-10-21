@@ -127,6 +127,9 @@ class MemoryStore:
         if ticket_id in self.tickets:
             self.tickets[ticket_id].update(fields)
 
+    def tickets_for_call(self, conversation_id: str) -> list[dict]:
+        return [t for t in self.tickets.values() if t.get("conversation_id") == conversation_id]
+
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         return sorted((t for t in self.tickets.values() if t["created_at"] >= since_iso
                        and t.get("status") not in CLOSED_STATES and not t.get("scenario")),
@@ -295,6 +298,9 @@ class SupabaseStore:
 
     def update_ticket(self, ticket_id: str, fields: dict) -> None:
         self.db.table(self.tickets_table).update(fields).eq("ticket_id", ticket_id).execute()
+
+    def tickets_for_call(self, conversation_id: str) -> list[dict]:
+        return self.db.table(self.tickets_table).select("*").eq("conversation_id", conversation_id).execute().data
 
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         rows = (self.db.table(self.tickets_table).select("*").gte("created_at", since_iso)
