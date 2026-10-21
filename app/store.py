@@ -135,6 +135,10 @@ class MemoryStore:
                        and t.get("status") not in CLOSED_STATES and not t.get("scenario")),
                       key=lambda t: t["created_at"], reverse=True)
 
+    def tickets_for_customer(self, customer_id: str, limit: int = 5) -> list[dict]:
+        return sorted((t for t in self.tickets.values() if t.get("customer_id") == customer_id and not t.get("scenario")),
+                      key=lambda t: t["created_at"], reverse=True)[:limit]
+
     def upsert_call(self, call: dict) -> None:
         self.calls[call["conversation_id"]] = {**call, "received_at": now_iso()}
 
@@ -306,6 +310,11 @@ class SupabaseStore:
         rows = (self.db.table(self.tickets_table).select("*").gte("created_at", since_iso)
                 .not_.in_("status", list(CLOSED_STATES)).order("created_at", desc=True).limit(50).execute().data)
         return [r for r in rows if not r.get("scenario")]
+
+    def tickets_for_customer(self, customer_id: str, limit: int = 5) -> list[dict]:
+        rows = (self.db.table(self.tickets_table).select("*").eq("customer_id", customer_id)
+                .order("created_at", desc=True).limit(limit + 10).execute().data)
+        return [r for r in rows if not r.get("scenario")][:limit]
 
     def upsert_call(self, call: dict) -> None:
         # Upsert on conversation_id so webhook retries never create duplicates.

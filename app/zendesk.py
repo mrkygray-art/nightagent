@@ -1,7 +1,8 @@
 """Zendesk tickets for calls that made a dispatch board ticket.
 
 After the post-call webhook stores a call, each board ticket made on that call gets a matching Zendesk
-ticket, and its Zendesk id is saved on the board row. Off unless ZENDESK_SUBDOMAIN, ZENDESK_CLIENT_ID and
+ticket, and its Zendesk id is saved on the board row. A note a caller adds later (add_ticket_note) goes
+onto that Zendesk ticket as a private comment. Off unless ZENDESK_SUBDOMAIN, ZENDESK_CLIENT_ID and
 ZENDESK_CLIENT_SECRET are set. Nothing here may break call logging: every failure is logged and skipped.
 """
 import logging
@@ -73,17 +74,38 @@ def ticket_payload(ticket: dict, call_summary: str | None) -> dict:
     }}
 
 
-def create_ticket(ticket: dict, call_summary: str | None) -> int:
-    def post():
-        return requests.post(f"{_base_url()}/api/v2/tickets.json", json=ticket_payload(ticket, call_summary),
-                             headers={"Authorization": f"Bearer {_access_token()}"}, timeout=TIMEOUT_SECS)
+def _send(method: str, path: str, payload: dict):
+    def go():
+        send = requests.put if method == "PUT" else requests.post
+        return send(f"{_base_url()}/api/v2{path}", json=payload,
+                    headers={"Authorization": f"Bearer {_access_token()}"}, timeout=TIMEOUT_SECS)
 
-    res = post()
+    res = go()
     if res.status_code == 401:  # token revoked or expired early: get a new one once
         _token["value"] = ""
-        res = post()
+        res = go()
     res.raise_for_status()
-    return res.json()["ticket"]["id"]
+    return res
+
+
+def create_ticket(ticket: dict, call_summary: str | None) -> int:
+    return _send("POST", "/tickets.json", ticket_payload(ticket, call_summary)).json()["ticket"]["id"]
+
+
+def add_note(zendesk_id: int, note: str) -> bool:
+    """A caller's note on a ticket that already has a Zendesk twin, as a private comment (no email goes
+    out). Returns whether Zendesk took it; a failure is logged, since the note is already on the board."""
+    from app.store import in_sandbox
+    if in_sandbox() or not configured():
+        return False
+    try:
+        _send("PUT", f"/tickets/{int(zendesk_id)}.json", {"ticket": {
+            "comment": {"body": f"Caller added on a NightAgent call: {note}", "public": False},
+            "additional_tags": ["nightagent_update"]}})
+        return True
+    except Exception:  # noqa: BLE001 - Zendesk being down must not break the call
+        log.exception("Zendesk: could not add a note to ticket %s", zendesk_id)
+        return False
 
 
 def sync_call(conversation_id: str, call_summary: str | None) -> list[int]:
