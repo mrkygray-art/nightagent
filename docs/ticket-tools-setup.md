@@ -3,7 +3,7 @@
 The backend endpoints are `/tools/ticket-status` and `/tools/ticket-note`. The agents live in ElevenLabs, so the two
 tools and the prompt lines below are added there by hand, then backed up with `scripts/export_elevenlabs.py`.
 
-## Tools (add both to Sam and to Jordan)
+## Tools (Sam only)
 
 Both are webhook tools: `POST`, header `x-tool-secret` set to the tool secret, response timeout 20 seconds, the same as
 `billing_lookup`.
@@ -23,7 +23,8 @@ Both are webhook tools: `POST`, header `x-tool-secret` set to the tool secret, r
 
 - URL: `https://nightshift-dispatch.vercel.app/tools/ticket-note`
 - Description: "Add what the caller wants the team to know to a ticket they already have, for example that the gate code
-  changed or when someone will be on site. Only works for the caller's own tickets."
+  changed or when someone will be on site. Only call it when the caller tells you something new for the team, never
+  to record that they called or had nothing to add. Only works for the caller's own tickets."
 - Body (`ticket_id` and `note` required):
   - `ticket_id` (string): "The ticket number, for example NS-4821."
   - `note` (string): "What the caller wants added, in one or two plain sentences. Never include alarm codes or passwords."
@@ -31,21 +32,20 @@ Both are webhook tools: `POST`, header `x-tool-secret` set to the tool secret, r
 
 ## Prompt lines
 
-Sam, in `# Goal`, after the front desk steps:
+Sam, in `# Goal`, after the front desk steps (as published; from `elevenlabs/agents/sam.json`):
 
 ```
 Existing ticket (the caller asks about a ticket they already have, or wants to add something to it):
-4. Find the account first (step 3), then ask for the ticket number if they have it.
-5. Call check_ticket_status with the ticket_id (if given), the customer_id, and the confirmed callback number. Tell the caller what tell_the_caller says, in your own words. Never guess a technician's name or an arrival time.
-6. If they want to add something, call add_ticket_note with their words in one or two sentences. If what they say means the problem is worse or is now an emergency, handle it as a service report too.
+4. Find the account first, exactly as in step 3: ask for the phone number on the account or the business name and call lookup_customer. Do not ask for the ticket number until the account is found. If there is no match after one retry, don't guess: say you can't pull up a ticket without finding the account, and take a message for the service desk instead (see Front desk).
+5. Once the account is found, ask for the ticket number if they have it. Call check_ticket_status with the ticket_id (if given), the customer_id from lookup_customer, and the confirmed callback number. Tell the caller what tell_the_caller says, in your own words. Only the status is known: never say anyone will call, visit, arrive, or be in touch, and never give or guess a time or a technician's name. If they ask when, say you don't have a time on the ticket and offer to add a note asking for an update.
+6. Only if the caller tells you something new for the team, call add_ticket_note with their words in one or two sentences. Never add a note just to record the call or that they had nothing to add. If what they say means the problem is worse or is now an emergency, handle it as a service report too.
 ```
 
-Jordan, in `# What to do`, step 5: "If the caller asks about a repair ticket they already have, call check_ticket_status
-(or add_ticket_note to add something to it) instead of taking a message."
+Jordan doesn't have these tools: a billing caller who asks about a repair ticket gets a message for the service
+desk (`take_message`), as before.
 
-## Before calling it done
+## Evaluation Lab tests
 
-- Add an Evaluation Lab test for each (`qa_lab.TESTS`, with its `why`): someone else's ticket number must get no
-  details, and a note must not be read back as a promise.
-- Then drop the "Ticket status and notes" line from "Not measured yet" in the README, and update the public
-  descriptions listed in CLAUDE.md.
+`scripts/create_ticket_lab_tests.py` creates QA-22 (another account's ticket gets no details), QA-23 (no note when the
+caller says nothing new) and QA-24 (no promised times or technician contact) in ElevenLabs and runs each three times.
+It needs a key that can write agent tests, and prints the test ids for `qa_lab.TESTS`.

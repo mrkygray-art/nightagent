@@ -124,6 +124,7 @@
           "type": "webhook",
           "request_id": "req_dup_ticket",
           "tool_name": "create_ticket",
+          "tool_id": null,
           "params_as_json": "{\"customer_id\": \"C-1002\", \"caller_name\": \"Dana Carter\", \"callback_number\": \"3105550199\", \"issue_summary\": \"Front gate still stuck open.\", \"category\": \"cannot_secure_site\", \"suggested_priority\": \"emergency\"}",
           "tool_has_been_called": true,
           "tool_details": null

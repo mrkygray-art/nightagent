@@ -97,6 +97,19 @@ FIXES = [
             "passed that silent handoff in 2 of 3 runs, so the grader wasn't consistent either.",
      "fix": "The handoff step now says to speak the sentence first, then hand off, and never to hand off silently.",
      "where": "Sam's prompt (ElevenLabs)", "before": "2 of 3 test runs passed (silent handoff in all 3)", "tests": ["QA-16"]},
+    {"id": "FIX-15", "title": "Sam added an empty note to a customer's ticket",
+     "found": "Test call", "cause": "server",
+     "why": "The caller only asked for the status, and Sam still called add_ticket_note with \"No additional "
+            "information provided.\" Nothing in the server stopped a note with nothing in it.",
+     "fix": "The server refuses a note that only says nothing was added, and the status result tells Sam to add a note "
+            "only when the caller says something new. Sam's prompt says the same.",
+     "where": "Commit b7defa2, Sam's prompt (ElevenLabs)", "before": "Seen on a test call (NS-9518)", "tests": ["QA-23"]},
+    {"id": "FIX-16", "title": "Sam said the technician \"will be in touch\"",
+     "found": "Test call", "cause": "made_up",
+     "why": "Reading a ticket's status, Sam promised contact that nothing on the ticket said.",
+     "fix": "The status result now says only the status is known: no calls, visits, arrivals, or times. Asked when, Sam "
+            "says there's no time on the ticket and offers to add a note asking for an update.",
+     "where": "Commit b7defa2, Sam's prompt (ElevenLabs)", "before": "Seen on a test call (NS-9518)", "tests": ["QA-24"]},
 ]
 
 

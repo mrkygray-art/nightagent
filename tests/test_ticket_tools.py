@@ -144,3 +144,29 @@ def test_ticket_not_in_zendesk_yet_skips_zendesk(tool, zd):
 def test_ticket_tools_need_the_tool_secret(client):
     assert client.post("/tools/ticket-status", json={"ticket_id": "NS-1000"}).status_code == 401
     assert client.post("/tools/ticket-note", json={"ticket_id": "NS-1000", "note": "x"}).status_code == 401
+
+
+@pytest.mark.parametrize("note", ["No additional information provided.", "Nothing new to add", "Caller had nothing to add.",
+                                  "No update", "None provided"])
+def test_a_note_that_adds_nothing_is_not_saved(tool, note):
+    """Seen on a test call: Sam logged "No additional information provided." on the ticket."""
+    tid = _ticket(tool)
+    before = len(get_store().list_events(tid))
+    out = tool("ticket-note", {"ticket_id": tid, "customer_id": "C-1003", "note": note})
+    assert out["saved"] is False and "nothing new" in out["message"]
+    assert len(get_store().list_events(tid)) == before
+
+
+@pytest.mark.parametrize("note", ["No one will be on site until 7, use the new side gate", "No power to the gate since 6pm",
+                                  "Nothing works on the keypad now"])
+def test_real_notes_that_start_with_no_are_saved(tool, note):
+    tid = _ticket(tool)
+    assert tool("ticket-note", {"ticket_id": tid, "customer_id": "C-1003", "note": note})["saved"] is True
+
+
+def test_status_tells_sam_not_to_promise_contact_or_times(tool):
+    """Seen on a test call: Sam said the technician "will be in touch", which nothing on the ticket said."""
+    tid = _ticket(tool)
+    out = tool("ticket-status", {"ticket_id": tid, "customer_id": "C-1003"})
+    assert "be in touch" in out["next_step"] and "don't give or guess any time" in out["next_step"]
+    assert not any(w in out["tell_the_caller"].lower() for w in ("will call", "in touch", "will arrive"))

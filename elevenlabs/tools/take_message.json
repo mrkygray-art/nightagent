@@ -156,7 +156,7 @@
     "follow_redirects_allowed_domains": []
   },
   "usage_stats": {
-    "total_calls": 10,
+    "total_calls": 14,
     "avg_latency_secs": 0.49
   },
   "response_mocks": null

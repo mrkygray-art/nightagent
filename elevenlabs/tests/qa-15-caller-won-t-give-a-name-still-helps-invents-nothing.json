@@ -68,6 +68,7 @@
           "type": "webhook",
           "request_id": "req_lookup_15",
           "tool_name": "lookup_customer",
+          "tool_id": null,
           "params_as_json": "{\"query\": \"8185550100\"}",
           "tool_has_been_called": true,
           "tool_details": null
