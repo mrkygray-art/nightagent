@@ -7,7 +7,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app import config, evaluation
+from app import config, evaluation, zendesk
 from app.security import verify_elevenlabs_signature
 from app.store import get_store
 
@@ -40,6 +40,11 @@ async def post_call(request: Request) -> dict:
 
     # Same parsing as the on-demand fetch (app/evaluation.py): grades, data collection, metrics, the
     # call length, and the transcript with phone numbers cut to the last four digits.
-    get_store().merge_call(conversation_id, evaluation.record_fields(evaluation.analyze(data)))
+    found = evaluation.analyze(data)
+    get_store().merge_call(conversation_id, evaluation.record_fields(found))
     log.info("Stored post-call data for %s", conversation_id)
+    try:  # after the call is stored, and never able to undo that
+        zendesk.sync_call(conversation_id, found["summary"])
+    except Exception:  # noqa: BLE001
+        log.exception("Zendesk sync failed for %s", conversation_id)
     return {"status": "ok"}

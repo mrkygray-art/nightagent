@@ -35,3 +35,8 @@ ONCALL_TECH_PHONE = os.getenv("ONCALL_TECH_PHONE", "")
 ONCALL_TECH_NAME = os.getenv("ONCALL_TECH_NAME", "the on-call technician")
 CALLBACK_WINDOW_MINUTES = int(os.getenv("CALLBACK_WINDOW_MINUTES", "15"))
 SMS_MAX_PER_HOUR = int(os.getenv("SMS_MAX_PER_HOUR", "5"))
+
+# Zendesk: a ticket for each board ticket, made after the post-call webhook. Unset = off.
+ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN", "")
+ZENDESK_CLIENT_ID = os.getenv("ZENDESK_CLIENT_ID", "")
+ZENDESK_CLIENT_SECRET = os.getenv("ZENDESK_CLIENT_SECRET", "")

@@ -342,6 +342,7 @@ The final ticket view connects the service outcome with next actions, including 
 - **Caps on the public demo.** Calls end after 5 minutes, each agent takes at most 3 calls at once and 40 a day, and scenarios and follow-up calls are capped per hour. Paging the technician is simulated.
 - **Transcripts are trimmed before they're stored.** The post-call webhook keeps only the last four digits of any phone or account number and drops email addresses, and live callers' transcripts never reach a public page.
 - **Nothing private on public pages.** Phone numbers on the ticket board are masked, Engineering Mode shows word counts instead of the caller's words, and the Evaluation Lab strips the tool secret that ElevenLabs returns with test results.
+- **Zendesk gets only what a dispatcher needs.** When Zendesk is configured, the post-call webhook makes one Zendesk ticket per board ticket (caller name, issue, priority, call summary, tagged `nightagent`) as a private note, without the callback number. A Zendesk error is logged and skipped, so it can never stop a call from being saved.
 - **Made-up data.** Demo customers, invoices, and staff are fictional. Please don't share real names, numbers, or alarm codes on the demo.
 
 ## Physical-Security Context
@@ -386,6 +387,7 @@ flowchart LR
 
     DB[("Supabase<br/>tickets, events, calls")]
     SMS["Twilio SMS page<br/>simulated unless configured"]
+    ZD["Zendesk ticket<br/>off unless configured"]
 
     SDK <--> SAM
     SAM -- transfer_to_agent --> JOR
@@ -398,6 +400,7 @@ flowchart LR
     TOOLS --> RULES --> DB
     RULES -. page_on_call_tech .-> SMS
     SAM -. "after each call:<br/>transcript + analysis" .-> HOOK --> DB
+    HOOK -. "board ticket:<br/>OAuth token, then ticket" .-> ZD
     UI --> DEMO --> DB
     DEMO -- "follow-up agent id +<br/>single-use pass" --> SDK
     LAB -- "test results + call grades<br/>(read-only API key)" --> TESTS
@@ -468,6 +471,7 @@ Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Nothing belo
 | `TABLE_PREFIX` | Table name prefix in a shared Supabase project | `ns_` |
 | `FOLLOW_UPS_PER_HOUR` | Demo-wide cap on follow-up calls | `30` |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `ONCALL_TECH_PHONE` | Sending a real SMS page for emergencies | Page is simulated and logged |
+| `ZENDESK_SUBDOMAIN`, `ZENDESK_CLIENT_ID`, `ZENDESK_CLIENT_SECRET` | A Zendesk ticket for each board ticket after the call ends (OAuth client credentials, scope `tickets:write users:write`) | No Zendesk tickets |
 | `ONCALL_TECH_NAME`, `CALLBACK_WINDOW_MINUTES`, `SMS_MAX_PER_HOUR` | What the agent tells the caller, and the SMS rate limit | `the on-call technician`, `15`, `5` |
 
 The live agents only accept browser calls from the approved websites, so voice calls from a local copy need your own ElevenLabs agents. (An origin check only stops browsers; the real limits are each agent's caps on calls per day and at once.) The ticket board, Demo Mode, the lab page, and the tests all work locally. The voice tests (`cd voicelab && npm install && node run.js`, then `scripts/save_voice_lab.py`) make real calls to the live agent and use its call minutes. The database schema is in `supabase/` (run `schema.sql`, then the migrations in order; [docs/supabase.md](docs/supabase.md) covers the tables and how access is locked down), and `scripts/export_elevenlabs.py` backs up the agents, tools, and tests (secrets redacted) into `elevenlabs/`.

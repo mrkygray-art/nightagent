@@ -78,6 +78,7 @@ Seed data is three fictional customers with reserved 555-01xx numbers.
 | `demo`, `scenario`, `demo_key_hash` | boolean, text, text | Demo Mode: simulated tickets, and the hash of the key that lets one browser advance its own ticket |
 | `source_ticket_id` | text, FK to `ns_tickets` | Set on a new ticket opened from a follow-up call |
 | `follow_up_token_hash`, `follow_up_started_at`, `follow_up_conversation_id` | text, timestamptz, text | The check-in call. Only the hash of its one-time token is stored. |
+| `zendesk_ticket_id` | bigint | The Zendesk ticket made after the call (only when Zendesk is configured); also stops a webhook retry from making a second one |
 | `resolution`, `csat` | text, smallint (1 to 5) | Outcome of the check-in call |
 | `created_at` | timestamptz, not null, default `now()` | |
 
@@ -141,7 +142,7 @@ If this ever moves beyond a demo (real customers, per-user dashboards), the next
 All SQL is **idempotent** (`create ... if not exists`, `add column if not exists`, `drop constraint if exists` before re-adding it, `on conflict do nothing`), so running a file twice is safe.
 
 - **`supabase/schema.sql`**: the base schema: the first three tables, their indexes, RLS, revoke, and the demo seed. It was rebuilt from the live database catalog on 2026-10-01 after the original file was lost.
-- **`supabase/migrations/`**: every change since, one dated file each (lifecycle and events, tool-call log, follow-up and routing, front desk, call check, repeat calls, tool timing, revokes). Each is additive.
+- **`supabase/migrations/`**: every change since, one dated file each (lifecycle and events, tool-call log, follow-up and routing, front desk, call check, repeat calls, tool timing, revokes, Zendesk ticket id). Each is additive.
 - **Fresh setup:** run `schema.sql` in the Supabase SQL editor, then each migration in filename order. Set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and optionally `TABLE_PREFIX` in the backend environment.
 - **Changing the schema:** add a new dated migration; don't edit an applied one.
 - **Leftover function:** the migrations also create `ns_impact()`, which only `service_role` may execute. The app no longer calls it: Business Impact now reads a few columns (`SupabaseStore.impact_rows`) and counts them in `app/metrics.py`.
