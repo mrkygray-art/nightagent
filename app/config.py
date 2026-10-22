@@ -40,3 +40,7 @@ SMS_MAX_PER_HOUR = int(os.getenv("SMS_MAX_PER_HOUR", "5"))
 ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN", "")
 ZENDESK_CLIENT_ID = os.getenv("ZENDESK_CLIENT_ID", "")
 ZENDESK_CLIENT_SECRET = os.getenv("ZENDESK_CLIENT_SECRET", "")
+
+# The "NightAgent Call" Zendesk sidebar app sends this in X-Sidebar-Secret. Unset = the endpoint is off.
+SIDEBAR_SECRET = os.getenv("SIDEBAR_SECRET", "")
+SIDEBAR_REQUESTS_PER_MINUTE = int(os.getenv("SIDEBAR_REQUESTS_PER_MINUTE", "60"))

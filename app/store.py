@@ -130,6 +130,9 @@ class MemoryStore:
     def tickets_for_call(self, conversation_id: str) -> list[dict]:
         return [t for t in self.tickets.values() if t.get("conversation_id") == conversation_id]
 
+    def ticket_by_zendesk_id(self, zendesk_id: int) -> dict | None:
+        return next((t for t in self.tickets.values() if t.get("zendesk_ticket_id") == zendesk_id), None)
+
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         return sorted((t for t in self.tickets.values() if t["created_at"] >= since_iso
                        and t.get("status") not in CLOSED_STATES and not t.get("scenario")),
@@ -305,6 +308,11 @@ class SupabaseStore:
 
     def tickets_for_call(self, conversation_id: str) -> list[dict]:
         return self.db.table(self.tickets_table).select("*").eq("conversation_id", conversation_id).execute().data
+
+    def ticket_by_zendesk_id(self, zendesk_id: int) -> dict | None:
+        rows = (self.db.table(self.tickets_table).select("*").eq("zendesk_ticket_id", int(zendesk_id))
+                .limit(1).execute().data)
+        return rows[0] if rows else None
 
     def open_tickets_since(self, since_iso: str) -> list[dict]:
         rows = (self.db.table(self.tickets_table).select("*").gte("created_at", since_iso)
