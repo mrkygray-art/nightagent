@@ -79,6 +79,10 @@ Seed data is three fictional customers with reserved 555-01xx numbers.
 | `source_ticket_id` | text, FK to `ns_tickets` | Set on a new ticket opened from a follow-up call |
 | `follow_up_token_hash`, `follow_up_started_at`, `follow_up_conversation_id` | text, timestamptz, text | The check-in call. Only the hash of its one-time token is stored. |
 | `zendesk_ticket_id` | bigint | The Zendesk ticket made after the call (only when Zendesk is configured); also stops a webhook retry from making a second one |
+| `zendesk_status` | text | Zendesk's status for that ticket (`new`, `open`, `pending`, `hold`, `solved`, `closed`), mirrored by the Zendesk webhook |
+| `zendesk_assignee_id` | bigint | The Zendesk agent it's assigned to, if any |
+| `zendesk_assignee_name` | text | That agent's name, for the sidebar card only (public pages show only whether it's assigned) |
+| `zendesk_updated_at` | timestamptz | When Zendesk last changed the ticket; a webhook delivery no newer than this is a repeat and is ignored |
 | `resolution`, `csat` | text, smallint (1 to 5) | Outcome of the check-in call |
 | `created_at` | timestamptz, not null, default `now()` | |
 
@@ -86,7 +90,7 @@ The model can suggest or raise a priority, but the backend rules decide the fina
 
 ### `ns_ticket_events`
 
-Append-only history: `id` (identity PK), `ticket_id` (FK, cascade delete), `event_type`, `description`, `simulated`, `source` (CHECK in `call`, `scenario`, `demo`, `follow_up`), `occurred_at`, `conversation_id`, `actor_type`, `actor_id`, `metadata` (jsonb), `created_at`. Rows are never edited. Demo Mode's Reset deletes only its own simulated rows (`source = 'demo'`).
+Append-only history: `id` (identity PK), `ticket_id` (FK, cascade delete), `event_type`, `description`, `simulated`, `source` (CHECK in `call`, `scenario`, `demo`, `follow_up`, `zendesk`), `occurred_at`, `conversation_id`, `actor_type`, `actor_id`, `metadata` (jsonb), `created_at`. Rows are never edited. Demo Mode's Reset deletes only its own simulated rows (`source = 'demo'`).
 
 ### `ns_calls`
 

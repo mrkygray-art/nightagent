@@ -295,6 +295,22 @@ LAB_HTML = r"""<!doctype html>
         <button type="button">Run it</button>
         <div class="out" aria-live="polite"></div>
       </section>
+      <section class="inject" data-scenario="zendesk-duplicate" aria-labelledby="zddup-title">
+        <h2 id="zddup-title" style="margin:0;font-size:18px">Zendesk webhook delivered twice</h2>
+        <p class="meta" style="margin:0">An agent assigns Priya's ticket in Zendesk, and Zendesk's signed webhook tells
+          NightAgent. The same delivery arrives again, as a retry would, and then an older change turns up late.</p>
+        <p class="meta before" style="margin:0"></p>
+        <button type="button">Run it</button>
+        <div class="out" aria-live="polite"></div>
+      </section>
+      <section class="inject" data-scenario="zendesk-skip" aria-labelledby="zdskip-title">
+        <h2 id="zdskip-title" style="margin:0;font-size:18px">Zendesk tries to skip ahead</h2>
+        <p class="meta" style="margin:0">Priya's emergency is still waiting for a technician when someone in Zendesk marks
+          it solved and sets its priority to low. Then Priya calls to ask how it's going.</p>
+        <p class="meta before" style="margin:0"></p>
+        <button type="button">Run it</button>
+        <div class="out" aria-live="polite"></div>
+      </section>
     </div>
   </section>
 

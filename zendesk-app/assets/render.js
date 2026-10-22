@@ -59,6 +59,11 @@ var NightAgentSidebar = (function () {
     top.appendChild(el("span", "muted", call.nightagent_ticket_id));
     box.appendChild(top);
     box.appendChild(el("p", "caller", call.caller_name || "Caller didn't give a name"));
+    if (call.board_status_label) {
+      // The board's own stage; Zendesk changes only move it along the allowed steps (app/zendesk_sync.py)
+      var synced = call.zendesk_assignee_name ? " · Assigned to " + call.zendesk_assignee_name : "";
+      box.appendChild(el("p", "muted", "On the NightAgent board: " + call.board_status_label + synced));
+    }
     return box;
   }
 

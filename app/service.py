@@ -103,6 +103,9 @@ def public_ticket(t: dict) -> dict:
         "call_ref": call_ref(t.get("conversation_id")),
         "call_refs": [call_ref(c) for c in (t.get("repeat_conversation_ids") or [])],  # calls that joined later
         "demo": bool(t.get("demo")),
+        # Mirrored from Zendesk by app/zendesk_sync.py. Public, so whether it's assigned, not to whom.
+        "zendesk_status": t.get("zendesk_status"),
+        "zendesk_assigned": bool(t.get("zendesk_assignee_id")),
     })
     return out
 

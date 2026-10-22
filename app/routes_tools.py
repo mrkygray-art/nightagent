@@ -524,7 +524,9 @@ def _ago(iso: str | None) -> str | None:
 def _status_of(ticket: dict) -> dict:
     """What the caller may hear about their own ticket. Status words come from the lifecycle, not the model."""
     state = lifecycle.normalize_state(ticket.get("status"))
-    events = [e for e in get_store().list_events(ticket["ticket_id"]) if e["event_type"] != "caller_added_note"]
+    # A note the caller added, and a Zendesk change the board refused, aren't status updates to read out
+    events = [e for e in get_store().list_events(ticket["ticket_id"])
+              if e["event_type"] not in ("caller_added_note", "zendesk_update_refused")]
     last = events[-1] if events else None
     say = (f"Ticket {_spoken(ticket['ticket_id'])}, for {ticket.get('issue_summary') or 'your service request'}: "
            f"{lifecycle.STATE_LABELS[state].lower()}.")

@@ -24,6 +24,7 @@ window.ZAFClient = { init: function () { return {
 const CALL = {
   zendesk_ticket_id: 3, nightagent_ticket_id: 'NS-8670', caller_name: 'Dave Matura',
   priority: 'emergency', priority_label: 'High priority',
+  board_status_label: 'Technician assigned', zendesk_status: 'open', zendesk_assignee_name: 'Morgan Reyes',
   call_summary: 'Dave Matura reported a side door that would not lock; the on-call technician was paged.',
   analysis_status: 'done',
   tool_calls: [
@@ -77,6 +78,7 @@ async function open(browser, scenario) {
     const text = await page.evaluate(() => document.body.innerText);
     ok(text.includes('High priority') && text.includes('NS-8670') && text.includes('Dave Matura'), 'header: priority, ticket, caller');
     ok(text.includes('side door that would not lock'), 'call summary');
+    ok(text.includes('On the NightAgent board: Technician assigned') && text.includes('Assigned to Morgan Reyes'), 'board status and Zendesk assignee');
     ok(text.includes('TOOL CALLS (4, 1 failed)') || text.includes('Tool calls (4, 1 failed)'), 'tool count with failures');
     const tools = await page.$$eval('ol.tools li', (lis) => lis.map((li) => [li.className, li.innerText.replace(/\s+/g, ' ')]));
     ok(tools.length === 4 && tools[1][0] === 'failed' && tools[1][1].includes('Created the ticket (failed)'), 'failed tool call marked');

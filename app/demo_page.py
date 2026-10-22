@@ -876,6 +876,8 @@ const TOOL_WORDS = {
 
 // Who's talking. Sam answers; after a handoff a specialist assistant takes over.
 const SPECIALISTS = { Jordan: "Jordan · billing assistant", Riley: "Riley · sales assistant" };
+// Zendesk's statuses, mirrored onto tickets NightAgent logged there (app/zendesk_sync.py STATUS_LABELS)
+const ZENDESK_STATUS = { new: "New", open: "Open", pending: "Pending", hold: "On hold", solved: "Solved", closed: "Closed" };
 let speaker = "Sam";      // "Sam", "pending" (just handed off), or a specialist's name
 let lastSamText = "";     // Sam's last line: it names who Sam is bringing in
 const TOOL_OWNER = { billing_lookup: "Jordan", request_billing_review: "Jordan", record_sales_interest: "Riley" };
@@ -1597,6 +1599,7 @@ function renderTickets(list, messages = lastMessages, callList = lastCalls) {
     const meta = el("div", "meta");
     meta.appendChild(el("span", "", `Caller: ${t.caller_name || "Unknown"} ${t.callback_number || ""}`));
     meta.appendChild(el("span", "", `Status: ${t.status_label || t.status || "Open"}`));
+    if (t.zendesk_status) meta.appendChild(el("span", "", `Zendesk: ${ZENDESK_STATUS[t.zendesk_status] || t.zendesk_status}${t.zendesk_assigned ? ", assigned" : ""}`));
     if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
     body.appendChild(meta);
 
@@ -1735,6 +1738,7 @@ function renderPanel(detail, message) {
   meta.appendChild(el("span", "", `Caller: ${t.caller_name || "Unknown"}`));
   if (t.priority_reason) meta.appendChild(el("span", "", t.priority_reason));
   if (t.technician_name) meta.appendChild(el("span", "", `Technician: ${t.technician_name} (demo)`));
+  if (t.zendesk_status) meta.appendChild(el("span", "", `Zendesk: ${ZENDESK_STATUS[t.zendesk_status] || t.zendesk_status}${t.zendesk_assigned ? ", assigned" : ""}`));
   p.appendChild(meta);
   p.appendChild(el("span", "tech-line", `status=${t.status} · priority=${t.priority} · category=${t.category || "-"} · outcome=${v.outcome || "-"} · source=${v.source || "-"} · GET /api/tickets/${t.ticket_id}`));
   if (v.handoff) p.appendChild(handoffMeter(v.handoff));
