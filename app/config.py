@@ -40,6 +40,10 @@ SMS_MAX_PER_HOUR = int(os.getenv("SMS_MAX_PER_HOUR", "5"))
 ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN", "")
 ZENDESK_CLIENT_ID = os.getenv("ZENDESK_CLIENT_ID", "")
 ZENDESK_CLIENT_SECRET = os.getenv("ZENDESK_CLIENT_SECRET", "")
+# Ticket field ids (numbers from Admin Center > Objects and rules > Tickets > Fields). Unset = that field is left off.
+ZENDESK_FIELD_NIGHTAGENT_ID = os.getenv("ZENDESK_FIELD_NIGHTAGENT_ID", "")
+ZENDESK_FIELD_CATEGORY = os.getenv("ZENDESK_FIELD_CATEGORY", "")
+ZENDESK_FIELD_CALL_SOURCE = os.getenv("ZENDESK_FIELD_CALL_SOURCE", "")
 
 # The "NightAgent Call" Zendesk sidebar app sends this in X-Sidebar-Secret. Unset = the endpoint is off.
 SIDEBAR_SECRET = os.getenv("SIDEBAR_SECRET", "")

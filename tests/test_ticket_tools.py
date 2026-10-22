@@ -106,7 +106,7 @@ def zd(monkeypatch):
     monkeypatch.setattr(config, "ZENDESK_SUBDOMAIN", "acme")
     monkeypatch.setattr(config, "ZENDESK_CLIENT_ID", "client-id")
     monkeypatch.setattr(config, "ZENDESK_CLIENT_SECRET", "client-secret")
-    monkeypatch.setattr(zendesk, "_token", {"value": "", "expires_at": 0.0})
+    monkeypatch.setattr(zendesk, "_token", {"value": "", "expires_at": 0.0, "scope": zendesk.SCOPE})
     state = {"puts": [], "fail": None}
     monkeypatch.setattr(zendesk.requests, "post", lambda url, **kw: FakeResponse(200))
 
