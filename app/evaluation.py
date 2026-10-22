@@ -204,9 +204,10 @@ def transcript_text(turns: list[dict] | None) -> str:
 
 _DIGIT_WORDS = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
                 "six": "6", "seven": "7", "eight": "8", "nine": "9"}
-_TOKEN = r"\b(?:\d+|zero|oh|one|two|three|four|five|six|seven|eight|nine|double|triple)\b"
+_TOKEN = r"\b(?:\d+|zero|oh|one|two|three|four|five|six|seven|eight|nine|double|triple|hundred)\b"
 _TOKEN_RE = re.compile(_TOKEN, re.IGNORECASE)
-# A run of digits and spoken digits ("310-555-0142", "three one oh, five five five, oh one four two")
+# A run of digits and spoken digits ("310-555-0142", "three one oh, five five five, oh one four two",
+# "one eight hundred, five five five, one two one two")
 _NUMBER_RUN = re.compile(rf"\(?{_TOKEN}(?:[\s,.()-]+{_TOKEN})*", re.IGNORECASE)
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 PHONE_DIGITS = 10  # runs this long are phone or account numbers; shorter ones (dates, counts, ticket numbers) stay
@@ -220,11 +221,17 @@ def _trim(m: re.Match) -> str:
         if word in ("double", "triple"):
             repeat = 2 if word == "double" else 3
             continue
+        if word == "hundred":  # "eight hundred" is 800
+            digits += "00"
+            continue
         digits += (word if word.isdigit() else _DIGIT_WORDS[word]) * repeat
         repeat = 1
-        if len(digits) >= PHONE_DIGITS:
+        # Area codes never start with 1, so a leading 1 is the country code ("1 800 555 1212")
+        if len(digits) >= PHONE_DIGITS + digits.startswith("1"):
             out += "•••" + digits[-4:]
             start, digits = tok.end(), ""
+    if len(digits) >= PHONE_DIGITS:  # ten digits that happen to start with 1
+        return out + "•••" + digits[-4:]
     return out + run[start:] if out else run
 
 
@@ -253,7 +260,8 @@ def _ai_item(label: str, grade: dict, criterion: str, passed_text: str, failed_t
     found = (grade.get("results") or {}).get(criterion) or {}
     if state == "done" and found.get("result") in ("success", "failure"):
         ok = found["result"] == "success"
-        return _item(label, "pass" if ok else "fail", found.get("rationale") or (passed_text if ok else failed_text), "ai")
+        # The AI's rationale can quote the caller's number, and the call check reaches public pages
+        return _item(label, "pass" if ok else "fail", redact(found.get("rationale")) or (passed_text if ok else failed_text), "ai")
     if state == "done":
         return _item(label, "na", "Not graded: the call was before this check existed, or nothing needed it", "ai")
     if state == "pending":

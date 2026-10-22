@@ -115,3 +115,28 @@ def test_redaction_catches_numbers_read_out_as_words():
     assert out.count("•••") == 3 and "•••0142" in out and "•••0119" in out and "•••0178" in out
     # Short numbers stay: ticket numbers, counts, dates
     assert "NS-1234" in out and "one door" in out and "2026-10-07" in out
+
+
+def test_redaction_catches_a_spoken_hundred():
+    from app.evaluation import redact
+    said = "Your best callback number is one eight hundred, five five five, one two one two. Is that correct?"
+    out = redact(said)
+    assert "five five five" not in out and "•••1212" in out
+    assert redact("eight hundred five five five one two one two") == "•••1212"
+    # A price or a count with "hundred" in it is too short to be a phone number
+    assert redact("about two hundred dollars, three hundred doors") == "about two hundred dollars, three hundred doors"
+
+
+def test_ai_rationale_is_redacted_in_the_call_check(client, tool):
+    from app import evaluation
+    tool("lookup-customer", {"query": "3105550142", "conversation_id": "conv_rat_1"})
+    t = tool("create-ticket", {"customer_id": "C-1001", "caller_name": "Maria", "callback_number": "3105550142",
+                               "issue_summary": "Back door will not lock", "category": "door_wont_lock",
+                               "conversation_id": "conv_rat_1"})
+    get_store().merge_call("conv_rat_1", {"eval_status": "done", "evaluation": {"results": {
+        "confirmed_details_first": {"result": "success",
+                                    "rationale": "Read back one eight hundred, five five five, one two one two."}},
+        "trace": [], "metrics": {}}})
+    check = client.get(f"/api/tickets/{t['ticket_id']}").json()["check"]
+    detail = next(i["detail"] for i in check["items"] if i["label"] == "Confirmed name and number before acting")
+    assert detail == "Read back •••1212."
