@@ -44,6 +44,11 @@ ZENDESK_CLIENT_SECRET = os.getenv("ZENDESK_CLIENT_SECRET", "")
 ZENDESK_FIELD_NIGHTAGENT_ID = os.getenv("ZENDESK_FIELD_NIGHTAGENT_ID", "")
 ZENDESK_FIELD_CATEGORY = os.getenv("ZENDESK_FIELD_CATEGORY", "")
 ZENDESK_FIELD_CALL_SOURCE = os.getenv("ZENDESK_FIELD_CALL_SOURCE", "")
+# Human review fields (made by scripts/zendesk_review_setup.py, which prints these ids). Unset = that field is left off;
+# the needs_review tags and the note line go on either way.
+ZENDESK_FIELD_REVIEW_NEEDED = os.getenv("ZENDESK_FIELD_REVIEW_NEEDED", "")
+ZENDESK_FIELD_REVIEW_REASON = os.getenv("ZENDESK_FIELD_REVIEW_REASON", "")
+ZENDESK_FIELD_RECOMMENDED_OPTIONS = os.getenv("ZENDESK_FIELD_RECOMMENDED_OPTIONS", "")
 # Zendesk -> NightAgent status sync: the webhook's signing secret, and the Zendesk user id our own API calls run as
 # (its changes are ignored, so nothing NightAgent does in Zendesk can loop back). Both unset = the endpoint is off.
 ZENDESK_WEBHOOK_SECRET = os.getenv("ZENDESK_WEBHOOK_SECRET", "")

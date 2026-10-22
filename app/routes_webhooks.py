@@ -45,7 +45,7 @@ async def post_call(request: Request) -> dict:
     get_store().merge_call(conversation_id, evaluation.record_fields(found))
     log.info("Stored post-call data for %s", conversation_id)
     try:  # after the call is stored, and never able to undo that
-        zendesk.sync_call(conversation_id, found["summary"])
+        zendesk.sync_call(conversation_id, found["summary"], found)
     except Exception:  # noqa: BLE001
         log.exception("Zendesk sync failed for %s", conversation_id)
     return {"status": "ok"}

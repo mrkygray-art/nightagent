@@ -18,13 +18,13 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app import config  # noqa: E402  (loads .env)
+from app.review import RULES  # noqa: E402
 from app.zendesk import subdomain  # noqa: E402
 
 TIMEOUT = 15
 
-# The review reason codes; each option's value is also the tag Zendesk puts on the ticket.
-REASON_CODES = ["EMERGENCY_UNCLEAR", "NO_ACCOUNT_MATCH", "SCORECARD_FAIL", "CALLER_WANTS_HUMAN",
-                "PRIORITY_MISMATCH", "NEGATIVE_SENTIMENT", "REPEAT_OR_RELATED", "LOW_CONFIDENCE"]
+# The review reason codes (app/review.py); each option's value is also the tag NightAgent puts on the ticket.
+REASON_CODES = list(RULES)
 DECISIONS = {"Called back": "review_called_back", "Dispatched": "review_dispatched", "SMS sent": "review_sms_sent",
              "Approved as-is": "review_approved", "Other": "review_other"}
 
