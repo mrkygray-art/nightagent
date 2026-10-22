@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "NightAgent Call",
+    "short_description": "What happened on the NightAgent call behind this ticket.",
+    "description": "Shows the call summary, priority, caller, the tools Sam used, the call check, and the redacted transcript for tickets NightAgent made.",
+    "long_description": "Read-only. For a ticket NightAgent made after an after-hours call, the sidebar shows the call summary, priority, caller name, each tool call in order (and whether it failed), the call check with rules and AI-judged items marked, and the transcript with phone numbers cut to the last four digits. Other tickets show a short note instead.",
+    "installation_instructions": "Paste the NightAgent sidebar secret (the SIDEBAR_SECRET value from NightAgent's Vercel settings). It is stored by Zendesk and never sent to the browser.",
+    "parameters": {
+      "sidebar_secret": {
+        "label": "Sidebar secret",
+        "helpText": "The SIDEBAR_SECRET value from NightAgent. Hidden once saved."
+      }
+    }
+  }
+}

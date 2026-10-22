@@ -1,0 +1,33 @@
+/* Close to Zendesk Garden: system font, 14px, quiet greys, so the app sits naturally in the sidebar. */
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #2f3941; background: #fff; }
+main { padding: 4px 2px 8px; }
+h2 { margin: 14px 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #68737d; }
+p { margin: 0 0 6px; }
+.muted, .meta { color: #68737d; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.note { color: #68737d; font-size: 12px; }
+.note.error { color: #cc3340; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.caller { margin-top: 6px; font-size: 16px; font-weight: 600; }
+.pill { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
+.pill.high { background: #cc3340; }
+.pill.medium { background: #ad5918; }
+.pill.normal { background: #038153; }
+ol, ul { list-style: none; margin: 0; padding: 0; }
+li { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid #e9ebed; }
+li:first-child { border-top: 0; }
+.mark { flex: 0 0 18px; height: 18px; border-radius: 50%; text-align: center; font-size: 12px; line-height: 18px; font-weight: 700; color: #fff; background: #87929d; }
+.body { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.ok .mark, .pass .mark { background: #038153; }
+.failed .mark, .fail .mark { background: #cc3340; }
+.failed > .body > span:first-child { color: #cc3340; }
+.pending .mark { background: #ad5918; }
+.info .mark { background: #1f73b7; font-style: italic; }
+.tag { margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #5d3bb7; background: #ece6fb; vertical-align: 1px; }
+.transcript { margin-top: 14px; }
+.transcript summary { cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #68737d; }
+.transcript p { margin: 6px 0; overflow-wrap: anywhere; }
+.caller-line strong { color: #1f73b7; }
+.agent-line strong { color: #2f3941; }
+.refresh { margin-top: 12px; padding: 5px 12px; font: inherit; font-size: 13px; color: #1f73b7; background: #fff; border: 1px solid #1f73b7; border-radius: 4px; cursor: pointer; }
+.refresh:hover { background: #edf7ff; }

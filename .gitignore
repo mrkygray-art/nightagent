@@ -15,3 +15,5 @@ bench/node_modules/
 bench/data/audio/
 bench/results/*/raw/
 bench/recordings/
+zendesk-app/tmp/
+e2e/zd-sidebar.png
