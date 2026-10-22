@@ -12,8 +12,10 @@ What a Zendesk change may do to the board is decided here, not in Zendesk:
   assignee, or an older updated_at) changes nothing. Zendesk retries and can deliver the same event twice.
 - Changes made by our own integration user are ignored, so a note NightAgent adds can't loop back.
 
-The Zendesk status and assignee name are stored for the board and the sidebar card. Sam never hears the
-assignee: check_ticket_status speaks only lifecycle labels, and refused-change events are left out of it.
+The Zendesk status and assignee are stored for the board and the sidebar card. The trigger sends only the
+assignee's id (no free text, so a quote in a name can't break the JSON); the name is looked up through the API
+when the assignee changes, and shown only on the staff-only sidebar card. Sam never hears the assignee:
+check_ticket_status speaks only lifecycle labels, and refused-change events are left out of it.
 """
 import base64
 import hashlib
@@ -21,14 +23,15 @@ import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 
-from app import config, lifecycle
+from app import config, lifecycle, zendesk
 from app.service import record_event
 from app.store import get_store
 
 log = logging.getLogger("nightshift")
 
 SIGNATURE_HEADER = "X-Zendesk-Webhook-Signature"
-TIMESTAMP_HEADER = "X-Zendesk-Webhook-Signature-Timestamp"
+TIMESTAMP_HEADER = "X-Zendesk-Webhook-Signature-Timestamp"  # e.g. 2021-03-25T05:09:27Z
+INVOCATION_HEADER = "X-Zendesk-Webhook-Invocation-Id"
 REPLAY_WINDOW = timedelta(minutes=10)  # Zendesk retries timeouts up to five times; a replay inside it is a repeat
 FUTURE_SKEW = timedelta(minutes=1)
 TAG = "nightagent"
@@ -111,9 +114,10 @@ def _ignored(reason: str) -> dict:
     return {"result": "ignored", "reason": reason}
 
 
-def apply_update(payload: dict) -> dict:
+def apply_update(payload: dict, lookup_name=None) -> dict:
     """Apply one verified Zendesk delivery. Returns what happened: applied, mirrored, refused, duplicate,
-    or ignored (with why). Raises only if the store fails, so the caller can ask Zendesk to retry."""
+    or ignored (with why). Raises only if the store fails, so the caller can ask Zendesk to retry.
+    lookup_name(assignee_id) -> name defaults to the Zendesk API; the Evaluation Lab's sandbox passes its own."""
     if not isinstance(payload, dict):
         return _ignored("Body isn't a JSON object")
     tags = str(payload.get("tags") or "").lower().replace(",", " ").split()
@@ -135,7 +139,6 @@ def apply_update(payload: dict) -> dict:
     if not status:
         return _ignored("Unknown Zendesk status")
     assignee_id = _id(payload.get("assignee_id"))
-    assignee_name = (" ".join(str(payload.get("assignee_name") or "").split())[:100] or None) if assignee_id else None
     updated_at = _parse_time(payload.get("updated_at"))
     if not updated_at:
         return _ignored("No updated_at")
@@ -144,6 +147,14 @@ def apply_update(payload: dict) -> dict:
     same = (status == ticket.get("zendesk_status") and assignee_id == _id(ticket.get("zendesk_assignee_id")))
     if stored_at and (updated_at < stored_at or (updated_at == stored_at and same)):
         return {"result": "duplicate", "reason": "Already have this change or a newer one"}
+
+    # The name, only for the staff sidebar: kept while the assignee stays the same, looked up when it changes
+    assignee_name = None
+    if assignee_id:
+        if assignee_id == _id(ticket.get("zendesk_assignee_id")) and ticket.get("zendesk_assignee_name"):
+            assignee_name = ticket["zendesk_assignee_name"]
+        else:
+            assignee_name = (lookup_name or zendesk.user_name)(assignee_id)
 
     signals = []
     if assignee_id and assignee_id != _id(ticket.get("zendesk_assignee_id")):

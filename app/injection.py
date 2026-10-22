@@ -154,12 +154,13 @@ def _deliver(body: bytes, signature: str, stamp: str) -> dict:
     """What the endpoint does after reading the request: check the signature, then apply."""
     if not zendesk_sync.verify(body, signature, stamp, _LAB_SECRET):
         return {"result": "rejected", "reason": "Invalid signature"}
-    return zendesk_sync.apply_update(json.loads(body))
+    # The sandbox stands in for Zendesk's user lookup, so no request leaves the server
+    return zendesk_sync.apply_update(json.loads(body), lookup_name=lambda _id: _LAB_ASSIGNEE)
 
 
 def _payload(tid: str, zendesk_id: int, status: str, minutes_ago: int, assignee: bool = True, **extra) -> dict:
     return {"zendesk_ticket_id": str(zendesk_id), "nightagent_ticket_id": tid, "status": status,
-            "assignee_id": "7001" if assignee else "", "assignee_name": _LAB_ASSIGNEE if assignee else "",
+            "assignee_id": "7001" if assignee else "",
             "updated_by_id": "7001", "updated_at": _stamp(minutes_ago), "tags": "nightagent", **extra}
 
 

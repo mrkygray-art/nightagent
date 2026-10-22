@@ -121,7 +121,7 @@ def test_call_with_a_board_ticket_makes_a_zendesk_ticket(client, tool, zd):
     assert token_call["url"] == "https://acme.zendesk.com/oauth/tokens"
     assert token_call["json"] == {"grant_type": "client_credentials", "client_id": "client-id",
                                   "client_secret": "client-secret",
-                                  "scope": "tickets:write users:write organizations:write"}
+                                  "scope": "tickets:write users:write users:read organizations:write"}
     assert ticket_call["url"] == "https://acme.zendesk.com/api/v2/tickets.json"
     assert ticket_call["headers"]["Authorization"] == "Bearer tok-1"
     sent = ticket_call["json"]["ticket"]
@@ -380,7 +380,7 @@ def test_client_without_the_organizations_scope_still_makes_tickets(client, tool
     ticket_id = _make(tool)
     _post(client, "conv_zd_1")
     scopes = [c["json"]["scope"] for c in zd["calls"] if c["url"].endswith("/oauth/tokens")]
-    assert scopes == ["tickets:write users:write organizations:write", "tickets:write users:write"]
+    assert scopes == ["tickets:write users:write users:read organizations:write", "tickets:write users:write"]
     assert "/organizations/create_or_update" not in _paths(zd)
     sent = zd["tickets"][0]
     assert sent["requester_id"] and "organization_id" not in sent

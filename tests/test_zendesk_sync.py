@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app import config, zendesk_sync
+from app import config, zendesk, zendesk_sync
 from app.store import get_store
 
 SECRET = "test-zendesk-webhook-secret"
@@ -12,10 +12,25 @@ URL = "/webhooks/zendesk/ticket-updated"
 INTEGRATION_USER = "900"
 
 
+AGENTS = {"7001": "Morgan Reyes", "7002": "Sam Okafor"}
+
+
 @pytest.fixture(autouse=True)
 def configured(monkeypatch):
     monkeypatch.setattr(config, "ZENDESK_WEBHOOK_SECRET", SECRET)
     monkeypatch.setattr(config, "ZENDESK_INTEGRATION_USER_ID", INTEGRATION_USER)
+
+
+@pytest.fixture(autouse=True)
+def lookups(monkeypatch):
+    """Zendesk's user lookup, faked: the trigger sends only the assignee id."""
+    asked = []
+
+    def user_name(user_id):
+        asked.append(str(user_id))
+        return AGENTS.get(str(user_id))
+    monkeypatch.setattr(zendesk, "user_name", user_name)
+    return asked
 
 
 def _stamp(delta: timedelta = timedelta()) -> str:
@@ -38,11 +53,11 @@ def _board_ticket(tool, zendesk_id=5001, conv="conv_sync_1", priority="emergency
     return made["ticket_id"]
 
 
-def _payload(tid, status="Open", minutes_ago=0, assignee_id="7001", assignee_name="Morgan Reyes", zendesk_id=5001,
-             by="7001", tags="nightagent priority_urgent", **extra):
+def _payload(tid, status="Open", minutes_ago=0, assignee_id="7001", zendesk_id=5001, by="7001",
+             tags="nightagent priority_urgent", **extra):
     at = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
     return {"zendesk_ticket_id": str(zendesk_id), "nightagent_ticket_id": tid, "status": status,
-            "assignee_id": assignee_id, "assignee_name": assignee_name, "updated_by_id": by,
+            "assignee_id": assignee_id, "updated_by_id": by,
             "updated_at": at, "tags": tags, **extra}
 
 
@@ -211,7 +226,7 @@ def test_statuses_that_dont_move_the_board_are_only_mirrored(client, tool, zd_st
 def test_reassignment_later_on_is_mirrored_not_refused(client, tool):
     tid = _board_ticket(tool)
     _set_status(tid, "en_route")
-    res = _send(client, _payload(tid, assignee_id="7002", assignee_name="Sam Okafor")).json()
+    res = _send(client, _payload(tid, assignee_id="7002")).json()
     assert res["result"] == "mirrored"
     ticket = get_store().get_ticket(tid)
     assert ticket["status"] == "en_route" and ticket["zendesk_assignee_name"] == "Sam Okafor"
@@ -252,7 +267,7 @@ def test_a_different_change_in_the_same_second_still_counts(client, tool):
 
 def test_sam_never_hears_the_assignee_or_a_time(client, tool):
     tid = _board_ticket(tool)
-    _send(client, _payload(tid, assignee_name="Morgan Reyes"))
+    _send(client, _payload(tid))
     said = tool("ticket-status", {"ticket_id": tid, "customer_id": "C-1003"})
     text = json.dumps(said)
     assert "Morgan" not in text and "Reyes" not in text
@@ -269,7 +284,7 @@ def test_sam_doesnt_read_out_a_refused_change(client, tool):
 
 def test_public_board_shows_the_zendesk_status_but_not_the_name(client, tool):
     tid = _board_ticket(tool)
-    _send(client, _payload(tid, assignee_name="Morgan Reyes"))
+    _send(client, _payload(tid))
     row = next(t for t in client.get("/api/tickets").json() if t["ticket_id"] == tid)
     assert row["zendesk_status"] == "open" and row["zendesk_assigned"] is True
     assert "Morgan" not in json.dumps(client.get("/api/tickets").json())
@@ -280,11 +295,121 @@ def test_public_board_shows_the_zendesk_status_but_not_the_name(client, tool):
 def test_sidebar_card_shows_the_zendesk_status_and_assignee(client, tool, monkeypatch):
     monkeypatch.setattr(config, "SIDEBAR_SECRET", "sidebar-secret")
     tid = _board_ticket(tool)
-    _send(client, _payload(tid, assignee_name="Morgan Reyes"))
+    _send(client, _payload(tid))
     card = client.get("/api/zendesk/tickets/5001", headers={"X-Sidebar-Secret": "sidebar-secret"}).json()
     assert card["nightagent_ticket_id"] == tid
     assert card["board_status_label"] == "Technician assigned"
     assert card["zendesk_status"] == "open" and card["zendesk_assignee_name"] == "Morgan Reyes"
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("Solved", "solved"), ("SOLVED", "solved"), ("  solved ", "solved"), ("On-hold", "hold"), ("on hold", "hold"),
+    ("HOLD", "hold"), ("Open", "open"),
+])
+def test_status_is_read_case_insensitively(raw, expected):
+    assert zendesk_sync._status(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["Awaiting parts", "", None, "solvedd", "open; drop table", "Résolu"])
+def test_unknown_status_values_are_rejected(raw):
+    assert zendesk_sync._status(raw) is None
+
+
+def test_unknown_status_changes_nothing(client, tool):
+    tid = _board_ticket(tool)
+    res = _send(client, _payload(tid, status="Awaiting parts")).json()
+    assert res == {"status": "ok", "result": "ignored", "reason": "Unknown Zendesk status"}
+    ticket = get_store().get_ticket(tid)
+    assert ticket["status"] == "awaiting_dispatch" and not ticket.get("zendesk_status")
+
+
+# --- The assignee's name: looked up by id, never taken from the body -------------------------------------------
+
+def test_name_comes_from_the_lookup_not_the_body(client, tool):
+    tid = _board_ticket(tool)
+    _send(client, _payload(tid, assignee_name='Mallory "the boss" <b>'))  # an old trigger still sending a name
+    assert get_store().get_ticket(tid)["zendesk_assignee_name"] == "Morgan Reyes"
+
+
+def test_name_is_looked_up_only_when_the_assignee_changes(client, tool, lookups):
+    tid = _board_ticket(tool)
+    _send(client, _payload(tid, status="Open", minutes_ago=3))
+    _send(client, _payload(tid, status="Pending", minutes_ago=2))  # same assignee
+    _send(client, _payload(tid, status="Pending", minutes_ago=1, assignee_id="7002"))
+    assert lookups == ["7001", "7002"]
+    assert get_store().get_ticket(tid)["zendesk_assignee_name"] == "Sam Okafor"
+
+
+def test_a_failed_lookup_still_applies_the_change(client, tool, monkeypatch):
+    monkeypatch.setattr(zendesk, "user_name", lambda _id: None)
+    tid = _board_ticket(tool)
+    assert _send(client, _payload(tid)).json()["result"] == "applied"
+    ticket = get_store().get_ticket(tid)
+    assert ticket["status"] == "technician_assigned" and ticket["zendesk_assignee_name"] is None
+
+
+def test_a_name_with_quotes_is_stored_as_is(client, tool, monkeypatch):
+    monkeypatch.setattr(zendesk, "user_name", lambda _id: 'Pat "PJ" O\'Neil')
+    tid = _board_ticket(tool)
+    _send(client, _payload(tid))
+    assert get_store().get_ticket(tid)["zendesk_assignee_name"] == 'Pat "PJ" O\'Neil'
+
+
+class _Res:
+    def __init__(self, status, body=None):
+        self.status_code, self._body = status, body or {}
+
+    def json(self):
+        return self._body
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+@pytest.fixture
+def real_lookup(monkeypatch, lookups):
+    """The real zendesk.user_name, against a faked Zendesk."""
+    monkeypatch.undo()  # drop the faked lookup and settings from the autouse fixtures...
+    monkeypatch.setattr(config, "ZENDESK_SUBDOMAIN", "acme")  # ...and set up just what this needs
+    monkeypatch.setattr(config, "ZENDESK_CLIENT_ID", "client-id")
+    monkeypatch.setattr(config, "ZENDESK_CLIENT_SECRET", "client-secret")
+    monkeypatch.setattr(zendesk, "_token", {"value": "", "expires_at": 0.0, "scope": zendesk.SCOPE})
+    monkeypatch.setattr(zendesk.requests, "post", lambda url, **kw: _Res(200, {"access_token": "tok-1"}))
+    calls = []
+
+    def get(url, headers=None, timeout=None):
+        calls.append({"url": url, "headers": headers, "timeout": timeout})
+        return calls_response["next"]
+    calls_response = {"next": _Res(200, {"user": {"id": 7001, "name": "  Morgan   Reyes "}})}
+    monkeypatch.setattr(zendesk.requests, "get", get)
+    return calls, calls_response
+
+
+def test_user_lookup_reads_the_name_from_zendesk(real_lookup):
+    calls, _ = real_lookup
+    assert zendesk.user_name("7001") == "Morgan Reyes"
+    assert calls[0]["url"] == "https://acme.zendesk.com/api/v2/users/7001.json"
+    assert calls[0]["headers"]["Authorization"] == "Bearer tok-1"
+    assert calls[0]["timeout"] == zendesk.LOOKUP_TIMEOUT_SECS
+
+
+def test_user_lookup_failure_is_none_not_an_error(real_lookup):
+    _, response = real_lookup
+    response["next"] = _Res(403)  # e.g. the token fell back to the scope without users:read
+    assert zendesk.user_name("7001") is None
+
+
+def test_user_lookup_never_leaves_the_sandbox(real_lookup):
+    from app.store import sandbox
+    calls, _ = real_lookup
+    with sandbox():
+        assert zendesk.user_name("7001") is None
+    assert calls == []
+
+
+def test_token_asks_for_users_read():
+    assert "users:read" in zendesk.SCOPE.split()
 
 
 def test_supabase_allows_every_column_and_event_source_the_sync_writes():

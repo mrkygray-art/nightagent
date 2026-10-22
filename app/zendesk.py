@@ -25,7 +25,8 @@ from app import config, lifecycle
 
 log = logging.getLogger("nightshift")
 
-SCOPE = "tickets:write users:write organizations:write"  # organizations:write also covers memberships
+# organizations:write also covers memberships; users:read looks up an assignee's name for the status sync
+SCOPE = "tickets:write users:write users:read organizations:write"
 # What the OAuth client had before organizations. If the client's allowed scopes leave out organizations:write,
 # Zendesk refuses the wider token (400 invalid_scope); tickets then still go in with this one.
 BASIC_SCOPE = "tickets:write users:write"
@@ -120,6 +121,34 @@ def _send(method: str, path: str, payload: dict, idempotency_key: str | None = N
     if res.status_code >= 400:
         raise ZendeskError(res.status_code, path)
     return res
+
+
+LOOKUP_TIMEOUT_SECS = 3  # runs inside the Zendesk webhook, which Zendesk gives 12 seconds in all
+
+
+def user_name(user_id: int | str) -> str | None:
+    """A Zendesk agent's name, looked up by id, for the staff-only sidebar card. The status webhook sends only
+    the assignee's id, so a name with quotes in it can't break its JSON body. None if it can't be had; the
+    status change is applied either way."""
+    from app.store import in_sandbox
+    if in_sandbox() or not configured():
+        return None
+    path = f"/users/{int(user_id)}.json"
+    try:
+        def go():
+            return requests.get(f"{_base_url()}/api/v2{path}", timeout=LOOKUP_TIMEOUT_SECS,
+                                headers={"Authorization": f"Bearer {_access_token()}"})
+
+        res = go()
+        if res.status_code == 401:  # token revoked or expired early: get a new one once
+            _token["value"] = ""
+            res = go()
+        if res.status_code >= 400:
+            raise ZendeskError(res.status_code, path)
+        return " ".join(str(res.json()["user"].get("name") or "").split())[:100] or None
+    except Exception:  # noqa: BLE001 - the name is a nicety; the sync must still go through
+        log.exception("Zendesk: could not look up the name of user %s", user_id)
+        return None
 
 
 def slug(name: str) -> str:

@@ -74,11 +74,14 @@ async def zendesk_ticket_updated(request: Request):
         payload = json.loads(raw)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Body is not valid JSON")
+    # Logged to trace a delivery. Not the duplicate key: Zendesk documents the header but not that a retry keeps
+    # it, and one change can fire the webhook twice; repeats are caught by updated_at in apply_update.
+    invocation = (request.headers.get(zendesk_sync.INVOCATION_HEADER) or "")[:80]
     try:
         outcome = zendesk_sync.apply_update(payload)
     except Exception:  # noqa: BLE001 - a store failure: let Zendesk try again shortly
-        log.exception("Zendesk sync: could not apply an update")
+        log.exception("Zendesk sync: could not apply invocation %s", invocation)
         return JSONResponse({"status": "retry"}, status_code=503, headers={"Retry-After": "30"})
-    if outcome["result"] != "duplicate":
-        log.info("Zendesk sync: %s (%s)", outcome["result"], outcome.get("reason") or outcome.get("board_status"))
+    log.info("Zendesk sync invocation %s: %s (%s)", invocation, outcome["result"],
+             outcome.get("reason") or outcome.get("board_status"))
     return {"status": "ok", **outcome}
