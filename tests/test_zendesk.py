@@ -240,6 +240,42 @@ def test_caller_becomes_an_end_user_in_their_account_organization(client, tool, 
     assert "4245550119" not in json.dumps([c["json"] for c in zd["calls"][1:]])
 
 
+def test_note_is_written_by_the_integration_user_not_the_caller(client, tool, zd, monkeypatch):
+    monkeypatch.setattr(config, "ZENDESK_INTEGRATION_USER_ID", "56667084092307")
+    _make(tool)
+    _post(client, "conv_zd_1")
+    sent = zd["tickets"][0]
+    assert sent["submitter_id"] == 56667084092307 and sent["requester_id"]
+
+
+def test_no_submitter_without_an_integration_user_or_a_requester(client, tool, zd, monkeypatch):
+    _make(tool, "conv_zd_1")
+    _post(client, "conv_zd_1")
+    assert "submitter_id" not in zd["tickets"][0]  # setting unset
+    monkeypatch.setattr(config, "ZENDESK_INTEGRATION_USER_ID", "56667084092307")
+    zd["fail"] = {"/users/create_or_update": 500}
+    _make(tool, "conv_zd_2", category="camera_offline")
+    _post(client, "conv_zd_2")
+    # No requester: the API user is already the author, and the plain payload stays exactly the old one
+    assert "submitter_id" not in zd["tickets"][1]
+
+
+def test_refused_ticket_falls_back_without_the_submitter(client, tool, zd, monkeypatch):
+    monkeypatch.setattr(config, "ZENDESK_INTEGRATION_USER_ID", "56667084092307")
+    _make(tool)
+    real_post = zendesk.requests.post
+
+    def post(url, json=None, headers=None, timeout=None):
+        if url.endswith("/tickets.json") and "submitter_id" in json["ticket"]:
+            zd["calls"].append({"url": url, "json": json, "headers": headers or {}})
+            return FakeResponse(422, {"error": "RecordInvalid"})
+        return real_post(url, json=json, headers=headers, timeout=timeout)
+    monkeypatch.setattr(zendesk.requests, "post", post)
+    _post(client, "conv_zd_1")
+    (sent,) = zd["tickets"]
+    assert "submitter_id" not in sent and "requester_id" not in sent
+
+
 def test_caller_who_gave_no_name_is_the_accounts_unknown_caller(client, tool, zd):
     _make(tool, caller_name="not given")
     _post(client, "conv_zd_1")

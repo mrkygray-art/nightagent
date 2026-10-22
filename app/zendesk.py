@@ -235,6 +235,11 @@ def create_ticket(ticket: dict, call_summary: str | None) -> int:
     full = {"ticket": dict(plain["ticket"])}
     if user_id:
         full["ticket"]["requester_id"] = user_id
+        # The submitter always authors a new ticket's first comment, and on these tickets Zendesk made that the
+        # caller. Naming NightAgent's own integration user keeps the private note from reading as the caller's.
+        submitter = config.ZENDESK_INTEGRATION_USER_ID.strip()
+        if submitter.isdigit():
+            full["ticket"]["submitter_id"] = int(submitter)
     if org_id:
         full["ticket"]["organization_id"] = org_id
     if fields := custom_fields(ticket):
