@@ -94,6 +94,7 @@ EVENT_LABELS = {
     "caller_called_again": "Same problem reported again",
     "page_failed": "Alert didn't go through",
     "caller_added_note": "Caller added a note",
+    "zendesk_update_refused": "Zendesk change not applied",
 }
 
 PRIORITY_LABELS = {"emergency": "High priority", "urgent": "Medium priority", "routine": "Normal priority"}

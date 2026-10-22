@@ -7,12 +7,20 @@ from html import escape
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
+from app import zendesk_sync
 from app.service import public_ticket
 from app.store import get_store
 
 router = APIRouter()
 
 BADGE = {"emergency": "#c62828", "urgent": "#ef6c00", "routine": "#2e7d32"}
+
+
+def _zendesk_line(t: dict) -> str:
+    if not t.get("zendesk_status"):
+        return ""
+    label = zendesk_sync.STATUS_LABELS.get(t["zendesk_status"], t["zendesk_status"])
+    return f"<br><small>Zendesk: {escape(label)}{', assigned' if t.get('zendesk_assigned') else ''}</small>"
 
 
 @router.get("/api/tickets")
@@ -38,7 +46,7 @@ def dashboard() -> str:
             f"<td><span class='badge' style='background:{color}'>{escape(t['priority_label'])}</span><br><small>{escape(t.get('priority_reason') or '')}</small></td>"
             f"<td>{escape(t.get('caller_name') or '')}<br><small>{escape(t['callback_number'])}</small></td>"
             f"<td>{escape(t.get('issue_summary') or '')}</td>"
-            f"<td>{escape(t['status_label'])}</td>"
+            f"<td>{escape(t['status_label'])}{_zendesk_line(t)}</td>"
             f"<td><small>{escape(t.get('call_summary') or 'Call summary on its way…')}</small></td>"
             "</tr>"
         )

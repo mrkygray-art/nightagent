@@ -55,6 +55,11 @@ def build(ticket: dict, zendesk_id: int, call: dict | None, logged: list[dict]) 
         "caller_name": ticket.get("caller_name"),
         "priority": priority,
         "priority_label": lifecycle.PRIORITY_LABELS.get(priority, priority),
+        "board_status_label": lifecycle.STATE_LABELS[lifecycle.normalize_state(ticket.get("status"))],
+        # Mirrored by app/zendesk_sync.py. The sidebar is staff-only, so the assignee's name is included.
+        "zendesk_status": ticket.get("zendesk_status"),
+        "zendesk_assignee_name": ticket.get("zendesk_assignee_name"),
+        "zendesk_synced_at": ticket.get("zendesk_updated_at"),
         "call_summary": evaluation.redact((call or {}).get("summary")),
         "analysis_status": "done" if (call or {}).get("eval_status") == "done" else "pending",
         "tool_calls": tool_calls(call, logged),

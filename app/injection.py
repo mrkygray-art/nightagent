@@ -6,9 +6,13 @@ regression tests on the same page.
 """
 from __future__ import annotations
 
+import json
+from datetime import datetime, timedelta, timezone
+
+from app import zendesk_sync
 from app.notify import paging_down
-from app.routes_tools import (CreateTicketRequest, LookupRequest, PageRequest, create_ticket,
-                              lookup_customer, page_on_call_tech)
+from app.routes_tools import (CreateTicketRequest, LookupRequest, PageRequest, TicketStatusRequest, create_ticket,
+                              lookup_customer, page_on_call_tech, ticket_status)
 from app.store import sandbox
 
 
@@ -120,4 +124,120 @@ def paging_service_down() -> dict:
     }
 
 
-SCENARIOS = {"duplicate-caller": duplicate_caller, "paging-down": paging_service_down}
+# A throwaway signing secret for the sandbox: the real webhook secret never leaves the server config.
+_LAB_SECRET = "evaluation-lab-sandbox-secret"
+_LAB_ASSIGNEE = "Morgan Reyes"  # made up, like the rest of the demo data
+
+
+def _zendesk_ticket(store, zendesk_id: int) -> str:
+    """An emergency board ticket that NightAgent already logged in Zendesk (made through the real tool)."""
+    made = create_ticket(CreateTicketRequest(
+        customer_id="C-1003", caller_name="Priya Shah", callback_number="4245550119",
+        issue_summary="Main entrance won't unlock; nobody can get in.", category="entry_blocked",
+        suggested_priority="emergency", conversation_id=f"inject_zd_{zendesk_id}"))
+    store.update_ticket(made["ticket_id"], {"zendesk_ticket_id": zendesk_id})
+    return made["ticket_id"]
+
+
+def _stamp(minutes_ago: int = 0) -> str:
+    return (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _delivery(payload: dict) -> tuple[bytes, str, str]:
+    """A signed webhook body, the way Zendesk sends one."""
+    body = json.dumps(payload).encode()
+    stamp = _stamp()
+    return body, zendesk_sync.sign(body, stamp, _LAB_SECRET), stamp
+
+
+def _deliver(body: bytes, signature: str, stamp: str) -> dict:
+    """What the endpoint does after reading the request: check the signature, then apply."""
+    if not zendesk_sync.verify(body, signature, stamp, _LAB_SECRET):
+        return {"result": "rejected", "reason": "Invalid signature"}
+    return zendesk_sync.apply_update(json.loads(body))
+
+
+def _payload(tid: str, zendesk_id: int, status: str, minutes_ago: int, assignee: bool = True, **extra) -> dict:
+    return {"zendesk_ticket_id": str(zendesk_id), "nightagent_ticket_id": tid, "status": status,
+            "assignee_id": "7001" if assignee else "", "assignee_name": _LAB_ASSIGNEE if assignee else "",
+            "updated_by_id": "7001", "updated_at": _stamp(minutes_ago), "tags": "nightagent", **extra}
+
+
+def _sam_says(tid: str) -> dict:
+    return ticket_status(TicketStatusRequest(ticket_id=tid, customer_id="C-1003", conversation_id="inject_zd_status"))
+
+
+def _result(name: str, before: str, steps: list, checks: list) -> dict:
+    return {"name": name, "before": before, "steps": steps,
+            "checks": [{"label": label, "passed": bool(ok), "detail": detail} for label, ok, detail in checks],
+            "passed": all(ok for _, ok, _ in checks)}
+
+
+def zendesk_duplicate_delivery() -> dict:
+    """Zendesk delivers the same webhook twice (it retries after a timeout, and says a webhook can fire more
+    than once for one change), then an older delivery arrives late."""
+    steps = []
+    with sandbox() as store:
+        tid = _zendesk_ticket(store, 8101)
+        delivery = _delivery(_payload(tid, 8101, "Open", minutes_ago=1))
+        first = _deliver(*delivery)
+        steps.append(_step("Zendesk", "Webhook: an agent assigned the ticket", first, ("result", "board_status", "moved")))
+        again = _deliver(*delivery)
+        steps.append(_step("Zendesk", "The same webhook again, same signature (a retry)", again, ("result", "reason")))
+        late = _deliver(*_delivery(_payload(tid, 8101, "New", minutes_ago=5, assignee=False)))
+        steps.append(_step("Zendesk", "An older change arriving late (still unassigned)", late, ("result", "reason")))
+        said = _sam_says(tid)
+        steps.append(_step("Caller · Sam", "check_ticket_status", said, ("status", "tell_the_caller")))
+        ticket = store.get_ticket(tid)
+        assigned = [e for e in store.list_events(tid) if e["event_type"] == "technician_assigned"]
+
+    checks = [
+        ("The first delivery moves the board one step", first.get("moved") == ["technician_assigned"],
+         f"Board: {first.get('board_status')}"),
+        ("The retry changes nothing", again.get("result") == "duplicate", again.get("reason") or again.get("result")),
+        ("The late, older delivery changes nothing", late.get("result") == "duplicate",
+         late.get("reason") or late.get("result")),
+        ('One "Technician assigned" in the history', len(assigned) == 1, f"{len(assigned)} event(s)"),
+        ("The board keeps the newest Zendesk state",
+         ticket.get("zendesk_status") == "open" and ticket.get("status") == "technician_assigned",
+         f"Zendesk: {ticket.get('zendesk_status')}"),
+        ("Sam doesn't say who was assigned", _LAB_ASSIGNEE.split()[0] not in json.dumps(said),
+         "Assignee's name not in the tool result"),
+    ]
+    return _result("Zendesk webhook delivered twice",
+                   "New with the Zendesk sync, so there's no earlier behavior to compare: Zendesk's docs say a webhook "
+                   "can fire more than once for one change, and it retries after a timeout.", steps, checks)
+
+
+def zendesk_illegal_transition() -> dict:
+    """In Zendesk someone marks an emergency solved (and its priority low) while the board still has it
+    waiting for a technician. On the board that would skip four stages."""
+    steps = []
+    with sandbox() as store:
+        tid = _zendesk_ticket(store, 8102)
+        tried = _deliver(*_delivery(_payload(tid, 8102, "Solved", minutes_ago=1, assignee=False, priority="Low")))
+        steps.append(_step("Zendesk", "Webhook: marked solved, priority set to low, nobody assigned", tried,
+                           ("result", "board_status", "refused")))
+        said = _sam_says(tid)
+        steps.append(_step("Caller · Sam", "check_ticket_status", said, ("status", "tell_the_caller")))
+        ticket = store.get_ticket(tid)
+        refused = [e for e in store.list_events(tid) if e["event_type"] == zendesk_sync.REFUSED_EVENT]
+
+    checks = [
+        ("The board doesn't skip ahead", ticket.get("status") == "awaiting_dispatch", f"Board: {ticket.get('status')}"),
+        ("The emergency stays an emergency", ticket.get("priority") == "emergency", f"Priority: {ticket.get('priority')}"),
+        ("The refusal is in the ticket's history", len(refused) == 1,
+         f'{len(refused)} "Zendesk change not applied" event(s)'),
+        ("What Zendesk said is still recorded", ticket.get("zendesk_status") == "solved",
+         f"Zendesk: {ticket.get('zendesk_status')}"),
+        ("Sam still gives the board's status",
+         said.get("status") == "Waiting for a technician" and "not applied" not in (said.get("tell_the_caller") or ""),
+         said.get("status") or ""),
+    ]
+    return _result("Zendesk tries to skip ahead",
+                   'New with the Zendesk sync, so there\'s no earlier behavior to compare: without the allow-list, a '
+                   'Zendesk "Solved" would have marked the repair finished on an emergency nobody had gone to.', steps, checks)
+
+
+SCENARIOS = {"duplicate-caller": duplicate_caller, "paging-down": paging_service_down,
+             "zendesk-duplicate": zendesk_duplicate_delivery, "zendesk-skip": zendesk_illegal_transition}

@@ -44,6 +44,10 @@ ZENDESK_CLIENT_SECRET = os.getenv("ZENDESK_CLIENT_SECRET", "")
 ZENDESK_FIELD_NIGHTAGENT_ID = os.getenv("ZENDESK_FIELD_NIGHTAGENT_ID", "")
 ZENDESK_FIELD_CATEGORY = os.getenv("ZENDESK_FIELD_CATEGORY", "")
 ZENDESK_FIELD_CALL_SOURCE = os.getenv("ZENDESK_FIELD_CALL_SOURCE", "")
+# Zendesk -> NightAgent status sync: the webhook's signing secret, and the Zendesk user id our own API calls run as
+# (its changes are ignored, so nothing NightAgent does in Zendesk can loop back). Both unset = the endpoint is off.
+ZENDESK_WEBHOOK_SECRET = os.getenv("ZENDESK_WEBHOOK_SECRET", "")
+ZENDESK_INTEGRATION_USER_ID = os.getenv("ZENDESK_INTEGRATION_USER_ID", "")
 
 # The "NightAgent Call" Zendesk sidebar app sends this in X-Sidebar-Secret. Unset = the endpoint is off.
 SIDEBAR_SECRET = os.getenv("SIDEBAR_SECRET", "")
