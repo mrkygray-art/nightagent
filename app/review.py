@@ -51,7 +51,9 @@ SETTINGS = {
     # AI checks that always apply to a call that made a repair ticket, so "unknown" there means uncertain.
     # The others are "unknown" whenever they don't apply (no safety words, no tricks), which is fine.
     "ticket_checks": ["confirmed_details_first", "correct_routing", "clear_close"],
-    "emergency_checks": ["emergency_handled"],  # also always apply once the ticket is an emergency
+    # Apply only once the ticket is an emergency: then "unknown" is uncertain, and before that even a "failure" is
+    # ignored (the grader failed "Emergency handled" on an urgent ticket for not paging, NS-3646)
+    "emergency_checks": ["emergency_handled"],
     "related_days": 7,
 }
 
@@ -69,7 +71,7 @@ def evaluate_review(call_data: dict) -> dict:
       priority, suggested_priority: the rules' final priority and the AI's suggestion (routine/urgent/emergency)
       account_matched, requester_known: bools
       scorecard: {check id: "success" | "failure" | "unknown"} from ElevenLabs' grading
-      sentiment, intent, identity_verified, call_successful: ElevenLabs' analysis, None if not given
+      sentiment, intent, identity_verified: ElevenLabs' analysis, None if not given
       issue, caller_text: the issue summary and the caller's lines of the transcript
       related_tickets: count of open or recent tickets for the same caller or account
     Returns {"reviewNeeded", "reasons": [{"code", "severity"}], "options": [str], "bump_priority": bool}."""
@@ -82,7 +84,10 @@ def evaluate_review(call_data: dict) -> dict:
     if not call_data.get("account_matched") or not call_data.get("requester_known"):
         found.append("NO_ACCOUNT_MATCH")
     scorecard = call_data.get("scorecard") or {}
-    must_apply = SETTINGS["ticket_checks"] + (SETTINGS["emergency_checks"] if priority == "emergency" else [])
+    emergency = priority == "emergency"
+    if not emergency:
+        scorecard = {c: r for c, r in scorecard.items() if c not in SETTINGS["emergency_checks"]}
+    must_apply = SETTINGS["ticket_checks"] + (SETTINGS["emergency_checks"] if emergency else [])
     if any(r == "failure" for r in scorecard.values()) or \
             any(scorecard.get(c) not in ("success", "failure") for c in must_apply if c in scorecard):
         found.append("SCORECARD_FAIL")
@@ -94,8 +99,8 @@ def evaluate_review(call_data: dict) -> dict:
         found.append("NEGATIVE_SENTIMENT")
     if call_data.get("related_tickets"):
         found.append("REPEAT_OR_RELATED")
-    if call_data.get("intent") == "unclear" or call_data.get("identity_verified") is False \
-            or call_data.get("call_successful") == "failure":
+    # Not ElevenLabs' overall call_successful: it marked a call that went fine a failure (NS-3646)
+    if call_data.get("intent") == "unclear" or call_data.get("identity_verified") is False:
         found.append("LOW_CONFIDENCE")
 
     order = list(RULES)
@@ -157,7 +162,6 @@ def call_data(ticket: dict, analysis: dict | None, store) -> dict:
         "sentiment": data.get("caller_sentiment"),
         "intent": data.get("intent"),
         "identity_verified": data.get("identity_verified"),
-        "call_successful": analysis.get("call_successful"),
         "issue": ticket.get("issue_summary"),
         "caller_text": caller_lines(analysis.get("transcript")),
         "related_tickets": related_tickets(ticket, store),
