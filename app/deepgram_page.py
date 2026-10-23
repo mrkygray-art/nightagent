@@ -105,8 +105,8 @@ DEEPGRAM_HTML = r"""<!doctype html>
     </section>
     <section class="panel" aria-label="Latency">
       <h2>Response time</h2>
-      <p class="note" style="margin-top:0">From Deepgram's AgentStartedSpeaking event: seconds from the end of your turn
-        until Sam starts talking, and how much of that was the LLM (think) and the voice (speak).</p>
+      <p class="note" style="margin-top:0">Deepgram's own figures for each of your turns (its LatencyReport messages):
+        seconds from the end of your turn until Sam starts talking, and how much of that was the LLM (think) and the voice (speak).</p>
       <table>
         <thead><tr><th>Turn</th><th>Think</th><th>Speak</th><th>Total</th></tr></thead>
         <tbody id="latency"><tr><td colspan="4" class="empty">No turns yet</td></tr></tbody>
@@ -140,6 +140,19 @@ DEEPGRAM_HTML = r"""<!doctype html>
     registerProcessor("pcm16", Pcm16);`;
 
   let call = null;
+  // Deepgram's agent doesn't speak up on its own when the caller goes quiet, so the page asks it to, like
+  // ElevenLabs Sam does: once after 10 s of silence following Sam's turn, then once more after another 15 s.
+  const CHECK_INS = [[10000, "Are you still there? Take your time."], [15000, "I'm still here whenever you're ready."]];
+
+  function quietTimer(step = 0) {
+    clearTimeout(call.quiet);
+    if (step >= CHECK_INS.length || call.ending) return;
+    call.quiet = setTimeout(() => {
+      if (!call || call.ws.readyState !== WebSocket.OPEN) return;
+      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: CHECK_INS[step][1] }));
+      call.checkIn = step + 1;
+    }, CHECK_INS[step][0]);
+  }
 
   function setStatus(text, state) {
     statusEl.lastChild.textContent = text;
@@ -171,7 +184,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     });
     latencyRows.appendChild(tr);
     const totals = call.latencies.map((l) => l.total_latency).filter((v) => typeof v === "number").sort((a, b) => a - b);
-    if (totals.length) $("median").textContent = `Median so far: ${totals[Math.floor(totals.length / 2)].toFixed(2)} s over ${totals.length} turns.`;
+    if (totals.length) $("median").textContent = `Median so far: ${totals[Math.floor(totals.length / 2)].toFixed(2)} s over ${totals.length} ${totals.length === 1 ? "turn" : "turns"}.`;
   }
 
   // Aura-2 audio: 24 kHz 16-bit PCM chunks, queued back to back
@@ -228,9 +241,13 @@ DEEPGRAM_HTML = r"""<!doctype html>
         addTurn(m.role === "assistant" ? "assistant" : "user", m.content);
         break;
       case "UserStartedSpeaking":
+        clearTimeout(call.quiet);
+        call.checkIn = 0;
         stopPlayback();
         call.talking = false;
         setStatus("Listening…", "live");
+        break;
+      case "InjectionRefused":  // someone was mid-turn; the next AgentAudioDone restarts the timer
         break;
       case "AgentThinking":
         setStatus("Sam is thinking…", "live");
@@ -249,6 +266,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         break;
       case "AgentAudioDone":
         call.talking = false;
+        quietTimer(call.checkIn || 0);  // after a check-in, wait for the next one
         setStatus("Sam is listening.", "live");
         if (call.ending) setTimeout(() => hangUp("Sam ended the call."), Math.max(0, (call.playAt - call.out.currentTime) * 1000) + 400);
         break;
@@ -344,6 +362,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const c = call;
     call = null;
     clearTimeout(c.timer);
+    clearTimeout(c.quiet);
     clearInterval(c.meter);
     $("mic").hidden = true;
     try { c.ws.close(); } catch (e) {}

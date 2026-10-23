@@ -14,7 +14,7 @@ let fails = 0;
 const check = (ok, name, extra = '') => { if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? ' — ' + extra : ''}`); };
 
 const wss = new WebSocketServer({ port: 8799, handleProtocols: (protocols) => protocols.has('bearer') ? 'bearer' : false });
-const seen = { protocols: null, settings: null, audioFrames: 0, audioBytes: 0, responses: [] };
+const seen = { protocols: null, settings: null, audioFrames: 0, audioBytes: 0, responses: [], injected: [] };
 let waitFor = null;
 const nextResponse = () => new Promise((resolve) => { waitFor = resolve; });
 
@@ -28,6 +28,8 @@ wss.on('connection', async (ws, req) => {
       ws.send(JSON.stringify({ type: 'Welcome', request_id: 'test' }));
       ws.send(JSON.stringify({ type: 'SettingsApplied' }));
       script(ws).catch((e) => { console.log('mock script failed', e); ws.close(); });
+    } else if (m.type === 'InjectAgentMessage') {
+      seen.injected.push({ at: Date.now() - seen.greetingDone, message: m.message });
     } else if (m.type === 'FunctionCallResponse') {
       seen.responses.push(m);
       if (waitFor) { const w = waitFor; waitFor = null; w(m); }
@@ -47,7 +49,9 @@ async function script(ws) {
   ws.send(JSON.stringify({ type: 'AgentStartedSpeaking', total_latency: 0.82, ttt_latency: 0.41, tts_latency: 0.19 }));
   ws.send(Buffer.alloc(24000 * 2 * 0.3));  // 0.3 s of 24 kHz silence
   ws.send(JSON.stringify({ type: 'AgentAudioDone' }));
-  await wait(1200);  // let the mic stream a bit
+  seen.greetingDone = Date.now();
+  await wait(10800);  // the caller stays quiet: the page should check in after 10 s
+  seen.injectedBeforeSpeech = seen.injected.length;
   ws.send(JSON.stringify({ type: 'UserStartedSpeaking' }));
   ws.send(JSON.stringify({ type: 'ConversationText', role: 'user', content: 'Westside Self Storage, 310 555 0178. The keypad has a trouble light.' }));
   const lookup = await call(ws, 'fc_1', 'lookup_customer', { query: '310-555-0178' });
@@ -94,6 +98,9 @@ async function script(ws) {
   check(seen.audioFrames > 5 && seen.audioBytes % 2 === 0, 'mic audio streams as 16-bit PCM after SettingsApplied', `${seen.audioFrames} frames`);
   // ~50 ms frames at 16 kHz = 1600 bytes, so the downsampling is right
   check(seen.audioFrames > 0 && Math.abs(seen.audioBytes / seen.audioFrames - 1600) < 40, 'frames are 16 kHz (about 1600 bytes per 50 ms)', String(seen.audioBytes / seen.audioFrames));
+  check(seen.injectedBeforeSpeech === 1 && seen.injected[0].at > 9500 && seen.injected[0].at < 10800,
+    'after 10 s of silence the page asks Sam to check in (InjectAgentMessage)', JSON.stringify(seen.injected));
+  check(seen.injected.length === 1, 'no check-in while the caller is talking or after end_call', String(seen.injected.length));
   check(seen.lookup && JSON.stringify(seen.lookup).includes('Westside'), 'lookup_customer ran on the real backend');
   check(seen.ticket && /^NS-\d+$/.test(seen.ticket.ticket_id || ''), 'create_ticket made a board ticket', JSON.stringify(seen.ticket).slice(0, 120));
   check(seen.responses.every((r) => r.type === 'FunctionCallResponse' && r.id && r.name && typeof r.content === 'string'), 'FunctionCallResponses have id, name, content');

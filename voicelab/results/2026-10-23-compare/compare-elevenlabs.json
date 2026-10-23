@@ -1,0 +1,362 @@
+{
+ "run_at": 1792792143,
+ "platform": "elevenlabs",
+ "sources": [
+  "voicelab/out/run-1792792645426.json",
+  "voicelab/out/run-1792793503769.json"
+ ],
+ "results": [
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "maria",
+   "conversation_id": "conv_0101m5nbt9m6ftbb3ey19m2hfa70",
+   "heard": "Hi, this is Maria Lopez from Sunset Dental. The number on the account is 310-555-0142. Our back door won't lock.",
+   "replies": [
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2188,
+   "first_sound_ms": 2188,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "james",
+   "conversation_id": "conv_6001m5nbv5yeeq69esdktnde8qyw",
+   "heard": "Hey, it's James Carter at Westside Self Storage. The number's 310-555-0178. Our front gate is stuck open.",
+   "replies": [
+    "Just to confirm, I have you as James Carter at 310-555-0178. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1531,
+   "first_sound_ms": 1531,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "priya",
+   "conversation_id": "conv_0801m5nbw1mfeaata89xace072sy",
+   "heard": "Hi, this is Priya Shah with Harbor Logistics Warehouse. Our number is 424-555-0119. The main entrance won't unlock.",
+   "replies": [
+    "Just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2770,
+   "first_sound_ms": 2770,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "maria",
+   "conversation_id": "conv_7201m5nbwxeqend9hrxgz81qx0zf",
+   "heard": "Hi, this is Maria Lopez from Sunset Dental. The number on the account is 310-555-0142. Our back door won't lock.",
+   "replies": [
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1832,
+   "first_sound_ms": 1832,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "james",
+   "conversation_id": "conv_8801m5nbxss0fk6rjj77pkwzahxq",
+   "heard": "Hey, it's James Carter at Westside Self Storage. The number's 310-555-0178. Our front gate is stuck open.",
+   "replies": [
+    "Just to confirm, I have you as James Carter at 310-555-0178. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2148,
+   "first_sound_ms": 2148,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "priya",
+   "conversation_id": "conv_9901m5nbynqff0484hyppvh0vw3x",
+   "heard": "Hi, this is Priya Shah with Harbor Logistics Warehouse. Our number is 424-555-0119. The main entrance won't unlock.",
+   "replies": [
+    "Just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1974,
+   "first_sound_ms": 1974,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "maria",
+   "conversation_id": "conv_4501m5nbzgmmfaxazv4kc5dce81e",
+   "heard": "Hi, this is Maria Lopez from Sunset Dental. The number on the account is 310-555-0142. Our back door won't lock.",
+   "replies": [
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1525,
+   "first_sound_ms": 1525,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "james",
+   "conversation_id": "conv_1601m5nc0c8zfpbrvke13js97ka1",
+   "heard": "Hey, it's James Carter at Westside Self Storage. The number's 310-555-0178. Our front gate is stuck open.",
+   "replies": [
+    "Just to confirm, I have you as James Carter at 310-555-0178. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 3713,
+   "first_sound_ms": 3713,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "priya",
+   "conversation_id": "conv_1801m5nc19vtf43bjwx6k98nydqa",
+   "heard": "Hi, this is Priya Shah with Harbor Logistics Warehouse. Our number is 424-555-0119. The main entrance won't unlock.",
+   "replies": [
+    "Just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2182,
+   "first_sound_ms": 2182,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "maria",
+   "conversation_id": "conv_6701m5nc24g5f2x80vqhj4ratz0d",
+   "heard": "Hi, this is Maria Lopez from Sunset Dental. The number on the account is 310-555-0142. Our back door won't lock.",
+   "replies": [
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1735,
+   "first_sound_ms": 1735,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "james",
+   "conversation_id": "conv_4401m5nc313zetq8xegrymhcrsd6",
+   "heard": "Hey, it's James Carter at Westside Self Storage. The number's 310-555-0178. Our front gate is stuck open.",
+   "replies": [
+    "Just to confirm, I have you as James Carter at 310-555-0178. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1790,
+   "first_sound_ms": 1790,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "priya",
+   "conversation_id": "conv_5501m5nc3xczec59deypf05p57mx",
+   "heard": "Hi, this is Priya Shah with Harbor Logistics Warehouse. Our number is 424-555-0119. The main entrance won't unlock.",
+   "replies": [
+    "Just to confirm, I have you as Priya Shah at 424-555-0119. Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1905,
+   "first_sound_ms": 1905,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer",
+    "lookup_customer"
+   ],
+   "ended_early": null
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "interruption",
+   "conversation_id": "conv_1601m5nczd76f1zvfweknjr75k7g",
+   "read_back": "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?",
+   "talking_when_cut_in": true,
+   "stopped": true,
+   "stop_ms": 885,
+   "heard": "Yes, yes, that's me. It's our back door. It won't lock.",
+   "reply": "Okay, so the back door won't lock. When did you first notice this happening?",
+   "used_new_detail": true,
+   "response_ms": 718,
+   "passed": true
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "interruption",
+   "conversation_id": "conv_3701m5nd06rpf9ksryypska5gy86",
+   "read_back": "Just to confirm, I have you as Maria Lopez at 310-555-0142. Is that right?",
+   "talking_when_cut_in": true,
+   "stopped": true,
+   "stop_ms": 653,
+   "heard": "Yes, yes, that's me. It's our back door. It won't lock.",
+   "reply": "Okay Maria, so the back door won't lock. Is that right, 310-555-0142?",
+   "used_new_detail": true,
+   "response_ms": 1042,
+   "passed": true
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "silence",
+   "conversation_id": "conv_6301m5nd1286fk48abzh9y50gx9t",
+   "quiet_ms": 25000,
+   "spoke_during_silence": [
+    {
+     "after_ms": 2701,
+     "text": "I'm here to help. Can you tell me what's happening with your alarm panel and when it started?"
+    },
+    {
+     "after_ms": 15122,
+     "text": "Are you still there? Please go ahead and tell me what's happening with your alarm panel."
+    }
+   ],
+   "first_reply_ms": 2701,
+   "check_in_ms": 15122,
+   "hung_up": false,
+   "close_info": null,
+   "tools": [],
+   "reply": "Got it, your alarm panel is beeping and showing a trouble code. When did this start?",
+   "carried_on": true,
+   "passed": true
+  },
+  {
+   "platform": "elevenlabs",
+   "test": "silence",
+   "conversation_id": "conv_3401m5nd2e5tefm8276ddxx9fmkf",
+   "quiet_ms": 25000,
+   "spoke_during_silence": [
+    {
+     "after_ms": 7089,
+     "text": "I'm here to help. Can you tell me what's happening with your alarm panel and when it started?"
+    },
+    {
+     "after_ms": 19273,
+     "text": "Are you still there? Please go ahead and tell me what's happening with your alarm panel."
+    }
+   ],
+   "first_reply_ms": 7089,
+   "check_in_ms": 19273,
+   "hung_up": false,
+   "close_info": null,
+   "tools": [],
+   "reply": "Got it, your alarm panel is beeping and showing a trouble code. When did this start?",
+   "carried_on": true,
+   "passed": true
+  }
+ ]
+}

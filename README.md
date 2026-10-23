@@ -74,6 +74,7 @@ The staff behind the agents (billing contact, account executive, service manager
 - **Browser straight to Deepgram.** `/api/deepgram/session` grants a 30-second Deepgram token (the API key never leaves the server) and returns the agent Settings plus a signed session for the call. The page streams the mic as 16 kHz PCM and plays Aura-2's 24 kHz audio, stopping Sam mid-sentence when the caller starts talking.
 - **Same tools, run on the server.** Sam's functions are client-side in Deepgram's terms: the browser posts each `FunctionCallRequest` to `/api/deepgram/tool` with its session, and the same Python that serves ElevenLabs' tool calls runs it. The server forces the call's own conversation id and only pages the technician for a ticket made on that call.
 - **After the call.** `/api/deepgram/end` stores the transcript (trimmed to the last four digits of any number), gets a summary and the caller's sentiment from Deepgram's Text Intelligence API, and logs the call in Zendesk with the same human-review rules, tagged `deepgram`. The page shows Deepgram's per-turn latency (think, speak, total), and the medians are saved with the call.
+- **Checking in on silence.** Deepgram's agent doesn't speak up on its own when a caller goes quiet, so the page sends `InjectAgentMessage` after 10 s of silence following Sam's turn, then once more after another 15 s.
 - **What's different.** Jordan and Riley stay on ElevenLabs, so on Deepgram, Sam takes billing and sales messages instead of handing off. Deepgram calls aren't graded by ElevenLabs, so they're left out of the Evaluation Lab scorecard and marked "Deepgram" on the board.
 
 ## Evaluation Lab
@@ -244,6 +245,31 @@ Each call ends before a ticket is made. The calls still run Sam's real account l
 | Talking over Sam | 2 of 3. Sam stopped every time (about 0.46 s); once it then repeated its question instead of using the new detail |
 | Going quiet | 3 of 3. Sam answers the half-finished sentence after about 4.7 s, then checks in ("Are you still there?") after about 17 s |
 | Caller wait | Typical 1.7 s, slowest 10% 2.4 s, from 20 timed replies |
+
+### ElevenLabs Sam vs Sam on Deepgram
+
+The same voice tests also run against [Sam on Deepgram](#sam-on-deepgram) (`node run.js --platform deepgram`): the same clips, noise, and phone line, the same stopwatch on the caller's side, and the live Settings and tools from `/deepgram`. `scripts/compare_voice.py` builds the table from the two result files in [`voicelab/results/2026-10-23-compare/`](voicelab/results/2026-10-23-compare/).
+
+**Snapshot on 2026-10-23** (16 calls each: 3 callers × 4 conditions, plus 2 talk-over and 2 silence calls):
+
+| | ElevenLabs Sam | Sam on Deepgram |
+| --- | --- | --- |
+| Caller wait, median (end of the caller's speech to Sam's voice) | 1.94 s | 1.81 s |
+| … quiet room / phone line | 2.19 s / 1.79 s | 1.48 s / 1.73 s |
+| … busy café (10 dB) / street (5 dB) | 1.97 s / 2.18 s | 2.35 s / 2.24 s |
+| Phone number and last name heard | 12 of 12 | 12 of 12 |
+| Sam read back the right number | 12 of 12 | 10 of 12 |
+| Sam started before the caller finished | 0 of 12 | 1 of 12 |
+| Talking over Sam: stopped and used the new detail | 2 of 2 (stops in about 0.77 s) | 2 of 2 (about 0.40 s) |
+| Going quiet: checks in, doesn't hang up, carries on | 2 of 2 | 2 of 2 |
+
+What's behind the numbers:
+
+- **It compares the whole stack, not only the voice layer.** ElevenLabs Sam thinks with Qwen 3.5, and Sam on Deepgram with Claude Haiku 4.5, so part of the difference is the model. Deepgram's own LatencyReport splits its median reply (1.10 s from the end of the turn) into 0.89 s for the model and 0.11 s for Aura-2.
+- **Flux is quickest in a quiet room and slower in noise**, where it waits longer to be sure the caller has finished.
+- **The two Deepgram read-back misses:** in one, Sam asked a safety question first (is there another way in?), which the ElevenLabs Sam did in the 2026-10-03 run too. In the other, street noise turned "stuck open" into "stucco", and Flux ended the turn while the caller was still talking.
+- **Checking in on silence is built into ElevenLabs but not Deepgram.** Deepgram's agent doesn't speak up on its own, so the `/deepgram` page sends an `InjectAgentMessage` after 10 s of quiet ("Are you still there? Take your time."), then once more after another 15 s. The test caller does the same. The first version of this test failed on Deepgram for that reason, and also because the test counted Deepgram's one-sentence-per-message replies as separate turns. The test now groups sentences less than 2.5 s apart.
+- **The sample is small.** 12 timed replies per platform, so treat a gap of a tenth of a second as a tie.
 
 ### Not measured yet
 

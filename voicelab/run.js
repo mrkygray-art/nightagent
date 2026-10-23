@@ -4,6 +4,7 @@
 //   node run.js                      run everything, print results
 //   node run.js --save               ...and write ../app/voice_lab.json for the /lab page
 //   node run.js --only numbers --conditions clean,phone --callers maria
+//   node run.js --platform deepgram  the same tests against Sam on Deepgram (/deepgram: Flux, Aura-2, Claude)
 //
 // Each call is a real conversation (it uses call minutes). Calls end before a ticket is made; the
 // conversation ids are saved so the server leaves these calls out of the real-call numbers.
@@ -98,7 +99,7 @@ class Call {
         break;
       }
       case 'agent_response':
-        this.events.push({ t: now, type: 'agent', text: m.agent_response_event.agent_response });
+        this.events.push({ t: now, type: 'agent', text: m.agent_response_event.agent_response, during_audio: this.agentSpeaking() });
         break;
       case 'user_transcript':
         this.events.push({ t: now, type: 'heard', text: m.user_transcription_event.user_transcript });
@@ -125,7 +126,7 @@ class Call {
         let frame;
         if (this.queue.length) { const q = this.queue.shift(); frame = q.f; if (q.mark) q.mark(this.t()); }
         else { frame = bed.subarray(bedPos, bedPos + FRAME); bedPos = (bedPos + FRAME) % (bed.length - FRAME); }
-        this.ws.send(JSON.stringify({ user_audio_chunk: A.toPcm16(frame).toString('base64') }));
+        this.sendFrame(frame);
         sent++;
         if (!this.queue.length && this.speaking) { this.speaking(); this.speaking = null; }
       }
@@ -144,6 +145,8 @@ class Call {
     }
     return new Promise((r) => { this.speaking = () => r({ ...said, end: this.t() }); });
   }
+
+  sendFrame(frame) { this.ws.send(JSON.stringify({ user_audio_chunk: A.toPcm16(frame).toString('base64') })); }
 
   agentSpeaking() { return this.t() < this.agentAudioEnd; }
 
@@ -165,8 +168,90 @@ class Call {
   close() { this.closing = true; if (!this.closed) this.ws.close(); return sleep(300); }
 }
 
+// Sam on Deepgram: the same caller over the Voice Agent socket the /deepgram page uses. The session comes
+// from the live site (so the same Settings and tools), audio goes up as raw 16 kHz PCM and comes back as
+// 24 kHz PCM, and Sam's functions run on the live backend, as they do for the page.
+const DG_OUT_RATE = 24000;
+class DeepgramCall extends Call {
+  async open() {
+    const r = await fetch(`${ORIGIN}/api/deepgram/session`, { method: 'POST' });
+    const s = await r.json();
+    if (!r.ok) throw new Error(`Deepgram session: ${r.status} ${s.detail || ''}`);
+    this.session = s.session;
+    this.conversationId = s.session.split('.')[0];  // dg_..., the first part of the signed session
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket(s.url, ['bearer', s.token]);
+      this.ws.on('error', reject);
+      this.ws.on('close', (code, reason) => { this.closed = true; this.closedAt = this.t(); this.closeInfo = { code, reason: String(reason), by_us: Boolean(this.closing) }; clearInterval(this.timer); });
+      this.ws.on('message', (raw, isBinary) => (isBinary ? this.onAudio(raw.length) : this.onDg(JSON.parse(raw), resolve)));
+      this.ws.on('open', () => { this.t0 = Date.now(); this.ws.send(JSON.stringify(s.settings)); });
+    });
+  }
+
+  onAudio(bytes) {
+    const now = this.t();
+    if (now > this.agentAudioEnd) this.events.push({ t: now, type: 'agent_audio_start' });
+    this.agentAudioEnd = Math.max(this.agentAudioEnd, now) + (bytes / 2 / DG_OUT_RATE) * 1000;
+    this.lastAudioAt = now;
+  }
+
+  async onDg(m, ready) {
+    const now = this.t();
+    switch (m.type) {
+      case 'SettingsApplied': this.startMic(); ready(); break;  // audio sent before this is dropped
+      case 'AgentAudioDone': this.quietTimer(this.checkIn || 0); break;
+      case 'ConversationText':
+        this.events.push({ t: now, type: m.role === 'assistant' ? 'agent' : 'heard', text: m.content, during_audio: this.agentSpeaking() });
+        break;
+      case 'UserStartedSpeaking':
+        // Like ElevenLabs' interruption event, only when Sam was talking; the page stops playback either way
+        if (this.agentSpeaking()) this.events.push({ t: now, type: 'interruption' });
+        this.agentAudioEnd = now;
+        clearTimeout(this.quietTimeout); this.checkIn = 0;
+        break;
+      case 'LatencyReport':
+        if (typeof m.total_latency === 'number') this.events.push({ t: now, type: 'latency', total: m.total_latency, ttt: this.ttt, tts: this.tts });
+        if (typeof m.ttt_text_latency === 'number') this.ttt = m.ttt_text_latency;
+        if (typeof m.tts_latency === 'number') this.tts = m.tts_latency;
+        break;
+      case 'FunctionCallRequest':
+        for (const fn of m.functions || []) {
+          this.events.push({ t: now, type: 'tool', tool: fn.name });
+          let content = 'ok';
+          if (fn.name !== 'end_call') {
+            const res = await fetch(`${ORIGIN}/api/deepgram/tool`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session: this.session, name: fn.name, arguments: fn.arguments || '{}' }) });
+            content = (await res.json()).content || '{"error": "The tool failed."}';
+          }
+          if (!this.closed) this.ws.send(JSON.stringify({ type: 'FunctionCallResponse', id: fn.id, name: fn.name, content }));
+        }
+        break;
+      case 'Error': this.events.push({ t: now, type: 'error', text: m.description || m.code }); break;
+    }
+  }
+
+  // The same silence check-ins as the /deepgram page (app/deepgram_page.py CHECK_INS)
+  quietTimer(step) {
+    const CHECK_INS = [[10000, 'Are you still there? Take your time.'], [15000, "I'm still here whenever you're ready."]];
+    clearTimeout(this.quietTimeout);
+    if (step >= CHECK_INS.length) return;
+    this.quietTimeout = setTimeout(() => {
+      if (this.closed) return;
+      this.ws.send(JSON.stringify({ type: 'InjectAgentMessage', message: CHECK_INS[step][1] }));
+      this.checkIn = step + 1;
+    }, CHECK_INS[step][0]);
+  }
+
+  close() { clearTimeout(this.quietTimeout); return super.close(); }
+
+  // The socket opens before the mic: startMic runs on SettingsApplied instead
+  sendFrame(frame) { this.ws.send(A.toPcm16(frame)); }
+}
+
+const PLATFORM = (() => { const i = process.argv.indexOf('--platform'); return i > -1 ? process.argv[i + 1] : 'elevenlabs'; })();
+
 async function newCall(cond, clips) {
-  const c = new Call(cond); c.clips = clips;
+  const c = PLATFORM === 'deepgram' ? new DeepgramCall(cond) : new Call(cond); c.clips = clips;
   await c.open();
   return c;
 }
@@ -200,6 +285,7 @@ async function numbersTest(cond, who, clips) {
     turn_split: c.after(said.start, 'heard').length > 1,
     tools: c.events.filter((e) => e.type === 'tool').map((e) => e.tool),
     ended_early: c.closeInfo && !c.closeInfo.by_us ? c.closeInfo : null,
+    ...(PLATFORM === 'deepgram' ? { deepgram_latency: c.after(said.voicedEnd, 'latency')[0] || null } : {}),
   };
 }
 
@@ -214,8 +300,10 @@ async function interruptionTest(clips) {
   const rb = c.after(opener.voicedEnd, 'agent').find(isReadBack);
   let result = { test: 'interruption', conversation_id: c.conversationId, read_back: rb ? rb.text : null };
   if (rb) {
-    await c.until(() => c.after(rb.t, 'agent_audio_start').length, 8000);
-    const audioStart = (c.after(rb.t, 'agent_audio_start')[0] || {}).t;
+    // ElevenLabs sends the words before the audio, Deepgram once the audio has started: cut into the read-back itself
+    const playing = rb.during_audio && c.events.filter((e) => e.type === 'agent_audio_start' && e.t <= rb.t).pop();
+    if (!playing) await c.until(() => c.after(rb.t, 'agent_audio_start').length, 8000);
+    const audioStart = (playing || c.after(rb.t, 'agent_audio_start')[0] || {}).t;
     await c.until(() => c.t() >= audioStart + 1500, 3000);
     const stillTalking = c.agentSpeaking();
     const barge = c.speak(clips['maria-bargein']);
@@ -249,7 +337,12 @@ async function silenceTest(clips, quietMs = 25000) {
   await c.greeting();
   const opener = await c.speak(clips['silence-opener']);
   await c.until(() => false, quietMs);
-  const during = c.after(opener.voicedEnd, 'agent');
+  // Sentences less than 2.5 s apart are one reply (Deepgram sends each sentence on its own)
+  const during = [];
+  for (const e of c.after(opener.voicedEnd, 'agent')) {
+    const last = during[during.length - 1];
+    if (last && e.t - last.end < 2500) { last.text += ' ' + e.text; last.end = e.t; } else during.push({ ...e, end: e.t });
+  }
   const hungUp = c.closed;
   let reply = '';
   if (!hungUp) {
@@ -269,7 +362,8 @@ async function silenceTest(clips, quietMs = 25000) {
     close_info: hungUp ? c.closeInfo : null,
     tools: c.events.filter((e) => e.type === 'tool').map((e) => e.tool),
     reply,
-    carried_on: /beep|trouble|code|panel|alarm/i.test(reply),
+    // Sam used the follow-up: said back the problem, or moved on to when it started instead of asking again
+    carried_on: /beep|trouble|code|panel|alarm|when did (that|it|this) start/i.test(reply) && !/what('s| is) happening/i.test(reply),
   };
   result.passed = Boolean(result.check_in_ms && !hungUp && result.carried_on && !result.tools.includes('create_ticket'));
   return result;
@@ -288,7 +382,7 @@ function arg(name, fallback) {
   const repeats = Number(arg('repeats', 3));
   const results = [];
   const started = Date.now();
-  const log = (r) => { results.push(r); console.log(JSON.stringify(r)); };
+  const log = (r) => { r = { platform: PLATFORM, ...r }; results.push(r); console.log(JSON.stringify(r)); };
   try {
     if (only.includes('numbers')) {
       for (const cond of conds) for (const who of callers) { log(await numbersTest(cond, who, clips)); await sleep(1500); }
@@ -299,8 +393,8 @@ function arg(name, fallback) {
     console.error('stopped:', e.message);
   }
   console.log(`\n${results.length} calls in ${Math.round((Date.now() - started) / 1000)} s`);
-  const out = path.join(__dirname, 'out', `run-${Date.now()}.json`);
+  const out = path.join(__dirname, 'out', `run-${PLATFORM === 'deepgram' ? 'deepgram-' : ''}${Date.now()}.json`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, JSON.stringify({ run_at: Math.round(started / 1000), results }, null, 1));
+  fs.writeFileSync(out, JSON.stringify({ run_at: Math.round(started / 1000), platform: PLATFORM, results }, null, 1));
   console.log('raw results:', out);
 })();
