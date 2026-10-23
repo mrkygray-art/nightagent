@@ -117,7 +117,10 @@ def ensure_on_default_form(zd: Zendesk, ids: dict[str, int | None], dry_run: boo
         print("  no default ticket form found; add the fields to your form by hand")
         return
     missing = [i for i in ids.values() if i and i not in form["ticket_field_ids"]]
-    if not missing:
+    if not all(ids.values()):  # dry run with fields not made yet
+        print(f"  would add the new field(s) to form {form['name']!r}")
+    elif not missing:
+        # Zendesk can add a new field to the default form by itself
         print(f"  skipped form {form['name']!r} (already has the fields)")
     elif dry_run:
         print(f"  would add {len(missing)} field(s) to form {form['name']!r}")
@@ -131,7 +134,7 @@ def view_payload(ids: dict[str, int | None]) -> dict:
     return {"view": {
         "title": VIEW_TITLE,
         "all": [{"field": "status", "operator": "less_than", "value": "solved"},
-                {"field": f"custom_fields_{ids[REVIEW_NEEDED]}", "operator": "is", "value": True}],
+                {"field": f"custom_fields_{ids[REVIEW_NEEDED]}", "operator": "is", "value": "true"}],
         # Grouped by priority (urgent first), oldest first inside each group
         "output": {"columns": ["subject", "requester", "priority", ids[REVIEW_REASON], "created"],
                    "group_by": "priority", "group_order": "desc", "sort_by": "created", "sort_order": "asc"},

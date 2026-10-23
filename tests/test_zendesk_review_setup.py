@@ -73,7 +73,7 @@ def test_first_run_makes_the_fields_and_view(fake, monkeypatch, capsys):
         ["Called back", "Dispatched", "SMS sent", "Approved as-is", "Other"]
     view = fake["views"][0]
     assert view["title"] == "Needs human review"
-    assert {"field": f"custom_fields_{fields['Review needed']['id']}", "operator": "is", "value": True} in view["all"]
+    assert {"field": f"custom_fields_{fields['Review needed']['id']}", "operator": "is", "value": "true"} in view["all"]
     assert view["output"]["columns"] == ["subject", "requester", "priority", fields["Review reason"]["id"], "created"]
     assert set(fake["ticket_forms"][0]["ticket_field_ids"]) >= {f["id"] for f in fields.values()}
     assert "ZENDESK_FIELD_REVIEW_NEEDED=" in capsys.readouterr().out
