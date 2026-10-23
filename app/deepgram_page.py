@@ -46,6 +46,10 @@ DEEPGRAM_HTML = r"""<!doctype html>
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--line); margin-right: 6px; vertical-align: middle; }
   .dot.live { background: var(--clear); box-shadow: 0 0 0 4px rgba(76, 183, 130, .2); }
   .dot.talk { background: var(--sodium); box-shadow: 0 0 0 4px var(--sodium-soft); }
+  .mic { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .9rem; }
+  .mic[hidden] { display: none; }
+  .mic-track { width: 70px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  #mic-bar { display: block; height: 100%; width: 0; background: var(--clear); transition: width .1s; }
   .grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
   @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 2rem; } }
   #transcript { min-height: 220px; max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -82,6 +86,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
   <section class="panel" aria-label="Call">
     <div class="controls">
       <button class="call" id="call" type="button">Start a call</button>
+      <span class="mic" id="mic" hidden title="Your microphone level">Mic <span class="mic-track"><span id="mic-bar"></span></span></span>
       <span id="status" role="status"><span class="dot" id="dot"></span>Ready. Use headphones if you can, so Sam doesn't hear itself.</span>
     </div>
     <p class="note" style="margin:12px 0 0">Try one of the fictional demo accounts:</p>
@@ -172,6 +177,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
   // Aura-2 audio: 24 kHz 16-bit PCM chunks, queued back to back
   function play(buf) {
     if (call.out.state === "suspended") call.out.resume();
+    if (!call.talking) { call.talking = true; setStatus("Sam is talking", "talk"); }
     const pcm = new Int16Array(buf);
     if (!pcm.length) return;
     const audio = call.out.createBuffer(1, pcm.length, 24000);
@@ -214,7 +220,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const m = JSON.parse(ev.data);
     switch (m.type) {
       case "SettingsApplied":
-        call.ready = true;
+        call.ready = true;  // audio before this would be dropped by Deepgram
         setStatus("Connected. Sam is listening.", "live");
         break;
       case "ConversationText":
@@ -223,16 +229,26 @@ DEEPGRAM_HTML = r"""<!doctype html>
         break;
       case "UserStartedSpeaking":
         stopPlayback();
+        call.talking = false;
         setStatus("Listening…", "live");
         break;
       case "AgentThinking":
         setStatus("Sam is thinking…", "live");
         break;
       case "AgentStartedSpeaking":
-        addLatency(m);
+        if (typeof m.total_latency === "number") addLatency(m);  // older API versions put the figures here
         setStatus("Sam is talking", "talk");
         break;
+      case "LatencyReport":  // Deepgram sends each figure in its own message; total_latency ends the turn's set
+        if (typeof m.ttt_text_latency === "number") call.turn.ttt_latency = m.ttt_text_latency;
+        if (typeof m.tts_latency === "number") call.turn.tts_latency = m.tts_latency;
+        if (typeof m.total_latency === "number") {
+          addLatency({ ...call.turn, total_latency: m.total_latency });
+          call.turn = {};
+        }
+        break;
       case "AgentAudioDone":
+        call.talking = false;
         setStatus("Sam is listening.", "live");
         if (call.ending) setTimeout(() => hangUp("Sam ended the call."), Math.max(0, (call.playAt - call.out.currentTime) * 1000) + 400);
         break;
@@ -258,14 +274,12 @@ DEEPGRAM_HTML = r"""<!doctype html>
   async function startCall() {
     button.disabled = true;
     setStatus("Starting…", "");
-    // Made in the click itself: Chrome and Safari keep an AudioContext made after an await (mic prompt,
-    // network) suspended, and Sam's greeting played into silence until the caller spoke.
-    const input = new AudioContext();
+    // Sam's speaker is made in the click itself: Chrome keeps an AudioContext made after an await (mic
+    // prompt, network) suspended, and the greeting played into silence until the caller spoke. The mic's
+    // context is made after the mic is granted, though: made before, a real mic could feed it silence.
     const out = new AudioContext();
     out.resume();
-    input.resume();
     const fail = (text) => {
-      input.close();
       out.close();
       setStatus(text, "");
       button.disabled = false;
@@ -293,14 +307,27 @@ DEEPGRAM_HTML = r"""<!doctype html>
     latencyRows.innerHTML = '<tr><td colspan="4" class="empty">No turns yet</td></tr>';
     $("median").textContent = "";
     if (out.state !== "running") await out.resume().catch(() => {});
+    const input = new AudioContext();
+    if (input.state !== "running") await input.resume().catch(() => {});
     const url = URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" }));
     await input.audioWorklet.addModule(url);
     const node = new AudioWorkletNode(input, "pcm16");
-    input.createMediaStreamSource(mic).connect(node);
+    const source = input.createMediaStreamSource(mic);
+    source.connect(node);
+    const analyser = input.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const level = new Float32Array(analyser.fftSize);
+    $("mic").hidden = false;
+    const meter = setInterval(() => {
+      analyser.getFloatTimeDomainData(level);
+      const rms = Math.sqrt(level.reduce((a, v) => a + v * v, 0) / level.length);
+      $("mic-bar").style.width = Math.min(100, Math.round(rms * 400)) + "%";
+    }, 100);
     const ws = new WebSocket(start.url, ["bearer", start.token]);
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
-    call = { ws, mic, input, out, node, session: start.session, ready: false, transcript: [], latencies: [],
-             playing: new Set(), playAt: 0, cancelled: new Set(), ending: false, startedAt: Date.now() };
+    call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
+             playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now() };
     node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
     ws.onmessage = onMessage;
@@ -317,6 +344,8 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const c = call;
     call = null;
     clearTimeout(c.timer);
+    clearInterval(c.meter);
+    $("mic").hidden = true;
     try { c.ws.close(); } catch (e) {}
     c.mic.getTracks().forEach((t) => t.stop());
     c.input.close();
