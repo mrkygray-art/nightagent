@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from app import analysis_spec, config, lifecycle
+from app import analysis_spec, config, deepgram_voice, lifecycle
 from app.store import get_store, now_iso
 
 log = logging.getLogger("nightshift")
@@ -126,6 +126,8 @@ def fetch_grade(conversation_id: str | None, want_trace: bool = False, want_metr
             results = {CRITERION: saved} if "result" in saved else saved
             if not want_trace and not want_metrics:
                 return {"status": "done", "results": results, "summary": cached.get("summary")}
+    if deepgram_voice.is_deepgram(conversation_id):  # ElevenLabs never saw it, and it isn't graded there
+        return {"status": "unavailable"}
     if not config.ELEVENLABS_API_KEY:
         return {"status": "unavailable"}
     last = cached.get("evaluated_at")

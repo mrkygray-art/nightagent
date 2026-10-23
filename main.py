@@ -8,6 +8,7 @@ import logging
 from fastapi import FastAPI
 
 from app.routes_dashboard import router as dashboard_router
+from app.routes_deepgram import router as deepgram_router
 from app.routes_demo import router as demo_router
 from app.routes_impact import router as impact_router
 from app.pwa import router as pwa_router
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 
 app = FastAPI(
     title="NightAgent",
-    description="Backend for an AI service lifecycle agent built on ElevenLabs Agents.",
+    description="Backend for an AI service lifecycle agent built on ElevenLabs Agents, with a Deepgram Voice Agent edition of Sam.",
     version="0.1.0",
 )
 app.include_router(tools_router)
@@ -32,6 +33,7 @@ app.include_router(lifecycle_router)
 app.include_router(impact_router)
 app.include_router(pwa_router)
 app.include_router(sidebar_router)
+app.include_router(deepgram_router)
 
 
 @app.get("/health")

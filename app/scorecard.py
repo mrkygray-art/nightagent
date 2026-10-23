@@ -11,7 +11,7 @@ import logging
 import statistics
 import time
 
-from app import analysis_spec, config, evaluation, judge, qa_lab, voice_lab
+from app import analysis_spec, config, deepgram_voice, evaluation, judge, qa_lab, voice_lab
 from app.store import get_store
 
 log = logging.getLogger("nightshift")
@@ -177,9 +177,11 @@ def scorecard(lab: dict | None = None) -> dict:
     data["tests"] += voice_metrics(voice_lab.summary())
     try:
         store = get_store()
-        # Voice-test calls are tests, not real calls
-        tickets = [t for t in store.recent_tickets(500) if not voice_lab.is_test(t.get("conversation_id"))]
-        tool_calls = [r for r in store.recent_tool_calls(2000) if not voice_lab.is_test(r.get("conversation_id"))]
+        # Voice-test calls are tests, not real calls; Deepgram calls aren't graded by ElevenLabs, so they'd skew it
+        def counts(conv: str | None) -> bool:
+            return not voice_lab.is_test(conv) and not deepgram_voice.is_deepgram(conv)
+        tickets = [t for t in store.recent_tickets(500) if counts(t.get("conversation_id"))]
+        tool_calls = [r for r in store.recent_tool_calls(2000) if counts(r.get("conversation_id"))]
         ids = list(dict.fromkeys([r["conversation_id"] for r in tool_calls if r.get("conversation_id")]
                                  + [t["conversation_id"] for t in tickets if t.get("conversation_id")]))
         calls = store.calls_by_ids(ids)
