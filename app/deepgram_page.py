@@ -171,6 +171,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
 
   // Aura-2 audio: 24 kHz 16-bit PCM chunks, queued back to back
   function play(buf) {
+    if (call.out.state === "suspended") call.out.resume();
     const pcm = new Int16Array(buf);
     if (!pcm.length) return;
     const audio = call.out.createBuffer(1, pcm.length, 24000);
@@ -257,12 +258,23 @@ DEEPGRAM_HTML = r"""<!doctype html>
   async function startCall() {
     button.disabled = true;
     setStatus("Starting…", "");
+    // Made in the click itself: Chrome and Safari keep an AudioContext made after an await (mic prompt,
+    // network) suspended, and Sam's greeting played into silence until the caller spoke.
+    const input = new AudioContext();
+    const out = new AudioContext();
+    out.resume();
+    input.resume();
+    const fail = (text) => {
+      input.close();
+      out.close();
+      setStatus(text, "");
+      button.disabled = false;
+    };
     let mic;
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
-      setStatus("Sam needs your microphone. Allow it and try again.", "");
-      button.disabled = false;
+      fail("Sam needs your microphone. Allow it and try again.");
       return;
     }
     let start;
@@ -272,17 +284,15 @@ DEEPGRAM_HTML = r"""<!doctype html>
       if (!r.ok) throw new Error(start.detail || "Couldn't start the call.");
     } catch (e) {
       mic.getTracks().forEach((t) => t.stop());
-      setStatus(e.message, "");
+      fail(e.message);
       statusEl.classList.add("error");
-      button.disabled = false;
       return;
     }
     statusEl.classList.remove("error");
     box.innerHTML = '<p class="empty">Connecting…</p>';
     latencyRows.innerHTML = '<tr><td colspan="4" class="empty">No turns yet</td></tr>';
     $("median").textContent = "";
-    const input = new AudioContext();
-    const out = new AudioContext();
+    if (out.state !== "running") await out.resume().catch(() => {});
     const url = URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" }));
     await input.audioWorklet.addModule(url);
     const node = new AudioWorkletNode(input, "pcm16");
