@@ -506,7 +506,7 @@ Then open http://127.0.0.1:8765/demo and http://127.0.0.1:8765/lab. Nothing belo
 | `ZENDESK_FIELD_REVIEW_NEEDED`, `ZENDESK_FIELD_REVIEW_REASON`, `ZENDESK_FIELD_RECOMMENDED_OPTIONS` | Numeric ids of the human-review fields (printed by `scripts/zendesk_review_setup.py`) | That field is left off; the `needs_review` tags and the note line still go on |
 | `ZENDESK_WEBHOOK_SECRET`, `ZENDESK_INTEGRATION_USER_ID` | Zendesk to NightAgent status sync: the webhook's signing secret, and the Zendesk user ID NightAgent's own API calls run as, which is the admin who created the OAuth client (its changes are ignored) | Endpoint off (503) |
 | `SIDEBAR_SECRET`, `SIDEBAR_REQUESTS_PER_MINUTE` | The Zendesk sidebar endpoint (secret sent in `X-Sidebar-Secret`) and its rate limit | Endpoint off (503); `60` |
-| `DEEPGRAM_API_KEY` | Sam on Deepgram (`/deepgram`). Needs Member permissions, to grant the browser's short-lived tokens | The page says it isn't set up (503) |
+| `DEEPGRAM2_API_KEY` (or `DEEPGRAM_API_KEY`) | Sam on Deepgram (`/deepgram`). Needs Member permissions, to grant the browser's short-lived tokens | The page says it isn't set up (503) |
 | `DEEPGRAM_LLM`, `DEEPGRAM_VOICE`, `DEEPGRAM_SESSION_SECRET`, `DEEPGRAM_CALLS_PER_HOUR`, `DEEPGRAM_CALLS_PER_IP_HOUR` | The Deepgram-managed Claude model, the Aura-2 voice, the key that signs call sessions, and the hourly caps | `claude-haiku-4-5`, `aura-2-thalia-en`, derived from `TOOL_SECRET`, `20`, `5` |
 | `ONCALL_TECH_NAME`, `CALLBACK_WINDOW_MINUTES`, `SMS_MAX_PER_HOUR` | What the agent tells the caller, and the SMS rate limit | `the on-call technician`, `15`, `5` |
 

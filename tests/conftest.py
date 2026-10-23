@@ -13,6 +13,7 @@ os.environ["TOOL_SECRET"] = "test-tool-secret"
 os.environ["ELEVENLABS_WEBHOOK_SECRET"] = "test-webhook-secret"
 os.environ["ALLOW_UNSIGNED_WEBHOOKS"] = "false"
 os.environ["ELEVENLABS_API_KEY"] = ""  # tests never call ElevenLabs
+os.environ["DEEPGRAM2_API_KEY"] = os.environ["DEEPGRAM_API_KEY"] = ""  # or Deepgram
 for name in ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "ONCALL_TECH_PHONE"):
     os.environ[name] = ""
 for name in ("ZENDESK_SUBDOMAIN", "ZENDESK_CLIENT_ID", "ZENDESK_CLIENT_SECRET", "ZENDESK_FIELD_NIGHTAGENT_ID",
