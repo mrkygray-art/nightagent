@@ -21,7 +21,7 @@ def keypad_call(**changes) -> dict:
     data = {
         "priority": "urgent", "suggested_priority": "urgent", "account_matched": True, "requester_known": True,
         "scorecard": dict(ALL_PASS), "sentiment": "calm", "intent": "service_problem", "identity_verified": True,
-        "call_successful": "success", "related_tickets": 0,
+        "related_tickets": 0,
         "issue": "Alarm keypad shows a trouble light and keeps beeping",
         "caller_text": "Hi, this is Dave Maturo.\nMy alarm keypad has a trouble light and it keeps beeping.\nYes, that's right.",
     }
@@ -113,10 +113,17 @@ def test_emergency_words_need_whole_words():
     assert not evaluate_review(keypad_call(caller_text="The firewall box next to the keypad is fine."))["reviewNeeded"]
 
 
-@pytest.mark.parametrize("changes", [{"intent": "unclear"}, {"identity_verified": False},
-                                     {"call_successful": "failure"}])
+@pytest.mark.parametrize("changes", [{"intent": "unclear"}, {"identity_verified": False}])
 def test_low_confidence(changes):
     assert evaluate_review(keypad_call(**changes))["reasons"] == [{"code": "LOW_CONFIDENCE", "severity": "Low"}]
+
+
+def test_ns_3646_unknown_caller_flags_only_for_the_missing_account():
+    """The real call: an urgent keypad ticket with no account. The grader failed "Emergency handled" (Sam rightly
+    didn't page on an urgent ticket) and ElevenLabs marked the call unsuccessful; neither may add a reason."""
+    data = keypad_call(account_matched=False, call_successful="failure",
+                       scorecard={**ALL_PASS, "safety_first": "success", "emergency_handled": "failure"})
+    assert codes(evaluate_review(data)) == ["NO_ACCOUNT_MATCH"]
 
 
 def test_reasons_are_ordered_by_severity_and_options_follow_the_highest():
