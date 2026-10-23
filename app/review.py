@@ -40,6 +40,9 @@ SETTINGS = {
     "emergency_words": ["fire", "smoke", "smoky", "burning", "sparks", "sparking", "melting", "break-in", "break in",
                         "broke in", "breaking in", "intruder", "someone inside", "gas leak", "carbon monoxide",
                         "in danger", "911"],
+    # An emergency word right after one of these doesn't count: "There is no smoke" (NS-4877), "not on fire"
+    "negations": ["no", "not", "never", "without", "isn't", "isnt", "wasn't", "aren't", "nothing", "none"],
+    "negation_window": 3,  # words before the match that are checked
     # Phrases, not single words: "manager" alone would catch "I'm the store manager", "callback" "my callback number"
     "wants_human_phrases": ["real person", "a human", "live person", "speak to someone", "talk to someone",
                             "speak to a person", "talk to a person", "speak with someone", "talk with someone",
@@ -60,10 +63,16 @@ SETTINGS = {
 PRIORITY_ORDER = ["routine", "urgent", "emergency"]
 
 
-def _any(text: str, phrases: list[str]) -> bool:
-    """Whole words only: "fire" matches "fire alarm" but not "firewall"."""
-    text = " ".join(text.lower().split())
-    return any(re.search(rf"(?<![a-z0-9]){re.escape(p.lower())}(?![a-z0-9])", text) for p in phrases)
+def _any(text: str, phrases: list[str], skip_negated: bool = False) -> bool:
+    """Whole words only: "fire" matches "fire alarm" but not "firewall". With skip_negated, a match with a negation
+    in the few words before it ("no smoke", "isn't any smoke") doesn't count; another mention still can."""
+    text = " ".join(text.lower().replace("’", "'").split())
+    for p in phrases:
+        for m in re.finditer(rf"(?<![a-z0-9]){re.escape(p.lower())}(?![a-z0-9])", text):
+            before = re.findall(r"[a-z0-9']+", text[:m.start()])[-SETTINGS["negation_window"]:]
+            if not (skip_negated and set(before) & set(SETTINGS["negations"])):
+                return True
+    return False
 
 
 def evaluate_review(call_data: dict) -> dict:
@@ -79,7 +88,7 @@ def evaluate_review(call_data: dict) -> dict:
     priority, suggested = call_data.get("priority"), call_data.get("suggested_priority")
     said = f"{call_data.get('issue') or ''}\n{call_data.get('caller_text') or ''}"
 
-    if priority != "emergency" and _any(said, SETTINGS["emergency_words"]):
+    if priority != "emergency" and _any(said, SETTINGS["emergency_words"], skip_negated=True):
         found.append("EMERGENCY_UNCLEAR")
     if not call_data.get("account_matched") or not call_data.get("requester_known"):
         found.append("NO_ACCOUNT_MATCH")
