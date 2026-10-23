@@ -105,8 +105,8 @@ DEEPGRAM_HTML = r"""<!doctype html>
     </section>
     <section class="panel" aria-label="Latency">
       <h2>Response time</h2>
-      <p class="note" style="margin-top:0">From Deepgram's AgentStartedSpeaking event: seconds from the end of your turn
-        until Sam starts talking, and how much of that was the LLM (think) and the voice (speak).</p>
+      <p class="note" style="margin-top:0">Deepgram's own figures for each of your turns (its LatencyReport messages):
+        seconds from the end of your turn until Sam starts talking, and how much of that was the LLM (think) and the voice (speak).</p>
       <table>
         <thead><tr><th>Turn</th><th>Think</th><th>Speak</th><th>Total</th></tr></thead>
         <tbody id="latency"><tr><td colspan="4" class="empty">No turns yet</td></tr></tbody>
@@ -184,7 +184,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     });
     latencyRows.appendChild(tr);
     const totals = call.latencies.map((l) => l.total_latency).filter((v) => typeof v === "number").sort((a, b) => a - b);
-    if (totals.length) $("median").textContent = `Median so far: ${totals[Math.floor(totals.length / 2)].toFixed(2)} s over ${totals.length} turns.`;
+    if (totals.length) $("median").textContent = `Median so far: ${totals[Math.floor(totals.length / 2)].toFixed(2)} s over ${totals.length} ${totals.length === 1 ? "turn" : "turns"}.`;
   }
 
   // Aura-2 audio: 24 kHz 16-bit PCM chunks, queued back to back
