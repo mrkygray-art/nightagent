@@ -21,7 +21,7 @@ import unicodedata
 
 import requests
 
-from app import config, lifecycle, review as review_rules
+from app import config, deepgram_voice, lifecycle, review as review_rules
 
 log = logging.getLogger("nightshift")
 
@@ -98,6 +98,9 @@ def ticket_payload(ticket: dict, call_summary: str | None, review: dict | None =
         f"NightAgent ticket: {ticket['ticket_id']}",
     ]
     zd_priority, tags = PRIORITIES.get(priority, "normal"), ["nightagent"]
+    if deepgram_voice.is_deepgram(ticket.get("conversation_id")):
+        lines.append("Voice: Sam on Deepgram (Flux, Aura-2, Claude)")
+        tags.append("deepgram")
     if review and review["reviewNeeded"]:
         lines.append(review_rules.note_line(review))
         # A reason's tag is also its option's value in the Review reason field, so the two always agree

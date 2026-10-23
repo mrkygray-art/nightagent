@@ -1,0 +1,201 @@
+[
+ {
+  "name": "lookup_customer",
+  "description": "Look up the caller's account by the phone number on the account or by the business or contact name. Call this as soon as the caller gives a phone number or business name.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "query": {
+     "type": "string",
+     "description": "The account phone number (digits only) or the business or contact name the caller gave."
+    }
+   },
+   "required": [
+    "query"
+   ]
+  }
+ },
+ {
+  "name": "create_ticket",
+  "description": "Create a service ticket. Only call this AFTER you have read the caller's name and callback number back to them and they have said it's correct in a separate turn. Never call it in the same turn you learn about the problem. Returns the final priority and the next step to follow.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "callback_number": {
+     "type": "string",
+     "description": "Best callback phone number, digits only, exactly as the caller confirmed it."
+    },
+    "caller_name": {
+     "type": "string",
+     "description": "The caller's name, as the caller confirmed it."
+    },
+    "category": {
+     "type": "string",
+     "description": "The issue category that best fits the problem.",
+     "enum": [
+      "life_safety",
+      "cannot_secure_site",
+      "entry_blocked",
+      "active_alarm",
+      "system_offline",
+      "panel_trouble",
+      "access_issue",
+      "other"
+     ]
+    },
+    "customer_id": {
+     "type": "string",
+     "description": "The customer_id returned by lookup_customer. Leave empty if the account was not found."
+    },
+    "issue_summary": {
+     "type": "string",
+     "description": "One or two sentences describing the problem and when it started."
+    },
+    "suggested_priority": {
+     "type": "string",
+     "description": "emergency only if the site is unsafe or cannot be secured, or staff can't get in; otherwise urgent or routine.",
+     "enum": [
+      "emergency",
+      "urgent",
+      "routine"
+     ]
+    }
+   },
+   "required": [
+    "caller_name",
+    "callback_number",
+    "issue_summary",
+    "category",
+    "suggested_priority"
+   ]
+  }
+ },
+ {
+  "name": "page_on_call_tech",
+  "description": "Page the on-call technician for an EMERGENCY ticket. Only call this when create_ticket returned priority emergency.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "ticket_id": {
+     "type": "string",
+     "description": "The ticket_id returned by create_ticket, for example NS-1234."
+    }
+   },
+   "required": [
+    "ticket_id"
+   ]
+  }
+ },
+ {
+  "name": "take_message",
+  "description": "Pass a message to a department or a person when the caller wants to talk to someone (billing, their account executive, support, the service manager) instead of, or in addition to, reporting a repair. Only call this AFTER you have read the caller's name and callback number back and they confirmed. Returns tell_the_caller: say it in your own words.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "department": {
+     "type": "string",
+     "description": "Who the message is for. billing: invoices, payments, charges. account_executive: buying, upgrades, quotes, contracts, or the caller asks for Sarah or their account rep. support: how-to questions about using their system. service_manager: complaints about service or a technician. service: anything else about repairs or scheduling.",
+     "enum": [
+      "billing",
+      "account_executive",
+      "support",
+      "service_manager",
+      "service"
+     ]
+    },
+    "reason": {
+     "type": "string",
+     "description": "One or two sentences: what the caller wants to talk about, in their words where possible."
+    },
+    "caller_name": {
+     "type": "string",
+     "description": "The caller's name, as they confirmed it."
+    },
+    "callback_number": {
+     "type": "string",
+     "description": "Best callback number, digits only, as the caller confirmed it."
+    },
+    "customer_id": {
+     "type": "string",
+     "description": "The customer_id from lookup_customer. Leave empty if not found."
+    },
+    "person_requested": {
+     "type": "string",
+     "description": "Only if the caller asked for a specific person by name or role, for example Sarah or my account rep."
+    },
+    "best_time": {
+     "type": "string",
+     "description": "Only if the caller said when is a good time to call back, for example tomorrow after 10 AM."
+    },
+    "ticket_id": {
+     "type": "string",
+     "description": "Only if you already created a service ticket on this call: its ticket_id."
+    }
+   },
+   "required": [
+    "department",
+    "reason",
+    "caller_name",
+    "callback_number"
+   ]
+  }
+ },
+ {
+  "name": "check_ticket_status",
+  "description": "Look up a ticket the caller already has, before telling them anything about it. Only works for the caller's own tickets. Returns the status in plain words and what to say.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "ticket_id": {
+     "type": "string",
+     "description": "The ticket number the caller gives, for example NS-4821. Leave empty if they don't know it."
+    },
+    "customer_id": {
+     "type": "string",
+     "description": "The customer_id returned by lookup_customer earlier in this conversation, for example C-1003."
+    },
+    "callback_number": {
+     "type": "string",
+     "description": "The callback number the caller confirmed. Needed when there's no customer_id."
+    }
+   }
+  }
+ },
+ {
+  "name": "add_ticket_note",
+  "description": "Add what the caller wants the team to know to a ticket they already have, for example that the gate code changed or when someone will be on site. Only call it when the caller tells you something new for the team, never to record that they called or had nothing to add. Only works for the caller's own tickets.",
+  "parameters": {
+   "type": "object",
+   "properties": {
+    "ticket_id": {
+     "type": "string",
+     "description": "The ticket number, for example NS-4821."
+    },
+    "note": {
+     "type": "string",
+     "description": "What the caller wants added, in one or two plain sentences. Never include alarm codes or passwords."
+    },
+    "customer_id": {
+     "type": "string",
+     "description": "The customer_id returned by lookup_customer earlier in this conversation, for example C-1003."
+    },
+    "callback_number": {
+     "type": "string",
+     "description": "The callback number the caller confirmed. Needed when there's no customer_id."
+    }
+   },
+   "required": [
+    "ticket_id",
+    "note"
+   ]
+  }
+ },
+ {
+  "name": "end_call",
+  "description": "Hang up. Call this only after you have said goodbye and the caller has nothing else.",
+  "parameters": {
+   "type": "object",
+   "properties": {}
+  }
+ }
+]

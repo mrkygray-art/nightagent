@@ -232,6 +232,7 @@ DEMO_HTML = r"""<!doctype html>
   .ticket[aria-current="true"] { border-color: var(--sodium); box-shadow: 0 0 0 1px var(--sodium); }
   .chip.stage { border-color: #3b5288; color: var(--text); white-space: nowrap; }
   .chip.demo { border-style: dashed; }
+  .chip.deepgram { border-color: #13ef93; color: #13ef93; }
 
   /* ---------- Demo Mode: the service lifecycle ---------- */
   .life { margin-top: 28px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; scroll-margin-top: 12px; }
@@ -1591,6 +1592,7 @@ function renderTickets(list, messages = lastMessages, callList = lastCalls) {
     row1.appendChild(el("span", `chip ${t.priority}`, t.priority_label || t.priority));
     if (isMine(t)) row1.appendChild(el("span", "chip mine", "Your call"));
     if (t.scenario) row1.appendChild(el("span", "chip demo", "Example"));
+    if (t.voice === "deepgram") row1.appendChild(el("span", "chip deepgram", "Deepgram"));
     row1.appendChild(el("span", "when", timeAgo(t.created_at)));
     body.appendChild(row1);
 
@@ -1727,6 +1729,7 @@ function renderPanel(detail, message) {
   if (v.outcome) head.appendChild(el("span", "chip outcome", v.outcome_label));
   if (v.source) head.appendChild(el("span", `chip src ${v.source}`, v.source === "synthetic" ? "Synthetic" : "Live"));
   if (isMine(t)) head.appendChild(el("span", "chip mine", "Your call"));
+  if (t.voice === "deepgram") head.appendChild(el("span", "chip deepgram", "Sam on Deepgram"));
   if (t.created_at) {
     const when = el("time", "ev-when", new Date(t.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
     when.dateTime = t.created_at;
