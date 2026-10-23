@@ -25,7 +25,8 @@ def fake(monkeypatch):
     monkeypatch.setattr(config, "ZENDESK_SUBDOMAIN", "acme")
     monkeypatch.setattr(config, "ZENDESK_CLIENT_ID", "client-id")
     monkeypatch.setattr(config, "ZENDESK_CLIENT_SECRET", "client-secret")
-    state = {"ticket_fields": [], "views": [], "triggers": [], "groups": [{"id": 77, "name": "Reviewers"}],
+    state = {"ticket_fields": [], "views": [{"id": 1, "title": "Unassigned tickets", "position": 0},
+                                            {"id": 2, "title": "All unsolved tickets", "position": 1}], "triggers": [], "groups": [{"id": 77, "name": "Reviewers"}],
              "ticket_forms": [{"id": 5, "name": "Default Ticket Form", "default": True, "ticket_field_ids": [1, 2]}],
              "posts": [], "puts": [], "next_id": 100}
 
@@ -38,6 +39,11 @@ def fake(monkeypatch):
 
     def request(method, url, json=None, headers=None, timeout=None):
         path = url.split("/api/v2", 1)[1]
+        if path == "/views/update_many.json":
+            for change in json["views"]:
+                next(v for v in state["views"] if v["id"] == change["id"])["position"] = change["position"]
+            state["puts"].append("views_order")
+            return FakeResponse(200, json)
         if method == "PUT":
             key = path.split("/")[1]
             item_id = int(path.split("/")[2].removesuffix(".json"))
@@ -71,8 +77,9 @@ def test_first_run_makes_the_fields_and_view(fake, monkeypatch, capsys):
     assert [o["value"] for o in fields["Review reason"]["custom_field_options"]][:2] == ["emergency_unclear", "no_account_match"]
     assert [o["name"] for o in fields["Review decision"]["custom_field_options"]] == \
         ["Called back", "Dispatched", "SMS sent", "Approved as-is", "Other"]
-    view = fake["views"][0]
-    assert view["title"] == "Needs human review"
+    view = next(v for v in fake["views"] if "human review" in v["title"])
+    assert view["title"] == "🔴 Needs human review"
+    assert sorted(fake["views"], key=lambda v: v["position"])[0] is view  # moved to the top
     assert {"field": f"custom_fields_{fields['Review needed']['id']}", "operator": "is", "value": "true"} in view["all"]
     assert view["output"]["columns"] == ["subject", "requester", "priority", fields["Review reason"]["id"], "created"]
     assert set(fake["ticket_forms"][0]["ticket_field_ids"]) >= {f["id"] for f in fields.values()}
@@ -127,3 +134,13 @@ def test_trigger_rerun_skips_and_a_new_group_updates_it(fake, monkeypatch, capsy
     run(monkeypatch, "--group", "Night leads")
     assert len(fake["triggers"]) == 1 and fake["triggers"][0]["actions"][0]["value"][0] == "88"
     assert "updated trigger" in capsys.readouterr().out
+
+
+def test_old_view_is_renamed_and_moved_to_the_top_once(fake, monkeypatch, capsys):
+    fake["views"].append({"id": 3, "title": "Needs human review", "position": 9})
+    run(monkeypatch)
+    assert [v["title"] for v in sorted(fake["views"], key=lambda v: v["position"])] ==         ["🔴 Needs human review", "Unassigned tickets", "All unsolved tickets"]
+    assert not any(k == "views" for k, _ in fake["posts"])  # renamed, not made again
+    puts = len(fake["puts"])
+    run(monkeypatch)
+    assert len(fake["puts"]) == puts and "already first" in capsys.readouterr().out
