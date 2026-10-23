@@ -55,7 +55,10 @@ async function script(ws) {
   const made = await call(ws, 'fc_2', 'create_ticket', { customer_id: 'C-1002', caller_name: 'James Carter', callback_number: '3105550178',
     issue_summary: 'Keypad trouble light since 9 pm', category: 'panel_trouble', suggested_priority: 'urgent' });
   seen.ticket = JSON.parse(made.content);
-  ws.send(JSON.stringify({ type: 'AgentStartedSpeaking', total_latency: 1.04, ttt_latency: 0.66, tts_latency: 0.21 }));
+  // Today's API: one LatencyReport per figure, total_latency last
+  for (const m of [{ stt_latency: 0.01 }, { ttt_token_latency: 0.6 }, { ttt_text_latency: 0.66 }, { tts_latency: 0.21 }, { total_latency: 1.04 }]) {
+    ws.send(JSON.stringify({ type: 'LatencyReport', ...m }));
+  }
   ws.send(JSON.stringify({ type: 'ConversationText', role: 'assistant', content: 'Your ticket is in. Goodbye!' }));
   await call(ws, 'fc_3', 'end_call', {});
   ws.send(Buffer.alloc(24000 * 2 * 0.2));
@@ -97,7 +100,10 @@ async function script(ws) {
   const turns = await page.$$eval('#transcript .turn', (els) => els.map((e) => e.className));
   check(turns.filter((c) => c.includes('assistant')).length === 2 && turns.some((c) => c.includes('user')), 'transcript shows both sides', turns.join(','));
   const rows = await page.$$eval('#latency tr', (els) => els.length);
-  check(rows === 2, 'latency table has a row per Sam turn', String(rows));
+  check(rows === 2, 'latency table has a row per Sam turn (AgentStartedSpeaking and LatencyReport)', String(rows));
+  const last = await page.$eval('#latency tr:last-child', (tr) => tr.textContent);
+  check(last.includes('0.66') && last.includes('0.21') && last.includes('1.04'), 'LatencyReport figures fill the row', last);
+  check(ended && ended.latencies[1] && ended.latencies[1].total_latency === 1.04 && ended.latencies[1].ttt_latency === 0.66, 'saved latencies use the LatencyReport figures');
   check(ended && ended.transcript.length === 3 && ended.latencies.length === 2, 'end of call posts transcript and latencies');
 
   await wait(800);
