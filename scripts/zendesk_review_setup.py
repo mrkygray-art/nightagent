@@ -36,7 +36,9 @@ REVIEW_NEEDED = "Review needed"
 REVIEW_REASON = "Review reason"
 RECOMMENDED = "Recommended options"
 REVIEW_DECISION = "Review decision"
-VIEW_TITLE = "Needs human review"
+# The red dot makes it stand out in the views list (Zendesk has no view colors); it is also moved to the top.
+VIEW_TITLE = "🔴 Needs human review"
+OLD_VIEW_TITLES = ("Needs human review",)  # earlier titles, renamed on the next run
 TRIGGER_TITLE = "NightAgent: email reviewers about calls that need review"
 ALERTED_TAG = "review_alerted"  # added by the trigger, so each ticket is emailed about once, not on every update
 
@@ -142,14 +144,31 @@ def view_payload(ids: dict[str, int | None]) -> dict:
 
 
 def ensure_view(zd: Zendesk, ids: dict[str, int | None], dry_run: bool) -> None:
-    found = next((v for v in zd.all("/views.json", "views") if v["title"] == VIEW_TITLE), None)
-    if found:
-        print(f"  skipped view {VIEW_TITLE!r} (exists, id {found['id']})")
-    elif dry_run or not all(ids.values()):
-        print(f"  would create view {VIEW_TITLE!r}")
+    views = sorted(zd.all("/views.json", "views"), key=lambda v: v.get("position") or 0)
+    found = next((v for v in views if v["title"] in (VIEW_TITLE, *OLD_VIEW_TITLES)), None)
+    if not found:
+        if dry_run or not all(ids.values()):
+            print(f"  would create view {VIEW_TITLE!r} at the top")
+            return
+        found = zd.call("POST", "/views.json", view_payload(ids))["view"]
+        views.append(found)
+        print(f"  created view {VIEW_TITLE!r} (id {found['id']})")
+    if found["title"] != VIEW_TITLE:
+        if dry_run:
+            print(f"  would rename view {found['title']!r} to {VIEW_TITLE!r}")
+        else:
+            zd.call("PUT", f"/views/{found['id']}.json", {"view": {"title": VIEW_TITLE}})
+            print(f"  renamed view {found['title']!r} to {VIEW_TITLE!r}")
+    others = [v for v in views if v["id"] != found["id"]]
+    if all((found.get("position") or 0) < (v.get("position") or 0) for v in others):
+        print(f"  skipped moving view {VIEW_TITLE!r} (already first)")
+    elif dry_run:
+        print(f"  would move view {VIEW_TITLE!r} to the top")
     else:
-        made = zd.call("POST", "/views.json", view_payload(ids))["view"]
-        print(f"  created view {VIEW_TITLE!r} (id {made['id']})")
+        # Ours first, the rest keep their order
+        order = [{"id": v["id"], "position": i} for i, v in enumerate([found, *others])]
+        zd.call("PUT", "/views/update_many.json", {"views": order})
+        print(f"  moved view {VIEW_TITLE!r} to the top")
 
 
 def find_group(zd: Zendesk, wanted: str) -> dict | None:
@@ -226,6 +245,7 @@ def main() -> None:
     parser.add_argument("--group", default=os.getenv("ZENDESK_REVIEW_GROUP", ""),
                         help="the Zendesk group (name or id) that gets review emails; default ZENDESK_REVIEW_GROUP")
     args = parser.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")  # the view title has an emoji; a Windows console may not default to UTF-8
     zd = Zendesk()
     print(f"Zendesk {zd.base}{' (dry run)' if args.dry_run else ''}")
     print("Ticket fields:")
