@@ -1,0 +1,80 @@
+{
+ "runs": [
+  {
+   "platform": "elevenlabs",
+   "run_at": 1792792143,
+   "calls": 16,
+   "response_ms_median": 1940,
+   "response_ms_by_condition": {
+    "clean": 2188,
+    "cafe-10": 1974,
+    "street-5": 2182,
+    "phone": 1790
+   },
+   "number_heard": "12/12",
+   "name_heard": "12/12",
+   "read_back_right": "12/12",
+   "cut_caller_off": "0/12",
+   "barge_in_stopped": "2/2",
+   "barge_in_stop_ms_median": 769,
+   "barge_in_passed": "2/2",
+   "silence_passed": "2/2",
+   "conversation_ids": [
+    "conv_0101m5nbt9m6ftbb3ey19m2hfa70",
+    "conv_6001m5nbv5yeeq69esdktnde8qyw",
+    "conv_0801m5nbw1mfeaata89xace072sy",
+    "conv_7201m5nbwxeqend9hrxgz81qx0zf",
+    "conv_8801m5nbxss0fk6rjj77pkwzahxq",
+    "conv_9901m5nbynqff0484hyppvh0vw3x",
+    "conv_4501m5nbzgmmfaxazv4kc5dce81e",
+    "conv_1601m5nc0c8zfpbrvke13js97ka1",
+    "conv_1801m5nc19vtf43bjwx6k98nydqa",
+    "conv_6701m5nc24g5f2x80vqhj4ratz0d",
+    "conv_4401m5nc313zetq8xegrymhcrsd6",
+    "conv_5501m5nc3xczec59deypf05p57mx",
+    "conv_1601m5nczd76f1zvfweknjr75k7g",
+    "conv_3701m5nd06rpf9ksryypska5gy86",
+    "conv_6301m5nd1286fk48abzh9y50gx9t",
+    "conv_3401m5nd2e5tefm8276ddxx9fmkf"
+   ]
+  },
+  {
+   "platform": "deepgram",
+   "run_at": 1792792610,
+   "calls": 16,
+   "response_ms_median": 1806,
+   "response_ms_by_condition": {
+    "clean": 1477,
+    "cafe-10": 2347,
+    "street-5": 2236,
+    "phone": 1732
+   },
+   "number_heard": "12/12",
+   "name_heard": "12/12",
+   "read_back_right": "10/12",
+   "cut_caller_off": "1/12",
+   "barge_in_stopped": "2/2",
+   "barge_in_stop_ms_median": 403,
+   "barge_in_passed": "2/2",
+   "silence_passed": "2/2",
+   "conversation_ids": [
+    "dg_1b7bd0568e07647294c17e42",
+    "dg_c0921136bf2a28e6ec0b6175",
+    "dg_497985b27da540c9968ae80d",
+    "dg_de7ac5ddac8c31334ede5fb3",
+    "dg_7492a37aa70b33b2d98edceb",
+    "dg_83823207bbd16c43388d8a80",
+    "dg_92be7763b539dcf72a6d8b22",
+    "dg_58b8f3b74b5370adce9b5ddf",
+    "dg_743f52bc600603e4153f6fd9",
+    "dg_bab492136fbff1cd6fb29cf0",
+    "dg_af258db4cf3727a279ddea4f",
+    "dg_1fa4e51c500d951d18335ee2",
+    "dg_af89e065dec98d323097efd3",
+    "dg_cb92a87eedaa80b1f1153ed8",
+    "dg_93e2e5559ec58d041b92e86e",
+    "dg_effcca9e4455b325afa57aa7"
+   ]
+  }
+ ]
+}

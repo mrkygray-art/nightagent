@@ -140,6 +140,19 @@ DEEPGRAM_HTML = r"""<!doctype html>
     registerProcessor("pcm16", Pcm16);`;
 
   let call = null;
+  // Deepgram's agent doesn't speak up on its own when the caller goes quiet, so the page asks it to, like
+  // ElevenLabs Sam does: once after 10 s of silence following Sam's turn, then once more after another 15 s.
+  const CHECK_INS = [[10000, "Are you still there? Take your time."], [15000, "I'm still here whenever you're ready."]];
+
+  function quietTimer(step = 0) {
+    clearTimeout(call.quiet);
+    if (step >= CHECK_INS.length || call.ending) return;
+    call.quiet = setTimeout(() => {
+      if (!call || call.ws.readyState !== WebSocket.OPEN) return;
+      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: CHECK_INS[step][1] }));
+      call.checkIn = step + 1;
+    }, CHECK_INS[step][0]);
+  }
 
   function setStatus(text, state) {
     statusEl.lastChild.textContent = text;
@@ -228,9 +241,13 @@ DEEPGRAM_HTML = r"""<!doctype html>
         addTurn(m.role === "assistant" ? "assistant" : "user", m.content);
         break;
       case "UserStartedSpeaking":
+        clearTimeout(call.quiet);
+        call.checkIn = 0;
         stopPlayback();
         call.talking = false;
         setStatus("Listening…", "live");
+        break;
+      case "InjectionRefused":  // someone was mid-turn; the next AgentAudioDone restarts the timer
         break;
       case "AgentThinking":
         setStatus("Sam is thinking…", "live");
@@ -249,6 +266,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         break;
       case "AgentAudioDone":
         call.talking = false;
+        quietTimer(call.checkIn || 0);  // after a check-in, wait for the next one
         setStatus("Sam is listening.", "live");
         if (call.ending) setTimeout(() => hangUp("Sam ended the call."), Math.max(0, (call.playAt - call.out.currentTime) * 1000) + 400);
         break;
@@ -344,6 +362,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const c = call;
     call = null;
     clearTimeout(c.timer);
+    clearTimeout(c.quiet);
     clearInterval(c.meter);
     $("mic").hidden = true;
     try { c.ws.close(); } catch (e) {}

@@ -1,0 +1,460 @@
+{
+ "run_at": 1792792610,
+ "platform": "deepgram",
+ "sources": [
+  "voicelab/out/run-deepgram-1792793177218.json",
+  "voicelab/out/run-deepgram-1792794877684.json"
+ ],
+ "results": [
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "maria",
+   "conversation_id": "dg_1b7bd0568e07647294c17e42",
+   "heard": "Hi. This is Maria Lopez from Sunset Dental. The number on the account is three one zero five five five zero one four two. Our back door won't lock.",
+   "replies": [
+    "I'm going to look up your account right now.",
+    "Got it, I found your account.",
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1183,
+   "first_sound_ms": 1183,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18382,
+    "type": "latency",
+    "total": 1.094333035,
+    "ttt": 0.997873523,
+    "tts": 0.060326085
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "james",
+   "conversation_id": "dg_c0921136bf2a28e6ec0b6175",
+   "heard": "Hey, it's James Carter at Westside Self Storage. The number is three one zero five five five zero one seven eight. Our front gate is stuck open.",
+   "replies": [
+    "I've got you, James.",
+    "Let me pull up your account.",
+    "Just to confirm, I have you as James Carter at 310-555-0178."
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1477,
+   "first_sound_ms": 1477,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18077,
+    "type": "latency",
+    "total": 0.710936827,
+    "ttt": 0.614084114,
+    "tts": 0.056534816
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "clean",
+   "caller": "priya",
+   "conversation_id": "dg_497985b27da540c9968ae80d",
+   "heard": "Hi. This is Priya Shah with Harbor Logistics Warehouse. Our number is four two four five five five zero one one nine. The main entrance won't unlock.",
+   "replies": [
+    "Hi Priya, thanks for that.",
+    "The main entrance won't unlock\u2014is there another way for your staff to get into the building right now?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": false,
+   "response_ms": 1880,
+   "first_sound_ms": 1880,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 16763,
+    "type": "latency",
+    "total": 1.041351177,
+    "ttt": 0.585810549,
+    "tts": 0.414066354
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "maria",
+   "conversation_id": "dg_de7ac5ddac8c31334ede5fb3",
+   "heard": "Hi. This is Maria Lopez from Sunset Dental. The number on the account is three one zero five five five zero one four two. Our back door won't lock.",
+   "replies": [
+    "I'm going to look up your account right now.",
+    "Got it, I found your account.",
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1502,
+   "first_sound_ms": 1502,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18387,
+    "type": "latency",
+    "total": 1.4151769060000001,
+    "ttt": 0.955855804,
+    "tts": 0.404121902
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "james",
+   "conversation_id": "dg_7492a37aa70b33b2d98edceb",
+   "heard": "Hey. It's James Carter at Westside Self Storage. The number is three one zero five five five zero one seven eight. Our front gate is stuck open.",
+   "replies": [
+    "I'm sorry to hear that.",
+    "Let me pull up your account.",
+    "Just to confirm, I have you as James Carter at 310-555-0178.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2347,
+   "first_sound_ms": 2347,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18737,
+    "type": "latency",
+    "total": 1.105792677,
+    "ttt": 0.53795342,
+    "tts": 0.5424387
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "cafe-10",
+   "caller": "priya",
+   "conversation_id": "dg_83823207bbd16c43388d8a80",
+   "heard": "Hi. This is Priya Shah with Harbor Logistics Warehouse. Our number is four two four five five five zero one one nine. The main entrance won't unlock.",
+   "replies": [
+    "I'm going to look up your account right now.",
+    "Just to confirm, I have you as Priya Shah at 424-555-0119.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2392,
+   "first_sound_ms": 2392,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 17184,
+    "type": "latency",
+    "total": 1.150204614,
+    "ttt": 1.081157529,
+    "tts": 0.048178505
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "maria",
+   "conversation_id": "dg_92be7763b539dcf72a6d8b22",
+   "heard": "Hi. This is Maria Lopez from Sunset Dental. The number on the account is three one zero five five five zero one four two. Our back door won't lock.",
+   "replies": [
+    "I'm going to look up your account right now.",
+    "Got it, I found your account.",
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1362,
+   "first_sound_ms": 1362,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18446,
+    "type": "latency",
+    "total": 1.243833533,
+    "ttt": 1.156086818,
+    "tts": 0.063681991
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "james",
+   "conversation_id": "dg_58b8f3b74b5370adce9b5ddf",
+   "heard": "Hey. It's James Carter at Westside Self Storage, the numbers three one zero five five five zero one seven eight. upfront gate is stucco.",
+   "replies": [
+    "I hear you\u2014the gate is stuck.",
+    "Is it stuck open, or stuck closed?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": false,
+   "response_ms": 2236,
+   "first_sound_ms": -1083,
+   "started_before_caller_finished": true,
+   "turn_split": true,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 19308,
+    "type": "latency",
+    "total": 1.555508341,
+    "ttt": 0.892030463,
+    "tts": 0.627883073
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "street-5",
+   "caller": "priya",
+   "conversation_id": "dg_743f52bc600603e4153f6fd9",
+   "heard": "Hi. This is Priya Shah with Harbor Logistics Warehouse. Our number is four two four five five five zero one one nine. The main entrance won't unlock.",
+   "replies": [
+    "I'm going to look up your account right now.",
+    "Just to confirm, I have you as Priya Shah at 424-555-0119.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 2274,
+   "first_sound_ms": 2274,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 17767,
+    "type": "latency",
+    "total": 1.192776999,
+    "ttt": 1.10187282,
+    "tts": 0.061012871
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "maria",
+   "conversation_id": "dg_bab492136fbff1cd6fb29cf0",
+   "heard": "Hi. This is Maria Lopez from Sunset Dental. The number on the account is three one zero five five five zero one four two. Our back door won't lock.",
+   "replies": [
+    "I'll look up your account right away.",
+    "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1173,
+   "first_sound_ms": 1173,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 19397,
+    "type": "latency",
+    "total": 1.056127554,
+    "ttt": 0.88603376,
+    "tts": 0.153047007
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "james",
+   "conversation_id": "dg_af258db4cf3727a279ddea4f",
+   "heard": "Hey. It's James Carter at Westside Self Storage. The number is three one zero five five five zero one seven eight. Our front gate is stuck open.",
+   "replies": [
+    "I've got it, James.",
+    "Let me pull up your account.",
+    "Just to confirm, I have you as James Carter at 310-555-0178.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1732,
+   "first_sound_ms": 1732,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 19394,
+    "type": "latency",
+    "total": 0.693049858,
+    "ttt": 0.556938498,
+    "tts": 0.072141047
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "numbers",
+   "condition": "phone",
+   "caller": "priya",
+   "conversation_id": "dg_1fa4e51c500d951d18335ee2",
+   "heard": "Hi. This is Priya Shah with Harbor Logistics Warehouse. Our number is four two four five five five zero one one nine. The main entrance won't unlock.",
+   "replies": [
+    "I'm sorry to hear that.",
+    "Let me pull up your account.",
+    "Just to confirm, I have you as Priya Shah at 424-555-0119.",
+    "Is that right?"
+   ],
+   "number_heard": true,
+   "name_heard": true,
+   "read_back_right": true,
+   "response_ms": 1943,
+   "first_sound_ms": 1943,
+   "started_before_caller_finished": false,
+   "turn_split": false,
+   "tools": [
+    "lookup_customer"
+   ],
+   "ended_early": null,
+   "deepgram_latency": {
+    "t": 18686,
+    "type": "latency",
+    "total": 1.10210596,
+    "ttt": 0.569893156,
+    "tts": 0.509372604
+   }
+  },
+  {
+   "platform": "deepgram",
+   "test": "interruption",
+   "conversation_id": "dg_af89e065dec98d323097efd3",
+   "read_back": "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+   "talking_when_cut_in": true,
+   "stopped": true,
+   "stop_ms": 336,
+   "heard": "Yes. Yes. That's me. It's our back door. It won't lock.",
+   "reply": "Okay, the back door won't lock. When did that start?",
+   "used_new_detail": true,
+   "response_ms": 778,
+   "passed": true
+  },
+  {
+   "platform": "deepgram",
+   "test": "interruption",
+   "conversation_id": "dg_cb92a87eedaa80b1f1153ed8",
+   "read_back": "Just to confirm, I have you as Maria Lopez at 310-555-0142.",
+   "talking_when_cut_in": true,
+   "stopped": true,
+   "stop_ms": 470,
+   "heard": "Yes. Yes. That's me. It's our back door. It won't lock.",
+   "reply": "Okay, the back door won't lock. When did that start?",
+   "used_new_detail": true,
+   "response_ms": 1264,
+   "passed": true
+  },
+  {
+   "platform": "deepgram",
+   "test": "silence",
+   "conversation_id": "dg_93e2e5559ec58d041b92e86e",
+   "quiet_ms": 25000,
+   "spoke_during_silence": [
+    {
+     "after_ms": 1759,
+     "text": "I'm here to help. What's happening with your alarm panel?"
+    },
+    {
+     "after_ms": 13127,
+     "text": "Are you still there? Take your time."
+    }
+   ],
+   "first_reply_ms": 1759,
+   "check_in_ms": 13127,
+   "hung_up": false,
+   "close_info": null,
+   "tools": [],
+   "reply": "No problem. When did the beeping start?",
+   "carried_on": true,
+   "passed": true
+  },
+  {
+   "platform": "deepgram",
+   "test": "silence",
+   "conversation_id": "dg_effcca9e4455b325afa57aa7",
+   "quiet_ms": 25000,
+   "spoke_during_silence": [
+    {
+     "after_ms": 1818,
+     "text": "I'm here to help. What's happening with your alarm panel?"
+    },
+    {
+     "after_ms": 13233,
+     "text": "Are you still there? Take your time."
+    }
+   ],
+   "first_reply_ms": 1818,
+   "check_in_ms": 13233,
+   "hung_up": false,
+   "close_info": null,
+   "tools": [],
+   "reply": "No problem. When did the beeping start?",
+   "carried_on": true,
+   "passed": true
+  }
+ ]
+}
