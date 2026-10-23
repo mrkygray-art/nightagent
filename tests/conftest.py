@@ -17,7 +17,8 @@ for name in ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "O
     os.environ[name] = ""
 for name in ("ZENDESK_SUBDOMAIN", "ZENDESK_CLIENT_ID", "ZENDESK_CLIENT_SECRET", "ZENDESK_FIELD_NIGHTAGENT_ID",
              "ZENDESK_FIELD_CATEGORY", "ZENDESK_FIELD_CALL_SOURCE", "ZENDESK_WEBHOOK_SECRET",
-             "ZENDESK_INTEGRATION_USER_ID"):
+             "ZENDESK_INTEGRATION_USER_ID", "ZENDESK_FIELD_REVIEW_NEEDED", "ZENDESK_FIELD_REVIEW_REASON",
+             "ZENDESK_FIELD_RECOMMENDED_OPTIONS"):
     os.environ[name] = ""  # tests never call Zendesk
 
 from fastapi.testclient import TestClient  # noqa: E402
