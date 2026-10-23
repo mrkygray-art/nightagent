@@ -8,6 +8,7 @@ Both expose the same methods, so the rest of the app doesn't care which one it g
 """
 import re
 import secrets
+import threading
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -265,9 +266,8 @@ class SupabaseStore:
     name = "supabase"
 
     def __init__(self, url: str, key: str, prefix: str = "") -> None:
-        from supabase import create_client  # imported here so tests don't need it
-
-        self.db = create_client(url, key)
+        self._url, self._key = url, key
+        self._local = threading.local()
         self.customers_table = f"{prefix}customers"
         self.tickets_table = f"{prefix}tickets"
         self.calls_table = f"{prefix}calls"
@@ -275,6 +275,18 @@ class SupabaseStore:
         self.tasks_table = f"{prefix}routing_tasks"
         self.opportunities_table = f"{prefix}opportunities"
         self.tool_calls_table = f"{prefix}tool_calls"
+
+    @property
+    def db(self):
+        """One Supabase client per thread. FastAPI runs sync endpoints on a thread pool, and the client's HTTP/2
+        connection isn't safe to share between threads: when the demo page's polling overlapped a create_ticket call,
+        the shared connection broke (StreamIDTooLowError, KeyError on the stream id), create_ticket answered after
+        ElevenLabs' tool timeout, and Sam made up a ticket number (NS-4877, 2026-10-23)."""
+        client = getattr(self._local, "client", None)
+        if client is None:
+            from supabase import create_client  # imported here so tests don't need it
+            client = self._local.client = create_client(self._url, self._key)
+        return client
 
     def find_customers(self, query: str) -> list[dict]:
         digits = phone_digits(query)

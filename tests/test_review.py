@@ -109,6 +109,19 @@ def test_emergency_words_on_an_emergency_ticket_are_fine():
     assert not evaluate_review(data)["reviewNeeded"]
 
 
+@pytest.mark.parametrize("line,flags", [
+    ("My alarm keypad has a trouble light on, and it keeps beeping. This is not an emergency. There is no smoke.", False),
+    ("There isn't any smoke and nothing is burning.", False),
+    ("No smoke or fire, just the beeping.", False),
+    ("It's not an emergency, but now there is smoke coming out of it.", True),  # the negation is too far back
+    ("I can smell smoke.", True),
+])
+def test_negated_emergency_words_do_not_count(line, flags):
+    """NS-4877: the caller said "There is no smoke" and the call was flagged EMERGENCY_UNCLEAR with a priority bump."""
+    result = evaluate_review(keypad_call(caller_text=line))
+    assert ("EMERGENCY_UNCLEAR" in codes(result)) is flags
+
+
 def test_emergency_words_need_whole_words():
     assert not evaluate_review(keypad_call(caller_text="The firewall box next to the keypad is fine."))["reviewNeeded"]
 
