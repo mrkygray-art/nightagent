@@ -115,6 +115,10 @@ DEEPGRAM_HTML = r"""<!doctype html>
       <p class="note">After the call, <a href="/demo" id="board">open the board</a> to see your ticket.</p>
     </section>
   </div>
+  <details class="panel" id="log-panel" hidden>
+    <summary>Call log (for debugging: what Deepgram sent, when, your mic level, and whether Sam was playing)</summary>
+    <pre id="call-log" style="white-space:pre-wrap;font-size:.8rem;color:var(--muted);max-height:360px;overflow:auto"></pre>
+  </details>
 </main>
 <script>
 (() => {
@@ -159,6 +163,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
       call.heardTries++;
       const last = call.heardTries === HEARD_NOTHING_TRIES;
       call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH, ...(last ? { behavior: "interrupt" } : {}) }));
+      note(`> didn't-catch try ${call.heardTries}${last ? " (interrupt)" : ""}`);
       call.injectedForNoise = true;
     }, ms);
   }
@@ -175,8 +180,16 @@ DEEPGRAM_HTML = r"""<!doctype html>
     call.quiet = setTimeout(() => {
       if (!call || call.ws.readyState !== WebSocket.OPEN) return;
       call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: CHECK_INS[step][1] }));
+      note(`> check-in ${step + 1}`);
       call.checkIn = step + 1;
     }, CHECK_INS[step][0]);
+  }
+
+  // The call log: event, seconds into the call, mic level (0-100), and "sam" while Sam's audio is playing
+  function note(what) {
+    if (!call) return;
+    const playing = call.out && call.playAt > call.out.currentTime;
+    call.log.push(`${((Date.now() - call.startedAt) / 1000).toFixed(1)}s ${what} mic=${call.mic_level || 0}${playing ? " sam" : ""}`);
   }
 
   function setStatus(text, state) {
@@ -232,6 +245,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
   }
 
   function stopPlayback() {  // the caller started talking: Sam stops mid-sentence
+    if (call.playing.size) note("! Sam's audio cut");
     for (const src of call.playing) { try { src.stop(); } catch (e) {} }
     call.playing.clear();
     call.playAt = 0;
@@ -256,6 +270,9 @@ DEEPGRAM_HTML = r"""<!doctype html>
   async function onMessage(ev) {
     if (typeof ev.data !== "string") { if (call.heard) turnMoved(); play(ev.data); return; }
     const m = JSON.parse(ev.data);
+    if (!["LatencyReport", "History"].includes(m.type)) {
+      note(m.type + (m.role ? ` ${m.role} (${(m.content || "").split(/\s+/).filter(Boolean).length} words)` : "") + (m.code ? ` ${m.code}` : ""));
+    }
     switch (m.type) {
       case "SettingsApplied":
         call.ready = true;  // audio before this would be dropped by Deepgram
@@ -382,13 +399,14 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const meter = setInterval(() => {
       analyser.getFloatTimeDomainData(level);
       const rms = Math.sqrt(level.reduce((a, v) => a + v * v, 0) / level.length);
+      if (call) call.mic_level = Math.min(100, Math.round(rms * 400));
       $("mic-bar").style.width = Math.min(100, Math.round(rms * 400)) + "%";
     }, 100);
     const ws = new WebSocket(start.url, ["bearer", start.token]);
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
     call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
              playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now(),
-             heard: null, heardTries: 0, injectedForNoise: false };
+             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0 };
     node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
     ws.onmessage = onMessage;
@@ -413,8 +431,11 @@ DEEPGRAM_HTML = r"""<!doctype html>
     c.mic.getTracks().forEach((t) => t.stop());
     c.input.close();
     c.out.close();
+    c.log.push(`${((Date.now() - c.startedAt) / 1000).toFixed(1)}s hang up: ${reason}`);
+    $("call-log").textContent = c.log.join("\n");
+    $("log-panel").hidden = false;
     const body = JSON.stringify({ session: c.session, transcript: c.transcript.slice(-400), latencies: c.latencies.slice(-200),
-                                  duration_secs: (Date.now() - c.startedAt) / 1000 });
+                                  duration_secs: (Date.now() - c.startedAt) / 1000, events: c.log.slice(-600) });
     fetch("/api/deepgram/end", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000 }).catch(() => {});
     setStatus(reason + " Your ticket, if Sam made one, is on the board.", "");
     button.textContent = "Start a call";
