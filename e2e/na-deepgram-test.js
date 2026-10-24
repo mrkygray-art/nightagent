@@ -8,6 +8,10 @@
 const puppeteer = require('puppeteer-core');
 const { WebSocketServer } = require('ws');
 
+// The mic level the page reads (its meter) is driven by the test: window.__micLoud makes the caller "talk"
+let page = null;
+const setLoud = (on) => page && page.evaluate((v) => { window.__micLoud = v; }, on).catch(() => {});
+
 const BASE = process.env.BASE || 'http://localhost:8767';
 const START = JSON.parse(process.env.DG_START);  // {session, settings}
 let fails = 0;
@@ -68,7 +72,10 @@ async function script(ws) {
     await until(() => didntCatch().length === i + 1, 8000);
     ws.send(JSON.stringify(refusals[i]));
   }
-  await until(() => didntCatch().length === 4, 5000);
+  // The caller is really talking when the last try (the interrupt) comes due: loud mic from 13 s to 17 s
+  await wait(1000); await setLoud(true);
+  await wait(4000); await setLoud(false);
+  await until(() => didntCatch().length === 4, 16000);
   ws.send(JSON.stringify({ type: 'ConversationText', role: 'assistant', content: "Sorry, I didn't catch that. Could you say it again?" }));
   ws.send(Buffer.alloc(24000 * 2 * 0.2));
   ws.send(JSON.stringify({ type: 'AgentAudioDone' }));
@@ -93,9 +100,15 @@ async function script(ws) {
 (async () => {
   const browser = await puppeteer.launch({
     executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new',
-    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
+    args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
+      '--autoplay-policy=no-user-gesture-required'],
   });
-  const page = await browser.newPage();
+  page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => {
+    const read = AnalyserNode.prototype.getFloatTimeDomainData;
+    AnalyserNode.prototype.getFloatTimeDomainData = function (arr) { read.call(this, arr); if (window.__micLoud) arr.fill(0.3); };
+    AnalyserNode.prototype.getFloatTimeDomainData.toString = () => read.toString();
+  });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setRequestInterception(true);
@@ -111,7 +124,8 @@ async function script(ws) {
   await page.goto(`${BASE}/deepgram`, { waitUntil: 'networkidle0' });
   check(errors.length === 0, 'page loads with no script errors', errors.join('; '));
   await page.click('#call');
-  await page.waitForFunction(() => document.querySelector('#call').textContent === 'Start a call' && document.querySelector('#status').textContent.includes('ended'), { timeout: 40000 });
+  await page.waitForFunction(() => document.querySelector('#call').textContent === 'Start a call' && document.querySelector('#status').textContent.includes('ended'), { timeout: 55000 });
+  await until(() => ended, 5000);  // the end-of-call post can land a moment after the page says the call ended
 
   check(seen.protocols && seen.protocols.includes('bearer') && seen.protocols.includes('fake-jwt'), 'browser authenticates with the bearer subprotocol', seen.protocols);
   check(seen.settings && seen.settings.agent.listen.provider.model === 'flux-general-en', 'Settings ask for Flux');
@@ -125,10 +139,15 @@ async function script(ws) {
   const gaps = noise.slice(1).map((n, i) => n.sinceNoise - noise[i].sinceNoise);
   check(noise.length === 4 && noise[0].sinceNoise > 5500 && noise[0].sinceNoise < 7000 && !noise[0].behavior,
     "a caller turn with no words: after 6 s the page asks Sam to say it didn't catch that", JSON.stringify(noise));
-  check(gaps.length === 3 && gaps.every((g) => g > 2500 && g < 4000),
-    'refused (warning or InjectionRefused, still mid-turn): the page asks again every 3 s', JSON.stringify(gaps));
+  check(gaps.length === 3 && gaps.slice(0, 2).every((g) => g > 2500 && g < 4000),
+    'refused (warning or InjectionRefused, still mid-turn): the page asks again 3 s later', JSON.stringify(gaps));
   check(noise.length === 4 && noise.slice(0, 3).every((n) => !n.behavior) && noise[3].behavior === 'interrupt',
-    'the last try (about 15 s in) interrupts, so noise cannot hold Sam silent', JSON.stringify(noise.map((n) => n.behavior || 'default')));
+    'the last try interrupts, so noise cannot hold Sam silent', JSON.stringify(noise.map((n) => n.behavior || 'default')));
+  // Due at 15 s, but the mic was loud (a caller still talking): it waits for 1.5 s of quiet after the tone
+  check(noise.length === 4 && noise[3].sinceNoise > 18000 && noise[3].sinceNoise < 20000,
+    'the interrupt waits while the caller talks, then for 1.5 s of quiet', String(noise[3] && noise[3].sinceNoise));
+  check(ended && ended.events.some((e) => e.includes('interrupt held')), 'the call log notes the held interrupt',
+    ended ? ended.events.filter((e) => /try|held|UserStarted/.test(e)).join(' / ') : 'no end post');
   check(seen.injected.length === 5, 'no other check-ins: none while the caller talks or after end_call', JSON.stringify(seen.injected.map((i) => i.message)));
   check(seen.lookup && JSON.stringify(seen.lookup).includes('Westside'), 'lookup_customer ran on the real backend');
   check(seen.ticket && /^NS-\d+$/.test(seen.ticket.ticket_id || ''), 'create_ticket made a board ticket', JSON.stringify(seen.ticket).slice(0, 120));

@@ -153,15 +153,28 @@ DEEPGRAM_HTML = r"""<!doctype html>
   // while it thinks someone is mid-turn (a real caller on a long sentence, or noise it can't place), so the
   // page asks again every 3 s and, the last time (15 s in), interrupts: a noise turn can't hold Sam forever.
   const HEARD_NOTHING_MS = 6000, REFUSED_RETRY_MS = 3000, HEARD_NOTHING_TRIES = 4;
+  // The interrupt can cut off a real caller on a long sentence, so it waits until the mic has been quiet for
+  // 1.5 s (Deepgram thinks someone is talking, but nobody is). After 30 s of a turn with no words it goes anyway,
+  // so steady loud noise can't hold Sam silent either.
+  const QUIET_LEVEL = 10, QUIET_BEFORE_INTERRUPT_MS = 1500, QUIET_POLL_MS = 500, INTERRUPT_ANYWAY_MS = 30000;
   const DIDNT_CATCH = "Sorry, I didn't catch that. Could you say it again?";
 
   function heardNothingTimer(ms = HEARD_NOTHING_MS) {
     clearTimeout(call.heard);
+    if (!call.turnStartedAt) call.turnStartedAt = Date.now();
     call.heard = setTimeout(() => {
       if (!call || call.ending || call.ws.readyState !== WebSocket.OPEN) return;
       if (call.heardTries >= HEARD_NOTHING_TRIES) return;
+      const last = call.heardTries + 1 === HEARD_NOTHING_TRIES;
+      const talking = Date.now() - call.lastLoudAt < QUIET_BEFORE_INTERRUPT_MS;
+      if (last && talking && Date.now() - call.turnStartedAt < INTERRUPT_ANYWAY_MS) {
+        if (!call.heldInterrupt) note("interrupt held: the caller is still talking");
+        call.heldInterrupt = true;
+        heardNothingTimer(QUIET_POLL_MS);
+        return;
+      }
+      call.heldInterrupt = false;
       call.heardTries++;
-      const last = call.heardTries === HEARD_NOTHING_TRIES;
       call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH, ...(last ? { behavior: "interrupt" } : {}) }));
       note(`> didn't-catch try ${call.heardTries}${last ? " (interrupt)" : ""}`);
       call.injectedForNoise = true;
@@ -170,6 +183,8 @@ DEEPGRAM_HTML = r"""<!doctype html>
 
   function turnMoved() {  // words, a reply, or a tool: the turn was real (or Sam answered the noise)
     clearTimeout(call.heard);
+    call.turnStartedAt = 0;
+    call.heldInterrupt = false;
     call.injectedForNoise = false;
     call.heardTries = 0;
   }
@@ -436,14 +451,18 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const meter = setInterval(() => {
       analyser.getFloatTimeDomainData(level);
       const rms = Math.sqrt(level.reduce((a, v) => a + v * v, 0) / level.length);
-      if (call) call.mic_level = Math.min(100, Math.round(rms * 400));
+      if (call) {
+        call.mic_level = Math.min(100, Math.round(rms * 400));
+        if (call.mic_level >= QUIET_LEVEL) call.lastLoudAt = Date.now();
+      }
       $("mic-bar").style.width = Math.min(100, Math.round(rms * 400)) + "%";
     }, 100);
     const ws = new WebSocket(start.url, ["bearer", start.token]);
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
     call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
              playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now(),
-             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0, echo: 0, echoFrames: 0, loud: 0, guarded: 0 };
+             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0, echo: 0, echoFrames: 0, loud: 0, guarded: 0,
+             lastLoudAt: 0, turnStartedAt: 0, heldInterrupt: false };
     note(GUARD ? "echo guard on" : "echo guard off (?guard=0)");
     node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(echoGuard(e.data)); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
