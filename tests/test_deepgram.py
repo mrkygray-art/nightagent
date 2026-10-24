@@ -41,6 +41,7 @@ def test_settings_use_flux_aura2_and_claude():
     agent = s["agent"]
     assert agent["listen"]["provider"] == {**agent["listen"]["provider"], "type": "deepgram", "version": "v2",
                                            "model": "flux-general-en"}
+    assert 500 <= agent["listen"]["provider"]["eot_timeout_ms"] < 5000  # shorter than Flux's default (Deepgram allows 500-60000)
     assert agent["speak"]["provider"]["model"].startswith("aura-2-") and agent["speak"]["provider"]["version"] == "v1"
     assert agent["think"]["provider"]["type"] == "anthropic"
     assert len(agent["think"]["prompt"]) < 25_000  # Deepgram's limit for managed LLMs

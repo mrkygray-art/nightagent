@@ -5,6 +5,8 @@
 //   node run.js --save               ...and write ../app/voice_lab.json for the /lab page
 //   node run.js --only numbers --conditions clean,phone --callers maria
 //   node run.js --platform deepgram  the same tests against Sam on Deepgram (/deepgram: Flux, Aura-2, Claude)
+//   node run.js --platform deepgram --only noise --conditions cafe-10,street-5 --repeats 2   noise, no words
+//   VOICELAB_ORIGIN=https://<preview>.vercel.app node run.js ...   test a branch's preview instead of the live site
 //
 // Each call is a real conversation (it uses call minutes). Calls end before a ticket is made; the
 // conversation ids are saved so the server leaves these calls out of the real-call numbers.
@@ -14,7 +16,7 @@ const WebSocket = require('ws');
 const A = require('./audio');
 
 const AGENT = 'agent_0301m3ws1zwae8ya6j72bcv7a193'; // Sam
-const ORIGIN = 'https://nightshift-dispatch.vercel.app';
+const ORIGIN = process.env.VOICELAB_ORIGIN || 'https://nightshift-dispatch.vercel.app';  // a preview URL to test a branch
 const FRAME = 320; // 20 ms at 16 kHz
 
 const CALLERS = {
@@ -190,6 +192,7 @@ class DeepgramCall extends Call {
 
   onAudio(bytes) {
     const now = this.t();
+    this.turnMoved();
     if (now > this.agentAudioEnd) this.events.push({ t: now, type: 'agent_audio_start' });
     this.agentAudioEnd = Math.max(this.agentAudioEnd, now) + (bytes / 2 / DG_OUT_RATE) * 1000;
     this.lastAudioAt = now;
@@ -197,10 +200,12 @@ class DeepgramCall extends Call {
 
   async onDg(m, ready) {
     const now = this.t();
+    if (m.type !== 'History') this.events.push({ t: now, type: 'dg', msg: m.type });  // every event, for the noise test's timeline
     switch (m.type) {
       case 'SettingsApplied': this.startMic(); ready(); break;  // audio sent before this is dropped
       case 'AgentAudioDone': this.quietTimer(this.checkIn || 0); break;
       case 'ConversationText':
+        if (m.role === 'user') { this.turnMoved(); this.heardTries = 0; }
         this.events.push({ t: now, type: m.role === 'assistant' ? 'agent' : 'heard', text: m.content, during_audio: this.agentSpeaking() });
         break;
       case 'UserStartedSpeaking':
@@ -208,13 +213,17 @@ class DeepgramCall extends Call {
         if (this.agentSpeaking()) this.events.push({ t: now, type: 'interruption' });
         this.agentAudioEnd = now;
         clearTimeout(this.quietTimeout); this.checkIn = 0;
+        this.heardNothing();
         break;
+      case 'InjectionRefused': if (this.noiseInject) this.heardNothing(3000); break;
+      case 'AgentThinking': case 'AgentStartedSpeaking': case 'FunctionCallRequest': this.turnMoved(); break;
       case 'LatencyReport':
         if (typeof m.total_latency === 'number') this.events.push({ t: now, type: 'latency', total: m.total_latency, ttt: this.ttt, tts: this.tts });
         if (typeof m.ttt_text_latency === 'number') this.ttt = m.ttt_text_latency;
         if (typeof m.tts_latency === 'number') this.tts = m.tts_latency;
         break;
       case 'FunctionCallRequest':
+        this.turnMoved();
         for (const fn of m.functions || []) {
           this.events.push({ t: now, type: 'tool', tool: fn.name });
           let content = 'ok';
@@ -242,7 +251,20 @@ class DeepgramCall extends Call {
     }, CHECK_INS[step][0]);
   }
 
-  close() { clearTimeout(this.quietTimeout); return super.close(); }
+  // The same "didn't catch that" as the page: a caller turn that never became words (noise) gets a reply
+  heardNothing(ms = 6000) {
+    clearTimeout(this.heardTimeout);
+    this.heardTimeout = setTimeout(() => {
+      if (this.closed || (this.heardTries || 0) >= 4) return;
+      this.heardTries = (this.heardTries || 0) + 1;
+      this.ws.send(JSON.stringify({ type: 'InjectAgentMessage', message: "Sorry, I didn't catch that. Could you say it again?" }));
+      this.noiseInject = true;
+    }, ms);
+  }
+
+  turnMoved() { clearTimeout(this.heardTimeout); this.noiseInject = false; }
+
+  close() { clearTimeout(this.quietTimeout); clearTimeout(this.heardTimeout); return super.close(); }
 
   // The socket opens before the mic: startMic runs on SettingsApplied instead
   sendFrame(frame) { this.ws.send(A.toPcm16(frame)); }
@@ -369,6 +391,38 @@ async function silenceTest(clips, quietMs = 25000) {
   return result;
 }
 
+// 2c. Background noise, no words: after the greeting the caller says nothing while the room is loud.
+// Sam must not go quiet for good: noise that Flux takes for the start of a turn used to cancel the check-in.
+async function noiseTest(cond, clips, quietMs = 35000) {
+  const c = await newCall(cond, clips);
+  await c.greeting();
+  const from = c.t();
+  // --blip <gain>: someone in the room says a few words, quietly, 2 s in (a TV, a coworker, a cough)
+  const blip = Number(arg('blip', 0));
+  if (blip) {
+    await c.until(() => false, 2000);
+    const words = clips['maria-opener'].subarray(0, Math.round(A.RATE * Number(arg('blip-secs', 1.2))));
+    await c.speak(words.map((v) => v * blip));
+  }
+  await c.until(() => false, quietMs);
+  await c.close();
+  const spoke = c.after(from, 'agent').map((e) => ({ after_ms: ms(e.t - from), text: e.text }));
+  const timeline = c.after(from, 'dg').filter((e) => !['LatencyReport', 'AgentAudioDone'].includes(e.msg))
+    .map((e) => `${(ms(e.t - from) / 1000).toFixed(1)}s ${e.msg}`);
+  const result = {
+    test: 'noise', condition: cond.id, blip: Number(arg('blip', 0)) || null, conversation_id: c.conversationId, quiet_ms: quietMs,
+    heard: c.after(from, 'heard').map((e) => e.text),
+    started_speaking: c.after(from, 'dg').filter((e) => e.msg === 'UserStartedSpeaking').length,
+    spoke, timeline,
+    // Longest stretch with Sam silent after the greeting (seconds)
+    longest_quiet_s: Math.round(Math.max(...[from, ...c.after(from, 'agent').map((e) => e.t), from + quietMs]
+      .map((t, i, a) => (i ? t - a[i - 1] : 0))) / 100) / 10,
+    hung_up: c.closed && !c.closing,
+  };
+  result.passed = !result.hung_up && result.longest_quiet_s <= 20;
+  return result;
+}
+
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
   return i > -1 ? process.argv[i + 1] : fallback;
@@ -388,6 +442,9 @@ function arg(name, fallback) {
       for (const cond of conds) for (const who of callers) { log(await numbersTest(cond, who, clips)); await sleep(1500); }
     }
     if (only.includes('interruption')) for (let i = 0; i < repeats; i++) { log(await interruptionTest(clips)); await sleep(1500); }
+    if (only.includes('noise')) {
+      for (const cond of conds.filter((x) => x.kind)) for (let i = 0; i < repeats; i++) { log(await noiseTest(cond, clips)); await sleep(1500); }
+    }
     if (only.includes('silence')) for (let i = 0; i < repeats; i++) { log(await silenceTest(clips)); await sleep(1500); }
   } catch (e) {
     console.error('stopped:', e.message);

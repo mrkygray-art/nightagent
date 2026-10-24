@@ -35,6 +35,7 @@ TIMEOUT_SECS = 10
 PROMPT = Path(__file__).with_name("deepgram_sam_prompt.md")
 FUNCTIONS = Path(__file__).with_name("deepgram_functions.json")
 GREETING = "Thanks for calling Demo Security Integrators after-hours support, this is Sam. How can I help you tonight?"
+EOT_TIMEOUT_MS = 3000  # Flux ends a turn after this long with no more speech (its default is 5000)
 # Words Flux should expect: the demo accounts and the trade's terms
 KEYTERMS = ["Demo Security Integrators", "Sunset Dental", "Westside Self Storage", "Harbor Logistics",
             "keypad", "fob", "access control", "intercom", "NVR"]
@@ -56,8 +57,9 @@ def settings() -> dict:
         "audio": {"input": {"encoding": "linear16", "sample_rate": 16000},
                   "output": {"encoding": "linear16", "sample_rate": 24000, "container": "none"}},
         "agent": {
+            # A shorter end-of-turn wait, so a turn padded out by background noise closes sooner
             "listen": {"provider": {"type": "deepgram", "version": "v2", "model": "flux-general-en",
-                                    "keyterms": KEYTERMS}},
+                                    "keyterms": KEYTERMS, "eot_timeout_ms": EOT_TIMEOUT_MS}},
             "think": {"provider": {"type": "anthropic", "model": config.DEEPGRAM_LLM, "temperature": 0.3},
                       "prompt": PROMPT.read_text(encoding="utf-8"),
                       "functions": json.loads(FUNCTIONS.read_text(encoding="utf-8"))},

@@ -29,7 +29,7 @@ wss.on('connection', async (ws, req) => {
       ws.send(JSON.stringify({ type: 'SettingsApplied' }));
       script(ws).catch((e) => { console.log('mock script failed', e); ws.close(); });
     } else if (m.type === 'InjectAgentMessage') {
-      seen.injected.push({ at: Date.now() - seen.greetingDone, message: m.message });
+      seen.injected.push({ at: Date.now() - seen.greetingDone, sinceNoise: seen.noiseAt ? Date.now() - seen.noiseAt : null, message: m.message });
     } else if (m.type === 'FunctionCallResponse') {
       seen.responses.push(m);
       if (waitFor) { const w = waitFor; waitFor = null; w(m); }
@@ -38,6 +38,9 @@ wss.on('connection', async (ws, req) => {
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const DIDNT_CATCH = /didn't catch that/;
+const didntCatch = () => seen.injected.filter((i) => DIDNT_CATCH.test(i.message));
+async function until(pred, ms) { const end = Date.now() + ms; while (Date.now() < end && !pred()) await wait(50); return pred(); }
 const call = (ws, id, name, args) => {
   const got = nextResponse();
   ws.send(JSON.stringify({ type: 'FunctionCallRequest', functions: [{ id, name, arguments: JSON.stringify(args), client_side: true }] }));
@@ -52,6 +55,16 @@ async function script(ws) {
   seen.greetingDone = Date.now();
   await wait(10800);  // the caller stays quiet: the page should check in after 10 s
   seen.injectedBeforeSpeech = seen.injected.length;
+  // Noise starts a caller turn that never becomes words: the page must not leave Sam silent
+  seen.noiseAt = Date.now();
+  ws.send(JSON.stringify({ type: 'UserStartedSpeaking' }));
+  await until(() => didntCatch().length === 1, 8000);
+  ws.send(JSON.stringify({ type: 'InjectionRefused', message: 'User is speaking' }));  // Deepgram still thinks so: retry
+  await until(() => didntCatch().length === 2, 5000);
+  ws.send(JSON.stringify({ type: 'ConversationText', role: 'assistant', content: "Sorry, I didn't catch that. Could you say it again?" }));
+  ws.send(Buffer.alloc(24000 * 2 * 0.2));
+  ws.send(JSON.stringify({ type: 'AgentAudioDone' }));
+  await wait(500);
   ws.send(JSON.stringify({ type: 'UserStartedSpeaking' }));
   ws.send(JSON.stringify({ type: 'ConversationText', role: 'user', content: 'Westside Self Storage, 310 555 0178. The keypad has a trouble light.' }));
   const lookup = await call(ws, 'fc_1', 'lookup_customer', { query: '310-555-0178' });
@@ -90,7 +103,7 @@ async function script(ws) {
   await page.goto(`${BASE}/deepgram`, { waitUntil: 'networkidle0' });
   check(errors.length === 0, 'page loads with no script errors', errors.join('; '));
   await page.click('#call');
-  await page.waitForFunction(() => document.querySelector('#call').textContent === 'Start a call' && document.querySelector('#status').textContent.includes('ended'), { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelector('#call').textContent === 'Start a call' && document.querySelector('#status').textContent.includes('ended'), { timeout: 40000 });
 
   check(seen.protocols && seen.protocols.includes('bearer') && seen.protocols.includes('fake-jwt'), 'browser authenticates with the bearer subprotocol', seen.protocols);
   check(seen.settings && seen.settings.agent.listen.provider.model === 'flux-general-en', 'Settings ask for Flux');
@@ -100,18 +113,23 @@ async function script(ws) {
   check(seen.audioFrames > 0 && Math.abs(seen.audioBytes / seen.audioFrames - 1600) < 40, 'frames are 16 kHz (about 1600 bytes per 50 ms)', String(seen.audioBytes / seen.audioFrames));
   check(seen.injectedBeforeSpeech === 1 && seen.injected[0].at > 9500 && seen.injected[0].at < 10800,
     'after 10 s of silence the page asks Sam to check in (InjectAgentMessage)', JSON.stringify(seen.injected));
-  check(seen.injected.length === 1, 'no check-in while the caller is talking or after end_call', String(seen.injected.length));
+  const noise = didntCatch();
+  check(noise.length === 2 && noise[0].sinceNoise > 5500 && noise[0].sinceNoise < 7000,
+    "a caller turn with no words: after 6 s the page asks Sam to say it didn't catch that", JSON.stringify(noise));
+  check(noise.length === 2 && noise[1].sinceNoise - noise[0].sinceNoise > 2500 && noise[1].sinceNoise - noise[0].sinceNoise < 4000,
+    'if Deepgram refuses (still mid-turn), the page asks again 3 s later', JSON.stringify(noise));
+  check(seen.injected.length === 3, 'no other check-ins: none while the caller talks or after end_call', JSON.stringify(seen.injected.map((i) => i.message)));
   check(seen.lookup && JSON.stringify(seen.lookup).includes('Westside'), 'lookup_customer ran on the real backend');
   check(seen.ticket && /^NS-\d+$/.test(seen.ticket.ticket_id || ''), 'create_ticket made a board ticket', JSON.stringify(seen.ticket).slice(0, 120));
   check(seen.responses.every((r) => r.type === 'FunctionCallResponse' && r.id && r.name && typeof r.content === 'string'), 'FunctionCallResponses have id, name, content');
   const turns = await page.$$eval('#transcript .turn', (els) => els.map((e) => e.className));
-  check(turns.filter((c) => c.includes('assistant')).length === 2 && turns.some((c) => c.includes('user')), 'transcript shows both sides', turns.join(','));
+  check(turns.filter((c) => c.includes('assistant')).length === 3 && turns.some((c) => c.includes('user')), 'transcript shows both sides', turns.join(','));
   const rows = await page.$$eval('#latency tr', (els) => els.length);
   check(rows === 2, 'latency table has a row per Sam turn (AgentStartedSpeaking and LatencyReport)', String(rows));
   const last = await page.$eval('#latency tr:last-child', (tr) => tr.textContent);
   check(last.includes('0.66') && last.includes('0.21') && last.includes('1.04'), 'LatencyReport figures fill the row', last);
   check(ended && ended.latencies[1] && ended.latencies[1].total_latency === 1.04 && ended.latencies[1].ttt_latency === 0.66, 'saved latencies use the LatencyReport figures');
-  check(ended && ended.transcript.length === 3 && ended.latencies.length === 2, 'end of call posts transcript and latencies');
+  check(ended && ended.transcript.length === 4 && ended.latencies.length === 2, 'end of call posts transcript and latencies');
 
   await wait(800);
   const board = await (await fetch(`${BASE}/api/tickets`)).json();

@@ -143,6 +143,27 @@ DEEPGRAM_HTML = r"""<!doctype html>
   // Deepgram's agent doesn't speak up on its own when the caller goes quiet, so the page asks it to, like
   // ElevenLabs Sam does: once after 10 s of silence following Sam's turn, then once more after another 15 s.
   const CHECK_INS = [[10000, "Are you still there? Take your time."], [15000, "I'm still here whenever you're ready."]];
+  // Noise (a TV, a voice across the room, Sam's own voice through the speakers) can start a caller turn that
+  // never becomes words. That cancelled the check-in, and nothing restarted it, so Sam went quiet until the
+  // caller asked if anyone was there. Now, if nothing follows a started turn, Sam asks again.
+  const HEARD_NOTHING_MS = 6000, REFUSED_RETRY_MS = 3000, HEARD_NOTHING_TRIES = 4;
+  const DIDNT_CATCH = "Sorry, I didn't catch that. Could you say it again?";
+
+  function heardNothingTimer(ms = HEARD_NOTHING_MS) {
+    clearTimeout(call.heard);
+    call.heard = setTimeout(() => {
+      if (!call || call.ending || call.ws.readyState !== WebSocket.OPEN) return;
+      if (call.heardTries >= HEARD_NOTHING_TRIES) return;
+      call.heardTries++;
+      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH }));
+      call.injectedForNoise = true;
+    }, ms);
+  }
+
+  function turnMoved() {  // words, a reply, or a tool: the turn was real
+    clearTimeout(call.heard);
+    call.injectedForNoise = false;
+  }
 
   function quietTimer(step = 0) {
     clearTimeout(call.quiet);
@@ -229,7 +250,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
   }
 
   async function onMessage(ev) {
-    if (typeof ev.data !== "string") { play(ev.data); return; }
+    if (typeof ev.data !== "string") { if (call.heard) turnMoved(); play(ev.data); return; }
     const m = JSON.parse(ev.data);
     switch (m.type) {
       case "SettingsApplied":
@@ -237,6 +258,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         setStatus("Connected. Sam is listening.", "live");
         break;
       case "ConversationText":
+        if (m.role === "user") { turnMoved(); call.heardTries = 0; }
         call.transcript.push({ role: m.role, content: m.content });
         addTurn(m.role === "assistant" ? "assistant" : "user", m.content);
         break;
@@ -245,14 +267,20 @@ DEEPGRAM_HTML = r"""<!doctype html>
         call.checkIn = 0;
         stopPlayback();
         call.talking = false;
-        setStatus("Listening…", "live");
+        setStatus("Sam heard something. Go ahead…", "live");
+        heardNothingTimer();
         break;
-      case "InjectionRefused":  // someone was mid-turn; the next AgentAudioDone restarts the timer
+      case "InjectionRefused":
+        // Deepgram still thinks someone is mid-turn. After a noise turn, try again shortly; otherwise the
+        // next AgentAudioDone restarts the check-in timer
+        if (call.injectedForNoise) heardNothingTimer(REFUSED_RETRY_MS);
         break;
       case "AgentThinking":
+        turnMoved();
         setStatus("Sam is thinking…", "live");
         break;
       case "AgentStartedSpeaking":
+        turnMoved();
         if (typeof m.total_latency === "number") addLatency(m);  // older API versions put the figures here
         setStatus("Sam is talking", "talk");
         break;
@@ -271,6 +299,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         if (call.ending) setTimeout(() => hangUp("Sam ended the call."), Math.max(0, (call.playAt - call.out.currentTime) * 1000) + 400);
         break;
       case "FunctionCallRequest":
+        turnMoved();
         for (const fn of m.functions || []) {
           if (fn.client_side === false) continue;
           const content = await runTool(fn);
@@ -345,7 +374,8 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const ws = new WebSocket(start.url, ["bearer", start.token]);
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
     call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
-             playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now() };
+             playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now(),
+             heard: null, heardTries: 0, injectedForNoise: false };
     node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
     ws.onmessage = onMessage;
@@ -363,6 +393,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
     call = null;
     clearTimeout(c.timer);
     clearTimeout(c.quiet);
+    clearTimeout(c.heard);
     clearInterval(c.meter);
     $("mic").hidden = true;
     try { c.ws.close(); } catch (e) {}
