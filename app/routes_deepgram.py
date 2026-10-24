@@ -135,6 +135,8 @@ class CallEnd(BaseModel):
     transcript: list[Turn] = Field(default_factory=list, max_length=400)
     latencies: list[dict] = Field(default_factory=list, max_length=200)  # AgentStartedSpeaking messages
     duration_secs: float | None = Field(None, ge=0, le=3600)
+    # The call's event log (event names, seconds, mic level, whether Sam was playing; no words), for debugging
+    events: list[str] = Field(default_factory=list, max_length=600)
 
 
 @router.post("/api/deepgram/end")
@@ -143,6 +145,8 @@ def end_call(end: CallEnd) -> dict:
     if conv in _ended:
         return {"status": "already saved"}
     _ended.add(conv)
+    if end.events:
+        log.info("deepgram call %s events: %s", conv, " | ".join(e[:80] for e in end.events))
     text = dg.transcript_text([t.model_dump() for t in end.transcript])
     read = dg.read_transcript(text)
     # The same shape as evaluation.analyze, minus ElevenLabs' grades (Deepgram calls aren't graded by them)

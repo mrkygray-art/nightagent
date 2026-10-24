@@ -115,6 +115,10 @@ DEEPGRAM_HTML = r"""<!doctype html>
       <p class="note">After the call, <a href="/demo" id="board">open the board</a> to see your ticket.</p>
     </section>
   </div>
+  <details class="panel" id="log-panel" hidden>
+    <summary>Call log (for debugging: what Deepgram sent, when, your mic level, and whether Sam was playing)</summary>
+    <pre id="call-log" style="white-space:pre-wrap;font-size:.8rem;color:var(--muted);max-height:360px;overflow:auto"></pre>
+  </details>
 </main>
 <script>
 (() => {
@@ -143,6 +147,32 @@ DEEPGRAM_HTML = r"""<!doctype html>
   // Deepgram's agent doesn't speak up on its own when the caller goes quiet, so the page asks it to, like
   // ElevenLabs Sam does: once after 10 s of silence following Sam's turn, then once more after another 15 s.
   const CHECK_INS = [[10000, "Are you still there? Take your time."], [15000, "I'm still here whenever you're ready."]];
+  // Noise (a TV, a voice across the room, Sam's own voice through the speakers) can start a caller turn that
+  // never becomes words. That cancelled the check-in, and nothing restarted it, so Sam went quiet until the
+  // caller asked if anyone was there. Now, if nothing follows a started turn, Sam asks again. Deepgram refuses
+  // while it thinks someone is mid-turn (a real caller on a long sentence, or noise it can't place), so the
+  // page asks again every 3 s and, the last time (15 s in), interrupts: a noise turn can't hold Sam forever.
+  const HEARD_NOTHING_MS = 6000, REFUSED_RETRY_MS = 3000, HEARD_NOTHING_TRIES = 4;
+  const DIDNT_CATCH = "Sorry, I didn't catch that. Could you say it again?";
+
+  function heardNothingTimer(ms = HEARD_NOTHING_MS) {
+    clearTimeout(call.heard);
+    call.heard = setTimeout(() => {
+      if (!call || call.ending || call.ws.readyState !== WebSocket.OPEN) return;
+      if (call.heardTries >= HEARD_NOTHING_TRIES) return;
+      call.heardTries++;
+      const last = call.heardTries === HEARD_NOTHING_TRIES;
+      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH, ...(last ? { behavior: "interrupt" } : {}) }));
+      note(`> didn't-catch try ${call.heardTries}${last ? " (interrupt)" : ""}`);
+      call.injectedForNoise = true;
+    }, ms);
+  }
+
+  function turnMoved() {  // words, a reply, or a tool: the turn was real (or Sam answered the noise)
+    clearTimeout(call.heard);
+    call.injectedForNoise = false;
+    call.heardTries = 0;
+  }
 
   function quietTimer(step = 0) {
     clearTimeout(call.quiet);
@@ -150,8 +180,53 @@ DEEPGRAM_HTML = r"""<!doctype html>
     call.quiet = setTimeout(() => {
       if (!call || call.ws.readyState !== WebSocket.OPEN) return;
       call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: CHECK_INS[step][1] }));
+      note(`> check-in ${step + 1}`);
       call.checkIn = step + 1;
     }, CHECK_INS[step][0]);
+  }
+
+  // The call log: event, seconds into the call, mic level (0-100), and "sam" while Sam's audio is playing
+  function note(what) {
+    if (!call) return;
+    const playing = call.out && call.playAt > call.out.currentTime;
+    call.log.push(`${((Date.now() - call.startedAt) / 1000).toFixed(1)}s ${what} mic=${call.mic_level || 0}${playing ? " sam" : ""}`);
+  }
+
+  // Echo guard: on laptop speakers, Sam's own voice reaches the mic, Flux takes it for the caller, and Sam is
+  // cut off mid-sentence (or a turn starts that never becomes words). While Sam's audio plays, and for a
+  // moment after, the page sends silence instead of the mic, unless the mic is clearly louder than the echo
+  // it has been measuring (the caller talking over Sam), so callers can still interrupt. ?guard=0 turns it off.
+  const GUARD = new URLSearchParams(location.search).get("guard") !== "0";
+  const GUARD_TAIL_S = 0.25, BARGE_MIN = 18, BARGE_OVER_ECHO = 2.5, BARGE_FRAMES = 2, ECHO_WARMUP = 6;
+
+  function frameLevel(buf) {  // the same 0-100 scale as the mic bar
+    const pcm = new Int16Array(buf);
+    let sum = 0;
+    for (let i = 0; i < pcm.length; i++) sum += (pcm[i] / 0x8000) ** 2;
+    return Math.min(100, Math.round(Math.sqrt(sum / Math.max(1, pcm.length)) * 400));
+  }
+
+  function echoGuard(buf) {
+    if (!GUARD || !call.out) return buf;
+    const samPlaying = call.playAt > call.out.currentTime - GUARD_TAIL_S && call.playAt > 0;
+    if (!samPlaying) {
+      if (call.guarded) { note(`echo guard: held back ${call.guarded} frames (echo level ~${Math.round(call.echo)})`); call.guarded = 0; }
+      call.loud = 0;
+      return buf;
+    }
+    const level = frameLevel(buf);
+    // Loud enough, two frames in a row (100 ms): the caller is talking over Sam, so let it through. Only once
+    // the echo has been measured (the first 300 ms of Sam on this call), or loud echo would pass as a caller
+    const measured = call.echoFrames >= ECHO_WARMUP;
+    call.loud = measured && level >= Math.max(BARGE_MIN, call.echo * BARGE_OVER_ECHO) ? call.loud + 1 : 0;
+    if (call.loud >= BARGE_FRAMES) {
+      if (call.loud === BARGE_FRAMES) note(`echo guard: let the caller through (level ${level}, echo ~${Math.round(call.echo)})`);
+      return buf;
+    }
+    call.echo = call.echoFrames ? call.echo * 0.9 + level * 0.1 : level;  // what Sam's own voice sounds like in this mic
+    call.echoFrames++;
+    call.guarded++;
+    return new ArrayBuffer(buf.byteLength);  // silence
   }
 
   function setStatus(text, state) {
@@ -207,6 +282,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
   }
 
   function stopPlayback() {  // the caller started talking: Sam stops mid-sentence
+    if (call.playing.size) note("! Sam's audio cut");
     for (const src of call.playing) { try { src.stop(); } catch (e) {} }
     call.playing.clear();
     call.playAt = 0;
@@ -229,14 +305,18 @@ DEEPGRAM_HTML = r"""<!doctype html>
   }
 
   async function onMessage(ev) {
-    if (typeof ev.data !== "string") { play(ev.data); return; }
+    if (typeof ev.data !== "string") { if (call.heard) turnMoved(); play(ev.data); return; }
     const m = JSON.parse(ev.data);
+    if (!["LatencyReport", "History"].includes(m.type)) {
+      note(m.type + (m.role ? ` ${m.role} (${(m.content || "").split(/\s+/).filter(Boolean).length} words)` : "") + (m.code ? ` ${m.code}` : ""));
+    }
     switch (m.type) {
       case "SettingsApplied":
         call.ready = true;  // audio before this would be dropped by Deepgram
         setStatus("Connected. Sam is listening.", "live");
         break;
       case "ConversationText":
+        if (m.role === "user") turnMoved();
         call.transcript.push({ role: m.role, content: m.content });
         addTurn(m.role === "assistant" ? "assistant" : "user", m.content);
         break;
@@ -245,14 +325,29 @@ DEEPGRAM_HTML = r"""<!doctype html>
         call.checkIn = 0;
         stopPlayback();
         call.talking = false;
-        setStatus("Listening…", "live");
+        setStatus("Sam heard something. Go ahead…", "live");
+        heardNothingTimer();
         break;
-      case "InjectionRefused":  // someone was mid-turn; the next AgentAudioDone restarts the timer
+      case "InjectionRefused":
+      case "Warning":
+        // Deepgram still thinks someone is mid-turn (InjectionRefused, or the INJECT_AGENT_MESSAGE_DURING_*
+        // warnings). After a noise turn, try again shortly; otherwise the next AgentAudioDone restarts the
+        // check-in timer
+        if (m.type === "Warning" && !/INJECT_AGENT_MESSAGE|InjectAgentMessage/.test((m.code || "") + (m.description || ""))) {
+          console.warn("Deepgram warning", m);
+          break;
+        }
+        if (call.injectedForNoise) {
+          setStatus("Sam is waiting for you to finish…", "live");
+          heardNothingTimer(REFUSED_RETRY_MS);
+        }
         break;
       case "AgentThinking":
+        turnMoved();
         setStatus("Sam is thinking…", "live");
         break;
       case "AgentStartedSpeaking":
+        turnMoved();
         if (typeof m.total_latency === "number") addLatency(m);  // older API versions put the figures here
         setStatus("Sam is talking", "talk");
         break;
@@ -271,6 +366,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         if (call.ending) setTimeout(() => hangUp("Sam ended the call."), Math.max(0, (call.playAt - call.out.currentTime) * 1000) + 400);
         break;
       case "FunctionCallRequest":
+        turnMoved();
         for (const fn of m.functions || []) {
           if (fn.client_side === false) continue;
           const content = await runTool(fn);
@@ -340,13 +436,16 @@ DEEPGRAM_HTML = r"""<!doctype html>
     const meter = setInterval(() => {
       analyser.getFloatTimeDomainData(level);
       const rms = Math.sqrt(level.reduce((a, v) => a + v * v, 0) / level.length);
+      if (call) call.mic_level = Math.min(100, Math.round(rms * 400));
       $("mic-bar").style.width = Math.min(100, Math.round(rms * 400)) + "%";
     }, 100);
     const ws = new WebSocket(start.url, ["bearer", start.token]);
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
     call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
-             playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now() };
-    node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
+             playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now(),
+             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0, echo: 0, echoFrames: 0, loud: 0, guarded: 0 };
+    note(GUARD ? "echo guard on" : "echo guard off (?guard=0)");
+    node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(echoGuard(e.data)); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
     ws.onmessage = onMessage;
     ws.onclose = () => { if (call && call.ws === ws) hangUp("The call ended."); };
@@ -363,14 +462,18 @@ DEEPGRAM_HTML = r"""<!doctype html>
     call = null;
     clearTimeout(c.timer);
     clearTimeout(c.quiet);
+    clearTimeout(c.heard);
     clearInterval(c.meter);
     $("mic").hidden = true;
     try { c.ws.close(); } catch (e) {}
     c.mic.getTracks().forEach((t) => t.stop());
     c.input.close();
     c.out.close();
+    c.log.push(`${((Date.now() - c.startedAt) / 1000).toFixed(1)}s hang up: ${reason}`);
+    $("call-log").textContent = c.log.join("\n");
+    $("log-panel").hidden = false;
     const body = JSON.stringify({ session: c.session, transcript: c.transcript.slice(-400), latencies: c.latencies.slice(-200),
-                                  duration_secs: (Date.now() - c.startedAt) / 1000 });
+                                  duration_secs: (Date.now() - c.startedAt) / 1000, events: c.log.slice(-600) });
     fetch("/api/deepgram/end", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60000 }).catch(() => {});
     setStatus(reason + " Your ticket, if Sam made one, is on the board.", "");
     button.textContent = "Start a call";
