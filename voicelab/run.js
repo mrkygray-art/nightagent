@@ -17,6 +17,8 @@ const A = require('./audio');
 
 const AGENT = 'agent_0301m3ws1zwae8ya6j72bcv7a193'; // Sam
 const ORIGIN = process.env.VOICELAB_ORIGIN || 'https://nightshift-dispatch.vercel.app';  // a preview URL to test a branch
+// A protected preview needs Vercel's automation bypass header (VOICELAB_BYPASS)
+const ORIGIN_HEADERS = process.env.VOICELAB_BYPASS ? { 'x-vercel-protection-bypass': process.env.VOICELAB_BYPASS } : {};
 const FRAME = 320; // 20 ms at 16 kHz
 
 const CALLERS = {
@@ -176,7 +178,7 @@ class Call {
 const DG_OUT_RATE = 24000;
 class DeepgramCall extends Call {
   async open() {
-    const r = await fetch(`${ORIGIN}/api/deepgram/session`, { method: 'POST' });
+    const r = await fetch(`${ORIGIN}/api/deepgram/session`, { method: 'POST', headers: ORIGIN_HEADERS });
     const s = await r.json();
     if (!r.ok) throw new Error(`Deepgram session: ${r.status} ${s.detail || ''}`);
     this.session = s.session;
@@ -205,7 +207,7 @@ class DeepgramCall extends Call {
       case 'SettingsApplied': this.startMic(); ready(); break;  // audio sent before this is dropped
       case 'AgentAudioDone': this.quietTimer(this.checkIn || 0); break;
       case 'ConversationText':
-        if (m.role === 'user') { this.turnMoved(); this.heardTries = 0; }
+        if (m.role === 'user') this.turnMoved();
         this.events.push({ t: now, type: m.role === 'assistant' ? 'agent' : 'heard', text: m.content, during_audio: this.agentSpeaking() });
         break;
       case 'UserStartedSpeaking':
@@ -215,8 +217,8 @@ class DeepgramCall extends Call {
         clearTimeout(this.quietTimeout); this.checkIn = 0;
         this.heardNothing();
         break;
-      case 'InjectionRefused': if (this.noiseInject) this.heardNothing(3000); break;
-      case 'AgentThinking': case 'AgentStartedSpeaking': case 'FunctionCallRequest': this.turnMoved(); break;
+      case 'InjectionRefused': if (this.noiseInject) this.heardNothing(3000); break;  // also the INJECT_AGENT_MESSAGE_* warnings, below
+      case 'AgentThinking': case 'AgentStartedSpeaking': this.turnMoved(); break;
       case 'LatencyReport':
         if (typeof m.total_latency === 'number') this.events.push({ t: now, type: 'latency', total: m.total_latency, ttt: this.ttt, tts: this.tts });
         if (typeof m.ttt_text_latency === 'number') this.ttt = m.ttt_text_latency;
@@ -228,7 +230,7 @@ class DeepgramCall extends Call {
           this.events.push({ t: now, type: 'tool', tool: fn.name });
           let content = 'ok';
           if (fn.name !== 'end_call') {
-            const res = await fetch(`${ORIGIN}/api/deepgram/tool`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            const res = await fetch(`${ORIGIN}/api/deepgram/tool`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...ORIGIN_HEADERS },
               body: JSON.stringify({ session: this.session, name: fn.name, arguments: fn.arguments || '{}' }) });
             content = (await res.json()).content || '{"error": "The tool failed."}';
           }
@@ -236,6 +238,10 @@ class DeepgramCall extends Call {
         }
         break;
       case 'Error': this.events.push({ t: now, type: 'error', text: m.description || m.code }); break;
+      case 'Warning':
+        this.events.push({ t: now, type: 'warning', text: m.description || m.code });
+        if (this.noiseInject && /INJECT_AGENT_MESSAGE|InjectAgentMessage/.test((m.code || '') + (m.description || ''))) this.heardNothing(3000);
+        break;
     }
   }
 
@@ -257,12 +263,13 @@ class DeepgramCall extends Call {
     this.heardTimeout = setTimeout(() => {
       if (this.closed || (this.heardTries || 0) >= 4) return;
       this.heardTries = (this.heardTries || 0) + 1;
-      this.ws.send(JSON.stringify({ type: 'InjectAgentMessage', message: "Sorry, I didn't catch that. Could you say it again?" }));
+      this.ws.send(JSON.stringify({ type: 'InjectAgentMessage', message: "Sorry, I didn't catch that. Could you say it again?",
+        ...(this.heardTries === 4 ? { behavior: 'interrupt' } : {}) }));
       this.noiseInject = true;
     }, ms);
   }
 
-  turnMoved() { clearTimeout(this.heardTimeout); this.noiseInject = false; }
+  turnMoved() { clearTimeout(this.heardTimeout); this.noiseInject = false; this.heardTries = 0; }
 
   close() { clearTimeout(this.quietTimeout); clearTimeout(this.heardTimeout); return super.close(); }
 
@@ -307,7 +314,9 @@ async function numbersTest(cond, who, clips) {
     turn_split: c.after(said.start, 'heard').length > 1,
     tools: c.events.filter((e) => e.type === 'tool').map((e) => e.tool),
     ended_early: c.closeInfo && !c.closeInfo.by_us ? c.closeInfo : null,
-    ...(PLATFORM === 'deepgram' ? { deepgram_latency: c.after(said.voicedEnd, 'latency')[0] || null } : {}),
+    ...(PLATFORM === 'deepgram' ? { deepgram_latency: c.after(said.voicedEnd, 'latency')[0] || null,
+      warnings: c.after(0, 'warning').map((e) => e.text),
+      timeline: c.after(said.start, 'dg').filter((e) => e.msg !== 'LatencyReport').map((e) => `${((e.t - said.voicedEnd) / 1000).toFixed(1)}s ${e.msg}`) } : {}),
   };
 }
 

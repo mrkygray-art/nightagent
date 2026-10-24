@@ -29,7 +29,7 @@ wss.on('connection', async (ws, req) => {
       ws.send(JSON.stringify({ type: 'SettingsApplied' }));
       script(ws).catch((e) => { console.log('mock script failed', e); ws.close(); });
     } else if (m.type === 'InjectAgentMessage') {
-      seen.injected.push({ at: Date.now() - seen.greetingDone, sinceNoise: seen.noiseAt ? Date.now() - seen.noiseAt : null, message: m.message });
+      seen.injected.push({ at: Date.now() - seen.greetingDone, sinceNoise: seen.noiseAt ? Date.now() - seen.noiseAt : null, message: m.message, behavior: m.behavior });
     } else if (m.type === 'FunctionCallResponse') {
       seen.responses.push(m);
       if (waitFor) { const w = waitFor; waitFor = null; w(m); }
@@ -58,9 +58,17 @@ async function script(ws) {
   // Noise starts a caller turn that never becomes words: the page must not leave Sam silent
   seen.noiseAt = Date.now();
   ws.send(JSON.stringify({ type: 'UserStartedSpeaking' }));
-  await until(() => didntCatch().length === 1, 8000);
-  ws.send(JSON.stringify({ type: 'InjectionRefused', message: 'User is speaking' }));  // Deepgram still thinks so: retry
-  await until(() => didntCatch().length === 2, 5000);
+  // Deepgram still thinks someone is mid-turn and refuses, both ways it does: the page retries, then interrupts
+  const refusals = [
+    { type: 'Warning', code: 'INJECT_AGENT_MESSAGE_DURING_USER_SPEECH', description: 'Ignored InjectAgentMessage because the user is currently speaking.' },
+    { type: 'InjectionRefused', message: 'User is speaking' },
+    { type: 'Warning', code: 'INJECT_AGENT_MESSAGE_DURING_USER_SPEECH', description: 'Ignored InjectAgentMessage because the user is currently speaking.' },
+  ];
+  for (let i = 0; i < refusals.length; i++) {
+    await until(() => didntCatch().length === i + 1, 8000);
+    ws.send(JSON.stringify(refusals[i]));
+  }
+  await until(() => didntCatch().length === 4, 5000);
   ws.send(JSON.stringify({ type: 'ConversationText', role: 'assistant', content: "Sorry, I didn't catch that. Could you say it again?" }));
   ws.send(Buffer.alloc(24000 * 2 * 0.2));
   ws.send(JSON.stringify({ type: 'AgentAudioDone' }));
@@ -114,11 +122,14 @@ async function script(ws) {
   check(seen.injectedBeforeSpeech === 1 && seen.injected[0].at > 9500 && seen.injected[0].at < 10800,
     'after 10 s of silence the page asks Sam to check in (InjectAgentMessage)', JSON.stringify(seen.injected));
   const noise = didntCatch();
-  check(noise.length === 2 && noise[0].sinceNoise > 5500 && noise[0].sinceNoise < 7000,
+  const gaps = noise.slice(1).map((n, i) => n.sinceNoise - noise[i].sinceNoise);
+  check(noise.length === 4 && noise[0].sinceNoise > 5500 && noise[0].sinceNoise < 7000 && !noise[0].behavior,
     "a caller turn with no words: after 6 s the page asks Sam to say it didn't catch that", JSON.stringify(noise));
-  check(noise.length === 2 && noise[1].sinceNoise - noise[0].sinceNoise > 2500 && noise[1].sinceNoise - noise[0].sinceNoise < 4000,
-    'if Deepgram refuses (still mid-turn), the page asks again 3 s later', JSON.stringify(noise));
-  check(seen.injected.length === 3, 'no other check-ins: none while the caller talks or after end_call', JSON.stringify(seen.injected.map((i) => i.message)));
+  check(gaps.length === 3 && gaps.every((g) => g > 2500 && g < 4000),
+    'refused (warning or InjectionRefused, still mid-turn): the page asks again every 3 s', JSON.stringify(gaps));
+  check(noise.length === 4 && noise.slice(0, 3).every((n) => !n.behavior) && noise[3].behavior === 'interrupt',
+    'the last try (about 15 s in) interrupts, so noise cannot hold Sam silent', JSON.stringify(noise.map((n) => n.behavior || 'default')));
+  check(seen.injected.length === 5, 'no other check-ins: none while the caller talks or after end_call', JSON.stringify(seen.injected.map((i) => i.message)));
   check(seen.lookup && JSON.stringify(seen.lookup).includes('Westside'), 'lookup_customer ran on the real backend');
   check(seen.ticket && /^NS-\d+$/.test(seen.ticket.ticket_id || ''), 'create_ticket made a board ticket', JSON.stringify(seen.ticket).slice(0, 120));
   check(seen.responses.every((r) => r.type === 'FunctionCallResponse' && r.id && r.name && typeof r.content === 'string'), 'FunctionCallResponses have id, name, content');

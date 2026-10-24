@@ -145,7 +145,9 @@ DEEPGRAM_HTML = r"""<!doctype html>
   const CHECK_INS = [[10000, "Are you still there? Take your time."], [15000, "I'm still here whenever you're ready."]];
   // Noise (a TV, a voice across the room, Sam's own voice through the speakers) can start a caller turn that
   // never becomes words. That cancelled the check-in, and nothing restarted it, so Sam went quiet until the
-  // caller asked if anyone was there. Now, if nothing follows a started turn, Sam asks again.
+  // caller asked if anyone was there. Now, if nothing follows a started turn, Sam asks again. Deepgram refuses
+  // while it thinks someone is mid-turn (a real caller on a long sentence, or noise it can't place), so the
+  // page asks again every 3 s and, the last time (15 s in), interrupts: a noise turn can't hold Sam forever.
   const HEARD_NOTHING_MS = 6000, REFUSED_RETRY_MS = 3000, HEARD_NOTHING_TRIES = 4;
   const DIDNT_CATCH = "Sorry, I didn't catch that. Could you say it again?";
 
@@ -155,14 +157,16 @@ DEEPGRAM_HTML = r"""<!doctype html>
       if (!call || call.ending || call.ws.readyState !== WebSocket.OPEN) return;
       if (call.heardTries >= HEARD_NOTHING_TRIES) return;
       call.heardTries++;
-      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH }));
+      const last = call.heardTries === HEARD_NOTHING_TRIES;
+      call.ws.send(JSON.stringify({ type: "InjectAgentMessage", message: DIDNT_CATCH, ...(last ? { behavior: "interrupt" } : {}) }));
       call.injectedForNoise = true;
     }, ms);
   }
 
-  function turnMoved() {  // words, a reply, or a tool: the turn was real
+  function turnMoved() {  // words, a reply, or a tool: the turn was real (or Sam answered the noise)
     clearTimeout(call.heard);
     call.injectedForNoise = false;
+    call.heardTries = 0;
   }
 
   function quietTimer(step = 0) {
@@ -258,7 +262,7 @@ DEEPGRAM_HTML = r"""<!doctype html>
         setStatus("Connected. Sam is listening.", "live");
         break;
       case "ConversationText":
-        if (m.role === "user") { turnMoved(); call.heardTries = 0; }
+        if (m.role === "user") turnMoved();
         call.transcript.push({ role: m.role, content: m.content });
         addTurn(m.role === "assistant" ? "assistant" : "user", m.content);
         break;
@@ -271,9 +275,18 @@ DEEPGRAM_HTML = r"""<!doctype html>
         heardNothingTimer();
         break;
       case "InjectionRefused":
-        // Deepgram still thinks someone is mid-turn. After a noise turn, try again shortly; otherwise the
-        // next AgentAudioDone restarts the check-in timer
-        if (call.injectedForNoise) heardNothingTimer(REFUSED_RETRY_MS);
+      case "Warning":
+        // Deepgram still thinks someone is mid-turn (InjectionRefused, or the INJECT_AGENT_MESSAGE_DURING_*
+        // warnings). After a noise turn, try again shortly; otherwise the next AgentAudioDone restarts the
+        // check-in timer
+        if (m.type === "Warning" && !/INJECT_AGENT_MESSAGE|InjectAgentMessage/.test((m.code || "") + (m.description || ""))) {
+          console.warn("Deepgram warning", m);
+          break;
+        }
+        if (call.injectedForNoise) {
+          setStatus("Sam is waiting for you to finish…", "live");
+          heardNothingTimer(REFUSED_RETRY_MS);
+        }
         break;
       case "AgentThinking":
         turnMoved();
