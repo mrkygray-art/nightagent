@@ -128,7 +128,7 @@ class Call {
       const due = Math.floor(this.t() / 20);
       while (sent < due && !this.closed) {
         let frame;
-        if (this.queue.length) { const q = this.queue.shift(); frame = q.f; if (q.mark) q.mark(this.t()); }
+        if (this.queue.length) { const q = this.queue.shift(); frame = q.f; if (q.mark) q.mark(this.t()); this.lastSpokeAt = this.t(); }
         else { frame = bed.subarray(bedPos, bedPos + FRAME); bedPos = (bedPos + FRAME) % (bed.length - FRAME); }
         this.sendFrame(frame);
         sent++;
@@ -260,8 +260,13 @@ class DeepgramCall extends Call {
   // The same "didn't catch that" as the page: a caller turn that never became words (noise) gets a reply
   heardNothing(ms = 6000) {
     clearTimeout(this.heardTimeout);
+    if (!this.turnStartedAt) this.turnStartedAt = this.t();
     this.heardTimeout = setTimeout(() => {
       if (this.closed || (this.heardTries || 0) >= 4) return;
+      // Like the page: the interrupt waits for 1.5 s with no caller speech (30 s into the turn it goes anyway)
+      if ((this.heardTries || 0) === 3 && this.t() - (this.lastSpokeAt || -1e9) < 1500 && this.t() - this.turnStartedAt < 30000) {
+        this.heardNothing(500); return;
+      }
       this.heardTries = (this.heardTries || 0) + 1;
       this.ws.send(JSON.stringify({ type: 'InjectAgentMessage', message: "Sorry, I didn't catch that. Could you say it again?",
         ...(this.heardTries === 4 ? { behavior: 'interrupt' } : {}) }));
@@ -269,7 +274,7 @@ class DeepgramCall extends Call {
     }, ms);
   }
 
-  turnMoved() { clearTimeout(this.heardTimeout); this.noiseInject = false; this.heardTries = 0; }
+  turnMoved() { clearTimeout(this.heardTimeout); this.noiseInject = false; this.heardTries = 0; this.turnStartedAt = 0; }
 
   close() { clearTimeout(this.quietTimeout); clearTimeout(this.heardTimeout); return super.close(); }
 
