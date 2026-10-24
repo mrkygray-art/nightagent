@@ -178,6 +178,7 @@ def _call_view(conv: str, rows: list[dict], cached: dict) -> dict:
         "summary": cached.get("summary") or (f"Call with {who}" if who else "Call with an unmatched caller"),
         "agents": report.agents_line(rows) or "Sam (front desk)",
         "created_at": rows[0]["called_at"],
+        "outcome": evaluation.call_outcome(rows, cached.get("transcript"))[0],  # pass, fail, or na
     }
 
 
@@ -206,9 +207,9 @@ def call_detail(call_id: str) -> dict:
     view = _call_view(conv, rows, cached)
     return {
         "call": view,
-        "check": evaluation.build("call", rows, grade),
+        "check": evaluation.build("call", rows, grade, transcript=cached.get("transcript")),
         "tool_calls": [report.public_tool_call(t) for t in rows],
-        "report": report.build_call(view, rows, cached.get("voice")),
+        "report": report.build_call(view, rows, cached.get("voice"), view["outcome"]),
     }
 
 

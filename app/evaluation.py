@@ -264,6 +264,8 @@ def _ai_item(label: str, grade: dict, criterion: str, passed_text: str, failed_t
         ok = found["result"] == "success"
         # The AI's rationale can quote the caller's number, and the call check reaches public pages
         return _item(label, "pass" if ok else "fail", redact(found.get("rationale")) or (passed_text if ok else failed_text), "ai")
+    if state == "deepgram":
+        return _item(label, "na", "Not graded: AI-judged checks run on ElevenLabs calls only", "ai")
     if state == "done":
         return _item(label, "na", "Not graded: the call was before this check existed, or nothing needed it", "ai")
     if state == "pending":
@@ -275,11 +277,52 @@ def _label(priority: str | None) -> str:
     return lifecycle.PRIORITY_LABELS.get(priority or "", priority or "not recorded").lower()
 
 
+# How a call with no ticket or message ended, read from its transcript: Sam closed it, or it stopped while
+# Sam was waiting for an answer. Fewer than this many scored checks is too few for a percentage.
+MIN_SCORED = 2
+_CLOSE = re.compile(r"anything else|good ?night|goodbye|bye\b|have a (good|great|nice)|take care|thanks for calling|"
+                    r"thank you for calling|stay safe", re.I)
+_CALLER_BYE = re.compile(r"\b(bye|goodbye|thanks|thank you|that's all|that's it)\b", re.I)
+_CONFIRMING = re.compile(r"just to confirm|let me confirm", re.I)
+STATUS_TOOLS = {"check_ticket_status", "add_ticket_note"}
+
+
+def call_outcome(tool_calls: list[dict], transcript: str | None) -> tuple[str, str]:
+    """("pass" | "fail" | "na", detail) for a call that made no ticket and no message."""
+    if STATUS_TOOLS & {t["tool"] for t in tool_calls}:
+        return "pass", "Answered a question about an existing ticket"
+    lines = [ln.split(": ", 1) for ln in (transcript or "").splitlines() if ": " in ln]
+    lines = [(who, text.strip()) for who, text in lines if who in ("Agent", "Caller") and text.strip()]
+    if not lines:
+        return "na", "No transcript recorded for this call"
+    # Sam's greeting ("Thanks for calling...") isn't a close: only what comes after the caller first speaks
+    first = next((i for i, (who, _) in enumerate(lines) if who == "Caller"), None)
+    if first is None:
+        return "na", "The caller never spoke"
+    lines = lines[first:]
+    who, last = lines[-1]
+    # Sam's last words asked something (Deepgram sends "Just to confirm..." and "Is that right?" separately)
+    if who == "Agent" and (last.endswith("?") or _CONFIRMING.match(last)) and not _CLOSE.search(last):
+        return "fail", "The call ended while Sam was waiting for an answer"
+    sam = [text for who, text in lines if who == "Agent"]
+    if any(_CLOSE.search(text) for text in sam[-3:]):
+        return "pass", "Sam closed the call"
+    if who == "Caller" and _CALLER_BYE.search(last):
+        return "pass", "The caller said goodbye"
+    if who == "Caller":
+        return "fail", "The caller's last words got no reply"
+    return "na", "The transcript doesn't show how the call ended"
+
+
 def build(kind: str, tool_calls: list[dict], grade: dict, ticket: dict | None = None,
-          task: dict | None = None) -> dict | None:
-    """kind: "ticket", "message", or "call" (handled on the call). None when there's nothing to check."""
+          task: dict | None = None, transcript: str | None = None) -> dict | None:
+    """kind: "ticket", "message", or "call" (no ticket or message). None when there's nothing to check.
+    transcript: for "call", to check how the call ended."""
     if not tool_calls:
         return None
+    on_deepgram = deepgram_voice.is_deepgram(tool_calls[0].get("conversation_id"))
+    if on_deepgram:
+        grade = {"status": "deepgram"}
     names = [t["tool"] for t in tool_calls]
     found = next((t for t in tool_calls if t["tool"] == "lookup_customer"
                   and (t.get("outcome") or "").startswith("Found")), None)
@@ -351,14 +394,21 @@ def build(kind: str, tool_calls: list[dict], grade: dict, ticket: dict | None = 
         when = task.get("best_time") or "next business day"
         items.append(_item("Follow-up completed", "pass", f"Callback booked with {who}, {when}"))
     else:
-        items.append(_item("Follow-up completed", "na", "Nothing left to follow up: handled on the call"))
+        items.append(_item("Follow-up completed", "na", "No ticket or message to follow up"))
+
+    # 8. A call with no ticket or message: did it reach an end, or stop partway?
+    if kind == "call":
+        status, detail = call_outcome(tool_calls, transcript)
+        items.append(_item("Call reached an outcome", status, detail))
 
     passed = sum(1 for i in items if i["status"] == "pass")
     failed = sum(1 for i in items if i["status"] == "fail")
     pending = sum(1 for i in items if i["status"] == "pending")
     scored = passed + failed
     return {
-        "score": round(100 * passed / scored) if scored else None,
+        "score": round(100 * passed / scored) if scored >= MIN_SCORED else None,
+        "too_few": 0 < scored < MIN_SCORED,
+        "note": "AI-judged checks run on ElevenLabs calls only" if on_deepgram else None,
         "passed": passed,
         "applicable": scored,
         "pending": pending,

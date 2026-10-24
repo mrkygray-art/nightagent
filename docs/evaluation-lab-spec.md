@@ -10,7 +10,7 @@ This extends what exists. It is not a new dashboard.
 | Piece | Where | What it gives us |
 |---|---|---|
 | 12 regression tests, 3 agents, run x3 | `app/qa_lab.py`, ElevenLabs Agent Testing | Pass/fail per test, an example reply, and the judge's reason |
-| Call check (9 checks per real call) | `app/evaluation.py`, cached in `ns_calls.evaluation` | Customer identified, confirmed first (AI-judged), location, emergency, priority, unsupported promises (AI-judged), escalation needed/performed, follow-up |
+| Call check (9 checks per real call, 10 for a call with no ticket or message) | `app/evaluation.py`, cached in `ns_calls.evaluation` | Customer identified, confirmed first (AI-judged), location, emergency, priority, unsupported promises (AI-judged), escalation needed/performed, follow-up; and for a call with no ticket or message, whether it reached an outcome (from the transcript) |
 | Turn-by-turn timing | `evaluation.turn_trace()` | `convai_llm_service_ttfb`, `convai_tts_service_ttfb`, `convai_ttf_audio_since_silence`, ASR latency, tool latency |
 | Tool log | `ns_tool_calls` (with `duration_ms`) | Every tool call on real calls |
 | Failure injection | `app/injection.py`, `/api/lab/inject/*` | Duplicate caller, alerts down |

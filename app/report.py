@@ -90,8 +90,15 @@ def build_message(task: dict, tool_calls: list[dict], department: str, callback:
     return {"rows": rows, "tool_count": len(tool_calls)}
 
 
-def build_call(view: dict, tool_calls: list[dict], voice: str | None) -> dict:
-    """The report for a call that ended without a ticket or a message."""
+OUTCOME_LINES = {
+    "pass": "Handled on the call: no ticket or message",
+    "fail": "Ended before an outcome: no ticket or message",
+    "na": "No ticket or message",
+}
+
+
+def build_call(view: dict, tool_calls: list[dict], voice: str | None, outcome: str = "na") -> dict:
+    """The report for a call that ended without a ticket or a message. outcome: evaluation.call_outcome's status."""
     agent, channel = _agent_and_channel(voice)
     team = agents_line(tool_calls)
     rows = [
@@ -101,7 +108,7 @@ def build_call(view: dict, tool_calls: list[dict], voice: str | None) -> dict:
         {"label": "Account", "value": view.get("customer") or "No matching account"},
         {"label": "What happened", "value": view.get("summary")},
         {"label": "Tools Sam used", "value": _tools_line(tool_calls)},
-        {"label": "Outcome", "value": "Handled on the call: no ticket or message needed"},
+        {"label": "Outcome", "value": OUTCOME_LINES.get(outcome, OUTCOME_LINES["na"])},
     ]
     return {"rows": rows, "tool_count": len(tool_calls)}
 

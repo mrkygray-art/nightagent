@@ -307,6 +307,7 @@ DEMO_HTML = r"""<!doctype html>
   .check-head .score { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--clear); line-height: 1; }
   .check-head .score.mid { color: var(--sodium); }
   .check-head .score.low { color: var(--alarm); }
+  .check-note { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
   .check-head small { color: var(--muted); font-size: 13px; }
   .check ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
   .check li { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; font-size: 14px; }
@@ -1524,7 +1525,7 @@ function callCard(c) {
   const body = el("div", "body");
   const row1 = el("div", "row1");
   row1.appendChild(el("span", "id", "Call"));
-  row1.appendChild(el("span", "chip stage", "Handled on the call"));
+  row1.appendChild(el("span", "chip stage", callOutcomeChip(c)));
   if (myCallRef && c.call_ref === myCallRef) row1.appendChild(el("span", "chip mine", "Your call"));
   row1.appendChild(el("span", "when", timeAgo(c.created_at)));
   body.appendChild(row1);
@@ -1986,13 +1987,18 @@ function renderMessagePanel(detail) {
   appendToolSteps(p, detail);
 }
 
+// What the board says about a call with no ticket or message: closed properly, stopped partway, or unknown
+function callOutcomeChip(c) {
+  return c.outcome === "pass" ? "Handled on the call" : c.outcome === "fail" ? "Ended early" : "No ticket";
+}
+
 // A call handled entirely on the phone: no ticket, no message
 function renderCallPanel(detail) {
   const p = els.panel;
   const c = detail.call;
   const head = el("div", "ev-head");
   head.appendChild(el("span", "id", "Call"));
-  head.appendChild(el("span", "chip stage", "Handled on the call"));
+  head.appendChild(el("span", "chip stage", callOutcomeChip(c)));
   if (myCallRef && c.call_ref === myCallRef) head.appendChild(el("span", "chip mine", "Your call"));
   p.appendChild(head);
   p.appendChild(el("p", "ev-issue", c.summary || ""));
@@ -2035,8 +2041,10 @@ function callCheck(check) {
     head.appendChild(el("span", `score${check.score < 60 ? " low" : check.score < 90 ? " mid" : ""}`, `${check.score}%`));
   }
   const waiting = check.pending ? ` · ${check.pending} still to come` : "";
-  head.appendChild(el("small", "", `${check.passed} of ${check.applicable} checks passed${waiting}`));
+  const tooFew = check.too_few ? " · too few to score" : "";
+  head.appendChild(el("small", "", `${check.passed} of ${check.applicable} checks passed${waiting}${tooFew}`));
   box.appendChild(head);
+  if (check.note) box.appendChild(el("p", "check-note", check.note));
   const ul = el("ul");
   for (const i of check.items) {
     const li = el("li", i.status);
