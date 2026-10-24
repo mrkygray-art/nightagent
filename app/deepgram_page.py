@@ -192,6 +192,43 @@ DEEPGRAM_HTML = r"""<!doctype html>
     call.log.push(`${((Date.now() - call.startedAt) / 1000).toFixed(1)}s ${what} mic=${call.mic_level || 0}${playing ? " sam" : ""}`);
   }
 
+  // Echo guard: on laptop speakers, Sam's own voice reaches the mic, Flux takes it for the caller, and Sam is
+  // cut off mid-sentence (or a turn starts that never becomes words). While Sam's audio plays, and for a
+  // moment after, the page sends silence instead of the mic, unless the mic is clearly louder than the echo
+  // it has been measuring (the caller talking over Sam), so callers can still interrupt. ?guard=0 turns it off.
+  const GUARD = new URLSearchParams(location.search).get("guard") !== "0";
+  const GUARD_TAIL_S = 0.25, BARGE_MIN = 18, BARGE_OVER_ECHO = 2.5, BARGE_FRAMES = 2, ECHO_WARMUP = 6;
+
+  function frameLevel(buf) {  // the same 0-100 scale as the mic bar
+    const pcm = new Int16Array(buf);
+    let sum = 0;
+    for (let i = 0; i < pcm.length; i++) sum += (pcm[i] / 0x8000) ** 2;
+    return Math.min(100, Math.round(Math.sqrt(sum / Math.max(1, pcm.length)) * 400));
+  }
+
+  function echoGuard(buf) {
+    if (!GUARD || !call.out) return buf;
+    const samPlaying = call.playAt > call.out.currentTime - GUARD_TAIL_S && call.playAt > 0;
+    if (!samPlaying) {
+      if (call.guarded) { note(`echo guard: held back ${call.guarded} frames (echo level ~${Math.round(call.echo)})`); call.guarded = 0; }
+      call.loud = 0;
+      return buf;
+    }
+    const level = frameLevel(buf);
+    // Loud enough, two frames in a row (100 ms): the caller is talking over Sam, so let it through. Only once
+    // the echo has been measured (the first 300 ms of Sam on this call), or loud echo would pass as a caller
+    const measured = call.echoFrames >= ECHO_WARMUP;
+    call.loud = measured && level >= Math.max(BARGE_MIN, call.echo * BARGE_OVER_ECHO) ? call.loud + 1 : 0;
+    if (call.loud >= BARGE_FRAMES) {
+      if (call.loud === BARGE_FRAMES) note(`echo guard: let the caller through (level ${level}, echo ~${Math.round(call.echo)})`);
+      return buf;
+    }
+    call.echo = call.echoFrames ? call.echo * 0.9 + level * 0.1 : level;  // what Sam's own voice sounds like in this mic
+    call.echoFrames++;
+    call.guarded++;
+    return new ArrayBuffer(buf.byteLength);  // silence
+  }
+
   function setStatus(text, state) {
     statusEl.lastChild.textContent = text;
     dot.className = "dot" + (state ? " " + state : "");
@@ -406,8 +443,9 @@ DEEPGRAM_HTML = r"""<!doctype html>
     ws.binaryType = "arraybuffer";  // sync, so audio chunks keep their order
     call = { ws, mic, input, out, node, meter, session: start.session, ready: false, transcript: [], latencies: [],
              playing: new Set(), playAt: 0, turn: {}, cancelled: new Set(), ending: false, startedAt: Date.now(),
-             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0 };
-    node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
+             heard: null, heardTries: 0, injectedForNoise: false, log: [], mic_level: 0, echo: 0, echoFrames: 0, loud: 0, guarded: 0 };
+    note(GUARD ? "echo guard on" : "echo guard off (?guard=0)");
+    node.port.onmessage = (e) => { if (call && call.ready && ws.readyState === WebSocket.OPEN) ws.send(echoGuard(e.data)); };
     ws.onopen = () => ws.send(JSON.stringify(start.settings));
     ws.onmessage = onMessage;
     ws.onclose = () => { if (call && call.ws === ws) hangUp("The call ended."); };
