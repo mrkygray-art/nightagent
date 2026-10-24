@@ -2,6 +2,7 @@
 import pytest
 
 from app import evaluation
+from app.store import get_store
 
 
 @pytest.fixture
@@ -88,13 +89,62 @@ def test_call_handled_on_the_phone_shows_on_the_board(client, tool, graded):
     call = board[0]
     assert call["customer"] == "Sunset Dental Group" and call["call_id"].startswith("CALL-")
     assert call["agents"] == "Sam (front desk) → Jordan (billing assistant)"
+    get_store().merge_call("conv_onphone_1", {"transcript": "Caller: Is my invoice paid?\nAgent: Your invoice is paid.\n"
+                                                              "Agent: Anything else tonight?\nCaller: No."})
     detail = client.get(f"/api/calls/{call['call_id']}").json()
     rows = {r["label"]: r["value"] for r in detail["report"]["rows"]}
-    assert rows["Outcome"].startswith("Handled on the call")
+    assert rows["Outcome"] == "Handled on the call: no ticket or message"
     items = _items(detail["check"])
     assert items["Follow-up completed"]["status"] == "na"
     assert items["Escalation performed"]["status"] == "pass"
-    assert detail["check"]["score"] == 100
+    assert items["Call reached an outcome"] == {**items["Call reached an outcome"], "status": "pass", "detail": "Sam closed the call"}
+    assert detail["check"]["score"] == 100 and not detail["check"]["too_few"] and detail["check"]["note"] is None
+
+
+def test_deepgram_call_cut_off_mid_question_is_not_100(client, tool, graded):
+    """Ky's live call 2026-10-24: account found, then the call ended on Sam's question. It scored 100%."""
+    tool("lookup-customer", {"query": "3105550142", "conversation_id": "dg_cutoff_1"})
+    get_store().merge_call("dg_cutoff_1", {"transcript": "Agent: Just to confirm, I have you as Dave Thomas.\n"
+                                           "Caller: Yes.\nAgent: Thanks.\nAgent: So when did that start?"})
+    call_id = client.get("/api/calls").json()[0]["call_id"]
+    detail = client.get(f"/api/calls/{call_id}").json()
+    items, check = _items(detail["check"]), detail["check"]
+    assert items["Call reached an outcome"]["status"] == "fail"
+    assert "waiting for an answer" in items["Call reached an outcome"]["detail"]
+    assert check["passed"] == 1 and check["applicable"] == 2 and check["score"] == 50
+    # Deepgram calls aren't graded by ElevenLabs: say so, rather than "before this check existed"
+    assert items["Avoided unsupported promises"]["detail"] == "Not graded: AI-judged checks run on ElevenLabs calls only"
+    assert check["note"] == "AI-judged checks run on ElevenLabs calls only"
+    rows = {r["label"]: r["value"] for r in detail["report"]["rows"]}
+    assert rows["Outcome"] == "Ended before an outcome: no ticket or message"
+
+
+def test_one_scored_check_is_too_few_for_a_percentage(client, tool, graded):
+    tool("lookup-customer", {"query": "3105550142", "conversation_id": "dg_short_1"})  # no transcript saved
+    detail = client.get(f"/api/calls/{client.get('/api/calls').json()[0]['call_id']}").json()
+    check = detail["check"]
+    assert _items(check)["Call reached an outcome"]["status"] == "na"
+    assert check["applicable"] == 1 and check["score"] is None and check["too_few"]
+    rows = {r["label"]: r["value"] for r in detail["report"]["rows"]}
+    assert rows["Outcome"] == "No ticket or message"
+
+
+@pytest.mark.parametrize("transcript, tools, status", [
+    ("Agent: Is there anything else I can help with?\nCaller: No thanks", [], "pass"),
+    ("Caller: That's all.\nAgent: Okay.\nAgent: Have a good night.", [], "pass"),
+    ("Agent: What's the address?\nCaller: It's 12 Main. Bye.", [], "pass"),  # the caller said goodbye
+    ("Caller: The panel is blinking.\nAgent: When did that start?", [], "fail"),
+    ("Agent: How can I help?\nCaller: The back door won't lock", [], "fail"),  # no reply
+    ("Agent: Let me look into that.", [], "na"),
+    # The greeting isn't a close, and Deepgram sends "Just to confirm..." without its question
+    ("Agent: Thanks for calling, this is Sam.\nCaller: This is James.\nAgent: Just to confirm, I have you as James Carter.", [], "fail"),
+    ("Agent: Thanks for calling, this is Sam.\nCaller: Hi.\nAgent: Have a good night.\nAgent: Is that right?", [], "fail"),
+    ("Agent: Thanks for calling, this is Sam. How can I help?", [], "na"),  # the caller never spoke
+    ("", [], "na"),
+    ("Agent: When did that start?", ["check_ticket_status"], "pass"),  # a status question answered
+])
+def test_call_outcome_from_the_transcript(transcript, tools, status):
+    assert evaluation.call_outcome([{"tool": t} for t in tools], transcript)[0] == status
 
 
 def test_voice_for_a_phone_only_call(client, tool, graded):
